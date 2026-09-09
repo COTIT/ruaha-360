@@ -19,6 +19,11 @@ import swCommon from './sw/common.json'
 export const supportedLanguages = ['en', 'sw'] as const
 export type SupportedLanguage = (typeof supportedLanguages)[number]
 
+/** app_user.locale is free text in the schema, so it needs narrowing. */
+export function isSupportedLanguage(value: string): value is SupportedLanguage {
+  return (supportedLanguages as readonly string[]).includes(value)
+}
+
 void i18next.use(initReactI18next).init({
   resources: {
     en: { common: enCommon },
