@@ -107,17 +107,28 @@ export interface Draft<T> {
 }
 
 export function useDraft<T>(key: string, store: DraftStore = indexedDbDraftStore): Draft<T> {
-  const [draft, setDraft] = useState<T | undefined>(undefined)
-  const [status, setStatus] = useState<DraftStatus>('restoring')
   const storeRef = useRef(store)
+
+  // Key, draft and status move together so a key change cannot leave a draft
+  // from the previous form on screen.
+  const [state, setState] = useState<{
+    key: string
+    draft: T | undefined
+    status: DraftStatus
+  }>({ key, draft: undefined, status: 'restoring' })
+
+  // Adjusting state during render when the key changes, rather than in an
+  // effect: setting state synchronously inside an effect triggers a cascading
+  // render, and the reset must be visible in the same commit as the new key.
+  if (state.key !== key) {
+    setState({ key, draft: undefined, status: 'restoring' })
+  }
 
   useEffect(() => {
     let cancelled = false
-    setStatus('restoring')
     void safeGet(storeRef.current, key).then((value) => {
       if (cancelled) return
-      setDraft(value as T | undefined)
-      setStatus(value === undefined ? 'empty' : 'dirty')
+      setState({ key, draft: value as T | undefined, status: value === undefined ? 'empty' : 'dirty' })
     })
     return () => {
       cancelled = true
@@ -126,11 +137,10 @@ export function useDraft<T>(key: string, store: DraftStore = indexedDbDraftStore
 
   const save = useCallback(
     async (value: T) => {
-      setDraft(value)
-      await safeSet(storeRef.current, key, value)
       // Stays 'dirty': it only reached local storage. An unsaved write must
       // look unsaved, so this is never reported as saved.
-      setStatus('dirty')
+      setState({ key, draft: value, status: 'dirty' })
+      await safeSet(storeRef.current, key, value)
     },
     [key],
   )
@@ -142,9 +152,8 @@ export function useDraft<T>(key: string, store: DraftStore = indexedDbDraftStore
       // Nothing to do: the server write already succeeded, which is what
       // matters. A stale local draft is cleaned up on the next restore.
     }
-    setDraft(undefined)
-    setStatus('saved')
+    setState({ key, draft: undefined, status: 'saved' })
   }, [key])
 
-  return { draft, save, clear, status }
+  return { draft: state.draft, save, clear, status: state.status }
 }
