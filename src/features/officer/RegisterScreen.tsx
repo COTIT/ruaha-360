@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getRouteApi, useNavigate } from '@tanstack/react-router'
+import { Link, getRouteApi, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,17 @@ import { draftKey, useDraft } from '@/lib/drafts'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/lib/db.types'
+
+/** What app_register_farmer returns. */
+interface RegisterResult {
+  person_id: string | null
+  household_id: string | null
+  farm_id: string | null
+  plot_id: string | null
+  crop_cycle_id: string | null
+  harvest_report_id: string | null
+  replayed: boolean
+}
 
 const EMPTY: RegisterForm = {
   given_name: '',
@@ -139,7 +150,9 @@ export function RegisterScreen() {
       // Trigger and RPC messages are written to be read by humans; surfaced
       // verbatim rather than replaced with a generic failure.
       if (error) throw new Error(error.message)
-      return data
+      // The RPC returns the ids it created, plus `replayed` when a retry hit
+      // the idempotency receipt rather than creating a second farmer.
+      return data as unknown as RegisterResult
     },
     onSuccess: async () => {
       // Cleared ONLY after the RPC returned success.
@@ -168,10 +181,21 @@ export function RegisterScreen() {
   }
 
   if (submit.isSuccess) {
+    const created = submit.data
     return (
       <section className="space-y-3" data-testid="register-success">
         <h1 className="text-lg font-semibold">{t('register.successTitle')}</h1>
         <p className="text-sm text-deep/70">{t('register.successDetail')}</p>
+        {created?.person_id && (
+          <Link
+            to="/officer/people/$personId"
+            params={{ personId: created.person_id }}
+            data-testid="register-view-person"
+            className="inline-block text-sm font-medium text-primary underline underline-offset-4"
+          >
+            {t('register.viewPerson')}
+          </Link>
+        )}
         <button
           type="button"
           data-testid="register-another"

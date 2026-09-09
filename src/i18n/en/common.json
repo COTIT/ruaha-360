@@ -118,11 +118,56 @@
     "required": "This is required.",
     "noVillage": "No village to register into",
     "noVillageDetail": "Registration needs a village assignment. Ask your programme manager.",
-    "provenanceNote": "Recorded as field-verified, captured by you. This is not a choice."
+    "provenanceNote": "Recorded as field-verified, captured by you. This is not a choice.",
+    "viewPerson": "Open the record"
   },
   "confidence": {
     "low": "Low",
     "medium": "Medium",
     "high": "High"
+  },
+  "source": {
+    "farmer_reported": "Farmer reported",
+    "field_verified": "Field verified",
+    "transaction_derived": "From a transaction",
+    "sensor_derived": "Sensor measured",
+    "model_estimated": "Estimated"
+  },
+  "verification": {
+    "unverified": "Unverified",
+    "pending": "Pending",
+    "verified": "Verified",
+    "disputed": "Disputed"
+  },
+  "provenance": {
+    "capturedAt": "Captured",
+    "capturedBy": "by",
+    "confidenceLabel": "Confidence"
+  },
+  "person": {
+    "notFoundTitle": "Person not found",
+    "notFoundDetail": "This record may not exist, or you may not have access to it.",
+    "households": "Households",
+    "farms": "Farms",
+    "plots": "Plots",
+    "cycles": "Crop cycles",
+    "harvests": "Harvest figures",
+    "noFarms": "No farms recorded yet",
+    "noFarmsDetail": "Farms appear here once one is registered.",
+    "noHouseholds": "No household recorded",
+    "members": "Members",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "verified": "Verified",
+    "allVerified": "Every record here is verified",
+    "expected": "Expected",
+    "actual": "Actual",
+    "superseded": "Superseded",
+    "plantedArea": "Planted area",
+    "trees": "Trees",
+    "units": "Units",
+    "window": "Harvest window",
+    "unverifiedCount_one": "{{count}} record still needs verifying",
+    "unverifiedCount_other": "{{count}} records still need verifying"
   }
 }
