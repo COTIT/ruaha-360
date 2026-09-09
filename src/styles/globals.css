@@ -1,0 +1,130 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* Poppins, self-hosted. Weights 400/500/600/700, latin subset only.
+   The bare `@fontsource/poppins/400.css` entrypoints also pull devanagari,
+   which is ~160 kB of faces neither English nor Swahili can render — and the
+   PWA precaches the shell, so it is 160 kB a field phone downloads over 3G. */
+@import '@fontsource/poppins/latin-400.css';
+@import '@fontsource/poppins/latin-500.css';
+@import '@fontsource/poppins/latin-600.css';
+@import '@fontsource/poppins/latin-700.css';
+
+/* Compiles the `dark:` variant so shadcn components keep working, but no dark
+   palette is defined and nothing toggles the class. Dark mode is not a product
+   requirement — add it deliberately if it ever becomes one. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* Ruaha brand, from the brand book. `deep` and `surface` are brand tokens
+     with no shadcn equivalent; `primary` and `accent` deliberately share
+     shadcn's semantic slots so there is exactly one blue and one green in the
+     system rather than a brand set and a component set that drift. */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-deep: var(--deep);
+  --color-surface: var(--surface);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* ── Ruaha brand book ────────────────────────────────── */
+  --primary: #1d70b7;
+  --accent: #93c01f;
+  --deep: #0c1f5b;
+  --surface: #f5f3e5;
+
+  --primary-foreground: #ffffff;
+  --accent-foreground: var(--deep);
+
+  /* ── derived surfaces ────────────────────────────────── */
+  --background: var(--surface);
+  --foreground: var(--deep);
+  --card: #ffffff;
+  --card-foreground: var(--deep);
+  --popover: #ffffff;
+  --popover-foreground: var(--deep);
+  --secondary: oklch(0.96 0.008 90);
+  --secondary-foreground: var(--deep);
+  --muted: oklch(0.96 0.008 90);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.2 0.08 265 / 12%);
+  --input: oklch(0.2 0.08 265 / 16%);
+  --ring: var(--primary);
+
+  /* Placeholders. No chart library is installed and none is added before the
+     Tower renders real numbers (CLAUDE.md). */
+  --chart-1: var(--primary);
+  --chart-2: var(--accent);
+  --chart-3: var(--deep);
+  --chart-4: oklch(0.65 0.12 230);
+  --chart-5: oklch(0.75 0.14 120);
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--deep);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.96 0.008 90);
+  --sidebar-accent-foreground: var(--deep);
+  --sidebar-border: oklch(0.2 0.08 265 / 12%);
+  --sidebar-ring: var(--primary);
+
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  /* Figures stack in tables and Tower tiles. Non-negotiable per spec §14. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

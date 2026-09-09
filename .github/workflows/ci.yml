@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+# Not run here, deliberately:
+#   supabase/tests/rls_test.sql needs Docker, a local Supabase and the demo
+#   seed. It is the highest-value test in the repo and currently only runs on
+#   a developer machine. Moving it into CI is on the tier-7 list alongside the
+#   Playwright acceptance journey.

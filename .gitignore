@@ -1,0 +1,25 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+
+# supabase CLI local state
+supabase/.branches
+supabase/.temp
+
+# test output
+coverage
+playwright-report
+test-results
+blob-report
+/playwright/.cache
+
+# editors / os
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log
