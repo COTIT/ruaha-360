@@ -178,6 +178,35 @@ create trigger opportunity_resum_trg
   after insert or update or delete on opportunity_supply
   for each row execute function opportunity_resum();
 
+-- ── opportunity visibility, as SECURITY DEFINER ──────────
+-- Same recursion shape as household / household_member in 003:
+-- opportunity_read_contributor read opportunity_supply, whose policy read
+-- opportunity, whose policy read opportunity_supply. Resolve it with RLS off
+-- instead. app_farms() is itself SECURITY DEFINER and defined in 004.
+--
+-- The staff guard is INSIDE app_staff_opportunities(): app_villages() returns
+-- villages for every role holding a membership row, farmers included.
+
+create or replace function app_supplied_opportunities() returns setof uuid
+language sql stable security definer set search_path = public as $$
+  select distinct os.opportunity_id
+  from opportunity_supply os
+  join crop_cycle c on c.id = os.crop_cycle_id
+  join plot p       on p.id = c.plot_id
+  where p.farm_id in (select app_farms())
+$$;
+
+create or replace function app_staff_opportunities() returns setof uuid
+language sql stable security definer set search_path = public as $$
+  select o.id
+  from opportunity o
+  where app_is_staff()
+    and o.village_id in (select app_villages())
+$$;
+
+grant execute on function app_supplied_opportunities, app_staff_opportunities
+to authenticated;
+
 create trigger buyer_updated_at        before update on buyer        for each row execute function set_updated_at();
 create trigger buyer_demand_updated_at before update on buyer_demand for each row execute function set_updated_at();
 create trigger opportunity_updated_at  before update on opportunity  for each row execute function set_updated_at();
@@ -217,14 +246,7 @@ create policy opportunity_read_staff on opportunity for select to authenticated
 
 -- a farmer sees an opportunity only when their own supply is inside it
 create policy opportunity_read_contributor on opportunity for select to authenticated
-  using (exists (
-    select 1
-    from opportunity_supply os
-    join crop_cycle c on c.id = os.crop_cycle_id
-    join plot p       on p.id = c.plot_id
-    where os.opportunity_id = opportunity.id
-      and p.farm_id in (select app_farms())
-  ));
+  using (id in (select app_supplied_opportunities()));
 
 create policy opportunity_write on opportunity for insert to authenticated
   with check (app_is_staff() and village_id in (select app_villages()));
@@ -233,7 +255,10 @@ create policy opportunity_update on opportunity for update to authenticated
   with check (app_is_staff() and village_id in (select app_villages()));
 
 create policy opp_supply_read on opportunity_supply for select to authenticated
-  using (exists (select 1 from opportunity o where o.id = opportunity_id));
+  using (
+    opportunity_id in (select app_supplied_opportunities())
+    or opportunity_id in (select app_staff_opportunities())
+  );
 create policy opp_supply_write on opportunity_supply for insert to authenticated
   with check (app_is_staff());
 create policy opp_supply_update on opportunity_supply for update to authenticated

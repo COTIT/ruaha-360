@@ -96,7 +96,9 @@ RLS is row-level. Three things it cannot express are done with triggers:
   leaves draft. Without it, `pue_update_own` lets a farmer approve their own
   request.
 - **`opportunity_supply_guard`** — the same harvested kilos cannot be promised
-  to two live buyers (research item I).
+  to two live buyers (research item I). `opportunity_resum` keeps
+  `offered_quantity_kg` equal to the sum of the attached supply lines, on both
+  sides of a move.
 - **`pue_recompute_estimate`** — clients hold no write policy on
   `energy_estimate` at all. The trigger is the only writer.
 
@@ -117,6 +119,8 @@ helper, which reads with RLS off and so cannot cycle:
 | `app_households()` | households the caller's person belongs to |
 | `app_household_persons()` | persons sharing a household with the caller |
 | `app_staff_households()` | households in the caller's villages, **if staff** |
+| `app_supplied_opportunities()` | opportunities whose supply traces to the caller's farms |
+| `app_staff_opportunities()` | opportunities in the caller's villages, **if staff** |
 
 The staff guard lives *inside* `app_staff_households()`, not at the call site.
 `app_villages()` returns villages for every role holding a membership row —
