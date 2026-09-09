@@ -182,5 +182,16 @@
     "perDay": "Estimated per day",
     "perWeek": "Estimated per week",
     "peakNote": "Peak power does not change with hours of use."
+  },
+  "myFarm": {
+    "title": "My farm",
+    "noFarmTitle": "No farm recorded yet",
+    "noFarmDetail": "A field officer will register your farm and it will appear here.",
+    "plots": "Plots",
+    "noPlots": "No plots recorded on this farm yet",
+    "noCycles": "No crops recorded on this plot yet",
+    "expected": "Expected harvest",
+    "window": "Harvest window",
+    "readOnly": "This is a record of what has been registered. Ask your field officer to change anything."
   }
 }
