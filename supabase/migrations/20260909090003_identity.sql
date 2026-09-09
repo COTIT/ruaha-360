@@ -47,12 +47,16 @@ create table household (
 
 create index household_village_idx on household (village_id) where deleted_at is null;
 
+-- Surrogate uuid key, like every other table: write_audit() records
+-- audit_log.record_id as a uuid, so a composite-keyed table cannot be
+-- audited. The pair stays unique.
 create table household_member (
+  id            uuid primary key default gen_random_uuid(),
   household_id  uuid not null references household(id) on delete cascade,
   person_id     uuid not null references person(id)    on delete cascade,
   is_head       boolean not null default false,
   created_at    timestamptz not null default now(),
-  primary key (household_id, person_id)
+  unique (household_id, person_id)
 );
 
 create unique index household_one_head
@@ -167,6 +171,7 @@ create trigger app_user_updated_at  before update on app_user  for each row exec
 
 create trigger person_audit     after insert or update or delete on person     for each row execute function write_audit();
 create trigger household_audit  after insert or update or delete on household  for each row execute function write_audit();
+create trigger household_member_audit after insert or update or delete on household_member for each row execute function write_audit();
 create trigger membership_audit after insert or update or delete on membership for each row execute function write_audit();
 
 -- ── RLS ──────────────────────────────────────────────────

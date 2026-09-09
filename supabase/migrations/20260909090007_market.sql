@@ -80,12 +80,13 @@ create index opportunity_demand_idx  on opportunity (buyer_demand_id) where dele
 -- THE traceability edge. Strategy poster proof 05:
 -- "One buyer opportunity links to its supply records."
 create table opportunity_supply (
+  id                 uuid primary key default gen_random_uuid(),
   opportunity_id     uuid not null references opportunity(id)    on delete cascade,
   harvest_report_id  uuid not null references harvest_report(id) on delete restrict,
   crop_cycle_id      uuid not null references crop_cycle(id)     on delete restrict,
   contributed_kg     numeric(12,2) not null check (contributed_kg > 0),
   created_at         timestamptz not null default now(),
-  primary key (opportunity_id, harvest_report_id)
+  unique (opportunity_id, harvest_report_id)
 );
 
 create index opp_supply_harvest_idx on opportunity_supply (harvest_report_id);
@@ -154,6 +155,10 @@ create trigger opportunity_updated_at  before update on opportunity  for each ro
 create trigger buyer_audit        after insert or update or delete on buyer        for each row execute function write_audit();
 create trigger buyer_demand_audit after insert or update or delete on buyer_demand for each row execute function write_audit();
 create trigger opportunity_audit  after insert or update or delete on opportunity  for each row execute function write_audit();
+-- Audited deliberately: this table IS the traceability claim. Who committed
+-- whose harvest to which buyer, and when, is exactly the record research
+-- item I is about.
+create trigger opportunity_supply_audit after insert or update or delete on opportunity_supply for each row execute function write_audit();
 
 alter table buyer              enable row level security;
 alter table buyer_demand       enable row level security;

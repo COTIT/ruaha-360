@@ -34,6 +34,17 @@ than a rewrite.
 
 ## Conventions
 
+**Every table has a uuid primary key.** Including the join tables —
+`household_member`, `farm_manager`, `opportunity_supply` — which carry an `id`
+plus a `unique` constraint on the natural pair rather than a composite primary
+key. `write_audit()` records `audit_log.record_id` as a uuid, so a
+composite-keyed table cannot be audited at all; the surrogate key is what
+makes audit coverage uniform instead of a per-table exception.
+
+All three join tables are audited. `opportunity_supply` in particular is the
+traceability claim the product makes — who committed whose harvest to which
+buyer, and when — which is precisely the record research item I is about.
+
 **Config vs observed.** Config tables (`country` `project` `village` `crop`
 `equipment_category` `equipment` `buyer` `village_capacity`) carry no
 provenance. Observed tables carry the full block:

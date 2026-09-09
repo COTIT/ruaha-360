@@ -48,11 +48,12 @@ create index farm_household_idx on farm (household_id) where deleted_at is null;
 
 -- S06: a farm may have several people, households and managers.
 create table farm_manager (
+  id          uuid primary key default gen_random_uuid(),
   farm_id     uuid not null references farm(id)   on delete cascade,
   person_id   uuid not null references person(id) on delete cascade,
   is_primary  boolean not null default false,
   created_at  timestamptz not null default now(),
-  primary key (farm_id, person_id)
+  unique (farm_id, person_id)
 );
 
 create unique index farm_one_primary on farm_manager (farm_id) where is_primary;
