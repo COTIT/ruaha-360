@@ -45,9 +45,17 @@ export async function fetchSession(): Promise<AppSession | null> {
       .is('revoked_at', null),
   ])
 
+  // A FAILED read is not an empty result. Coercing either error to a default
+  // would make resolveLanding send a legitimate officer to /no-access, so a
+  // transient blip would present as a permissions problem. Zero rows is an
+  // answer; a broken query is not.
+  if (appUserResult.error) throw new Error(appUserResult.error.message)
+  if (membershipResult.error) throw new Error(membershipResult.error.message)
+
   return {
     userId,
     email: session.user.email ?? null,
+    // A signed-in auth user with no app_user row is legitimate, not an error.
     appUser: appUserResult.data ?? null,
     memberships: membershipResult.data ?? [],
   }

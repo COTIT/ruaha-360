@@ -10,8 +10,16 @@
   "nav": {
     "signOut": "Sign out",
     "myFarm": "My farm",
-    "officer": "Officer",
-    "ops": "Ops",
+    "equipment": "Equipment",
+    "requests": "Requests",
+    "opportunities": "Opportunities",
+    "register": "Register",
+    "people": "People",
+    "verify": "Verify",
+    "demand": "Demand",
+    "catalogue": "Catalogue",
+    "buyers": "Buyers",
+    "villages": "Villages",
     "tower": "Control Tower"
   },
   "login": {
@@ -38,5 +46,22 @@
     "field_officer": "Field officer",
     "ops": "Operations",
     "admin": "Administrator"
+  },
+  "a11y": {
+    "primaryNav": "Primary navigation",
+    "language": "Language"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "retry": "Try again"
+  },
+  "empty": {
+    "noAccessToThis": "Nothing to show",
+    "noAccessDetail": "You may not have access to these records, or there are none yet."
+  },
+  "notFound": {
+    "title": "That page does not exist",
+    "detail": "The link may be out of date.",
+    "home": "Go to your home screen"
   }
 }

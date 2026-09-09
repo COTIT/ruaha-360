@@ -1,38 +1,38 @@
-import { Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { DemoBanner } from '@/app/DemoBanner'
 import { LanguageSwitch } from '@/app/LanguageSwitch'
-import { activeMemberships, canAccessSurface } from '@/app/membership'
+import { SurfaceNav } from '@/app/SurfaceNav'
+import { activeMemberships } from '@/app/membership'
+import { navItemsFor, navLayoutForPath, surfaceForPath } from '@/app/nav'
 import { signOut, useSession } from '@/app/session'
 
 /**
- * Session 1/tier 1 shell.
+ * App shell — spec 4.1.
  *
- * Nav is role-aware but still one bar for every surface. Spec 4.1 wants a
- * bottom tab bar for farmer and officer and a sidebar for ops; that split
- * arrives with the first real screens on each surface, so the layout is not
- * built twice around placeholders.
+ * Role-aware nav: farmer and officer surfaces get a bottom tab bar and are
+ * mobile-first; ops gets a sidebar and is desktop-first. The layout follows the
+ * CURRENT surface rather than the role set, because a user may hold several
+ * roles and the active one lives in the URL.
  */
 export function RootLayout() {
   const { t } = useTranslation()
   const { data: session } = useSession()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   const memberships = activeMemberships(session?.memberships ?? [])
+  const surface = surfaceForPath(pathname)
+  const layout = navLayoutForPath(pathname)
+  const items = surface ? navItemsFor(surface, memberships) : []
   const signedIn = Boolean(session)
 
-  const links = [
-    { to: '/farm', label: t('nav.myFarm'), show: canAccessSurface(memberships, 'farmer') },
-    { to: '/officer', label: t('nav.officer'), show: canAccessSurface(memberships, 'officer') },
-    { to: '/ops', label: t('nav.ops'), show: canAccessSurface(memberships, 'ops') },
-    { to: '/ops/tower', label: t('nav.tower'), show: canAccessSurface(memberships, 'ops') },
-  ].filter((l) => l.show)
-
   return (
-    <div className="min-h-dvh bg-surface font-sans text-deep">
+    <div className="flex min-h-dvh flex-col bg-surface font-sans text-deep">
+      {/* Always visible, driven by VITE_DATA_MODE and never by a column. */}
       <DemoBanner />
 
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-deep/10 bg-white px-4 py-3">
@@ -63,23 +63,16 @@ export function RootLayout() {
         </div>
       </header>
 
-      {links.length > 0 && (
-        <nav className="flex flex-wrap gap-3 border-b border-deep/10 px-4 py-2 text-sm">
-          {links.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              className="text-deep/70 underline-offset-4 hover:underline data-[status=active]:font-medium data-[status=active]:text-primary"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-      )}
+      <div className="flex flex-1">
+        {layout === 'sidebar' && <SurfaceNav layout={layout} items={items} />}
 
-      <main className="p-4">
-        <Outlet />
-      </main>
+        {/* Bottom padding keeps the tab bar clear of the last row of content. */}
+        <main className={`flex-1 p-4 ${layout === 'tabs' ? 'pb-20' : ''}`}>
+          <Outlet />
+        </main>
+      </div>
+
+      {layout === 'tabs' && <SurfaceNav layout={layout} items={items} />}
     </div>
   )
 }

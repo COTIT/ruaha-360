@@ -51,14 +51,21 @@ export function LoginScreen() {
       return
     }
 
-    await queryClient.invalidateQueries({ queryKey: queryKeys.session() })
-    const session = await ensureSession(queryClient)
+    // The password can be accepted and the follow-up session read still fail.
+    // Swallowing that leaves the user staring at the login form with no
+    // explanation, having just typed a correct password.
+    try {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.session() })
+      const session = await ensureSession(queryClient)
 
-    // A guard that bounced someone here attached where they were going. Go
-    // back there if the value is trustworthy; the surface guard will correct
-    // it if their role does not open that surface. Otherwise, role home.
-    const target = safeRedirect(requested) ?? resolveLanding(session?.memberships ?? []).to
-    await navigate({ to: target, replace: true })
+      // A guard that bounced someone here attached where they were going. Go
+      // back there if the value is trustworthy; the surface guard will correct
+      // it if their role does not open that surface. Otherwise, role home.
+      const target = safeRedirect(requested) ?? resolveLanding(session?.memberships ?? []).to
+      await navigate({ to: target, replace: true })
+    } catch (cause) {
+      setFormError(cause instanceof Error ? cause.message : String(cause))
+    }
   }
 
   return (
