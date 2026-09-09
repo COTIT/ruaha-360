@@ -57,9 +57,15 @@ describe('fetchSession', () => {
     expect(session?.memberships).toHaveLength(1)
   })
 
+  // Superseded by the not-yet-effective-token cases below: an app_user row is
+  // what distinguishes "this user has no memberships" from "this read did not
+  // run as the user", so a genuine no-access session must carry one.
   test('genuinely having no memberships resolves to an empty list', async () => {
     getSession.mockResolvedValue({ data: { session: { user: { id: USER, email: null } } } })
-    mockTables({ data: null, error: null }, { data: [], error: null })
+    mockTables(
+      { data: { id: USER, person_id: null, display_name: 'New User', locale: 'en' }, error: null },
+      { data: [], error: null },
+    )
 
     const session = await fetchSession()
     expect(session?.memberships).toEqual([])
@@ -86,5 +92,43 @@ describe('fetchSession', () => {
     )
 
     await expect(fetchSession()).rejects.toThrow(/permission denied/)
+  })
+})
+
+describe('fetchSession guards against a not-yet-effective token', () => {
+  // Every account that can sign in has an app_user row — seed_user creates
+  // one, and app_register_farmer never creates a login. So an auth session
+  // with NO app_user row and NO memberships is not "this user has no access";
+  // it is a read that did not run as the user, which RLS reports as zero rows
+  // rather than as an error. Routing that to /no-access tells a legitimate
+  // officer they have been removed from the programme.
+  test('an auth session with no app_user and no memberships throws', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: USER, email: null } } } })
+    mockTables({ data: null, error: null }, { data: [], error: null })
+
+    await expect(fetchSession()).rejects.toThrow(/could not be read/i)
+  })
+
+  test('an app_user with genuinely zero memberships is still no-access, not an error', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: USER, email: null } } } })
+    mockTables(
+      { data: { id: USER, person_id: null, display_name: 'New User', locale: 'en' }, error: null },
+      { data: [], error: null },
+    )
+
+    const session = await fetchSession()
+    expect(session?.memberships).toEqual([])
+    expect(session?.appUser?.display_name).toBe('New User')
+  })
+
+  test('an app_user with memberships resolves normally', async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: USER, email: null } } } })
+    mockTables(
+      { data: { id: USER, person_id: null, display_name: 'Salima', locale: 'sw' }, error: null },
+      { data: [{ id: 'm1', role: 'field_officer', project_id: 'p', village_id: 'v', revoked_at: null }], error: null },
+    )
+
+    const session = await fetchSession()
+    expect(session?.memberships).toHaveLength(1)
   })
 })

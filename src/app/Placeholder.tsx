@@ -7,7 +7,7 @@
 export function Placeholder({ route, tier }: { route: string; tier: string }) {
   return (
     <section className="space-y-1">
-      <h2 className="font-medium text-deep">{route}</h2>
+      <h1 className="font-medium text-deep">{route}</h1>
       <p className="text-sm text-deep/60">
         Session 1 placeholder — built in {tier}.
       </p>

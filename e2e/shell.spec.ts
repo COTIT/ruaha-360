@@ -65,9 +65,11 @@ test.describe('app shell', () => {
     const labels = ['Requests', 'Demand', 'Catalogue', 'Buyers', 'Villages', 'Control Tower']
     for (const label of labels) {
       await page.getByTestId('nav-sidebar').getByRole('link', { name: label }).click()
-      // A route that does not resolve renders the router's error state, not a
-      // heading, so asserting a heading proves the target exists.
-      await expect(page.getByRole('heading', { level: 2 })).toBeVisible()
+      // A route that does not resolve renders the router's error or not-found
+      // state, neither of which has a heading, so any heading proves the
+      // target exists. Deliberately level-agnostic: asserting h2 tied this to
+      // the placeholder markup and broke as real screens replaced them.
+      await expect(page.getByRole('heading').first()).toBeVisible()
     }
   })
 
@@ -77,7 +79,7 @@ test.describe('app shell', () => {
 
     for (const label of ['My farm', 'Equipment', 'Requests', 'Opportunities']) {
       await page.getByTestId('nav-tabs').getByRole('link', { name: label }).click()
-      await expect(page.getByRole('heading', { level: 2 })).toBeVisible()
+      await expect(page.getByRole('heading').first()).toBeVisible()
     }
   })
 

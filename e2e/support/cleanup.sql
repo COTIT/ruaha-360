@@ -33,10 +33,15 @@ create temporary table _e2e_cycle on commit drop as
 -- leaves first
 delete from opportunity_supply where crop_cycle_id in (select id from _e2e_cycle);
 delete from harvest_report where crop_cycle_id in (select id from _e2e_cycle);
+-- PUE requests are marked through `purpose`, because the suite submits them
+-- as SEEDED farmers: a request left behind by Neema would shift the Tower's
+-- prospective demand for good, and the seeded figures are specification.
 delete from energy_estimate where pue_request_id in (
-  select id from pue_request where person_id in (select id from _e2e_person)
+  select id from pue_request
+  where person_id in (select id from _e2e_person) or purpose like 'E2E-%'
 );
-delete from pue_request where person_id in (select id from _e2e_person);
+delete from pue_request
+ where person_id in (select id from _e2e_person) or purpose like 'E2E-%';
 delete from crop_cycle where id in (select id from _e2e_cycle);
 delete from plot where id in (select id from _e2e_plot);
 delete from farm_manager where farm_id in (select id from _e2e_farm);

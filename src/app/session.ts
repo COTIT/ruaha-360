@@ -52,12 +52,24 @@ export async function fetchSession(): Promise<AppSession | null> {
   if (appUserResult.error) throw new Error(appUserResult.error.message)
   if (membershipResult.error) throw new Error(membershipResult.error.message)
 
+  const appUser = appUserResult.data ?? null
+  const memberships = membershipResult.data ?? []
+
+  // Every account that can sign in has an app_user row: seed_user creates one,
+  // and app_register_farmer never creates a login. So an auth session with
+  // neither an app_user nor any membership is not "this user has no access" —
+  // it is a read that did not run as the user, which RLS reports as zero rows
+  // rather than as an error. Treating it as no-access tells a legitimate
+  // officer they have been removed from the programme.
+  if (!appUser && memberships.length === 0) {
+    throw new Error('Your account could not be read. Try again.')
+  }
+
   return {
     userId,
     email: session.user.email ?? null,
-    // A signed-in auth user with no app_user row is legitimate, not an error.
-    appUser: appUserResult.data ?? null,
-    memberships: membershipResult.data ?? [],
+    appUser,
+    memberships,
   }
 }
 

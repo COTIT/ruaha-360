@@ -193,5 +193,62 @@
     "expected": "Expected harvest",
     "window": "Harvest window",
     "readOnly": "This is a record of what has been registered. Ask your field officer to change anything."
+  },
+  "requestStatus": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "under_review": "Under review",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "withdrawn": "Withdrawn"
+  },
+  "demandStatus": {
+    "open": "Open",
+    "matched": "Matched",
+    "closed": "Closed",
+    "cancelled": "Cancelled"
+  },
+  "opportunityStatus": {
+    "proposed": "Proposed",
+    "shared": "Shared",
+    "accepted": "Accepted",
+    "declined": "Declined",
+    "lapsed": "Lapsed"
+  },
+  "equipment": {
+    "title": "Equipment",
+    "intro": "Powered equipment available through the programme.",
+    "noneTitle": "No equipment listed yet",
+    "noneDetail": "Equipment appears here once the programme adds it.",
+    "ratedPower": "Rated power",
+    "indicativePrice": "Indicative price",
+    "indicative": "indicative",
+    "notAQuotation": "Prices are indicative, not quotations.",
+    "requestThis": "Request this",
+    "quantity": "How many",
+    "hours": "Hours per day",
+    "days": "Days per week",
+    "purpose": "What will you use it for?",
+    "submit": "Submit request",
+    "submitting": "Submitting…",
+    "successTitle": "Request submitted",
+    "successDetail": "Ops will review it. You can follow it under Requests.",
+    "viewRequest": "View the request",
+    "notFoundTitle": "Equipment not found",
+    "notFoundDetail": "It may no longer be listed, or you may not have access to it."
+  },
+  "requests": {
+    "title": "My requests",
+    "noneTitle": "No requests yet",
+    "noneDetail": "Requests you submit will appear here.",
+    "submittedOn": "Submitted",
+    "assumptions": "Assumptions",
+    "storedEstimate": "Stored estimate",
+    "decision": "Decision",
+    "frozen": "A submitted request cannot be changed. Ask your field officer if something needs correcting.",
+    "notFoundTitle": "Request not found",
+    "notFoundDetail": "It may not exist, or you may not have access to it.",
+    "noEstimate": "No estimate stored for this request",
+    "noEstimateDetail": "This equipment has no rated power recorded, so no estimate could be calculated."
   }
 }

@@ -106,3 +106,17 @@ export function writableVillageIds(rows: ActiveMembership[]): string[] {
   }
   return [...ids]
 }
+
+/**
+ * The single village this session belongs to, if there is one.
+ *
+ * A farmer's membership names their village; ops and admin hold whole-project
+ * scope with village_id NULL, so there is no one village to return and the
+ * caller must ask rather than guess.
+ */
+export function ownVillageId(rows: ActiveMembership[]): string | undefined {
+  for (const m of activeMemberships(rows)) {
+    if (m.village_id) return m.village_id
+  }
+  return undefined
+}

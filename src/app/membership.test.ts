@@ -7,6 +7,7 @@ import {
   roleHome,
   safeRedirect,
   writableVillageIds,
+  ownVillageId,
 } from '@/app/membership'
 import type { ActiveMembership } from '@/app/membership'
 
@@ -184,5 +185,28 @@ describe('writableVillageIds', () => {
       m('field_officer', { village_id: ILUNDO }),
     ]
     expect(writableVillageIds(rows)).toEqual([ILUNDO])
+  })
+})
+
+describe('ownVillageId', () => {
+  const ILUNDO = '30000000-0000-4000-8000-000000000001'
+
+  test('a farmer village comes from their membership', () => {
+    expect(ownVillageId([m('farmer', { village_id: ILUNDO })])).toBe(ILUNDO)
+  })
+
+  // village_id NULL is whole-project scope: there is no one village.
+  test('a project-wide membership has no single village', () => {
+    expect(ownVillageId([m('ops', { village_id: null })])).toBeUndefined()
+  })
+
+  test('revoked memberships do not supply a village', () => {
+    expect(
+      ownVillageId([m('farmer', { village_id: ILUNDO, revoked_at: '2026-09-01T00:00:00Z' })]),
+    ).toBeUndefined()
+  })
+
+  test('no memberships at all yields nothing', () => {
+    expect(ownVillageId([])).toBeUndefined()
   })
 })
