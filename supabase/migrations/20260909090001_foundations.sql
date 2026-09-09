@@ -53,19 +53,30 @@ create index audit_log_record_idx
 -- RLS on, zero policies -> unreachable via PostgREST. Service role only.
 alter table audit_log enable row level security;
 
+-- OLD is unassigned on INSERT and NEW is unassigned on DELETE. Touching the
+-- one that does not exist raises `record "old" is not assigned yet`, so each
+-- branch reads only the tuple that is actually there. A CASE expression is not
+-- sufficient: PL/pgSQL resolves every record reference in an expression before
+-- evaluating it, so `coalesce(new.id, old.id)` fails on both INSERT and DELETE
+-- rather than short-circuiting.
 create or replace function write_audit() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  insert into audit_log (table_name, record_id, action, actor, before, after)
-  values (
-    tg_table_name,
-    coalesce(new.id, old.id),
-    lower(tg_op),
-    auth.uid(),
-    case when tg_op = 'INSERT' then null else to_jsonb(old) end,
-    case when tg_op = 'DELETE' then null else to_jsonb(new) end
-  );
-  return coalesce(new, old);
+  if tg_op = 'INSERT' then
+    insert into audit_log (table_name, record_id, action, actor, before, after)
+    values (tg_table_name, new.id, 'insert', auth.uid(), null, to_jsonb(new));
+    return new;
+
+  elsif tg_op = 'UPDATE' then
+    insert into audit_log (table_name, record_id, action, actor, before, after)
+    values (tg_table_name, new.id, 'update', auth.uid(), to_jsonb(old), to_jsonb(new));
+    return new;
+
+  else
+    insert into audit_log (table_name, record_id, action, actor, before, after)
+    values (tg_table_name, old.id, 'delete', auth.uid(), to_jsonb(old), null);
+    return old;
+  end if;
 end $$;
 
 -- ── PROVENANCE CONVENTION ────────────────────────────────

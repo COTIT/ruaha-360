@@ -132,16 +132,46 @@ create trigger opportunity_supply_guard_trg
 create or replace function opportunity_resum() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
-  target uuid := coalesce(new.opportunity_id, old.opportunity_id);
+  -- Same unassigned-tuple rule as write_audit(): OLD does not exist on INSERT
+  -- and NEW does not exist on DELETE, so neither may be read unconditionally.
+  -- These are assigned in guarded statements rather than in a CASE
+  -- initialiser, because a CASE would still resolve the record reference.
+  v_new uuid;
+  v_old uuid;
 begin
-  update opportunity
-     set offered_quantity_kg = (
-           select coalesce(sum(contributed_kg), 0)
-           from opportunity_supply where opportunity_id = target
-         ),
-         updated_at = now()
-   where id = target;
-  return coalesce(new, old);
+  if tg_op <> 'DELETE' then
+    v_new := new.opportunity_id;
+  end if;
+  if tg_op <> 'INSERT' then
+    v_old := old.opportunity_id;
+  end if;
+
+  if v_new is not null then
+    update opportunity
+       set offered_quantity_kg = (
+             select coalesce(sum(contributed_kg), 0)
+             from opportunity_supply where opportunity_id = v_new
+           ),
+           updated_at = now()
+     where id = v_new;
+  end if;
+
+  -- An UPDATE that moves a supply line to a different opportunity leaves the
+  -- one it came from overstated, so re-sum that too.
+  if v_old is not null and v_old is distinct from v_new then
+    update opportunity
+       set offered_quantity_kg = (
+             select coalesce(sum(contributed_kg), 0)
+             from opportunity_supply where opportunity_id = v_old
+           ),
+           updated_at = now()
+     where id = v_old;
+  end if;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
 end $$;
 
 create trigger opportunity_resum_trg
