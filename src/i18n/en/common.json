@@ -2,5 +2,41 @@
   "language": {
     "en": "English",
     "sw": "Kiswahili"
+  },
+  "demoBanner": {
+    "label": "Demo data",
+    "detail": "Every figure here is invented. Nothing is a measured Ruaha result."
+  },
+  "nav": {
+    "signOut": "Sign out",
+    "myFarm": "My farm",
+    "officer": "Officer",
+    "ops": "Ops",
+    "tower": "Control Tower"
+  },
+  "login": {
+    "title": "Sign in",
+    "email": "Email address",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "invalid": "That email and password do not match an account.",
+    "network": "Could not reach the server. Check your connection and try again."
+  },
+  "selectRole": {
+    "title": "Choose a role",
+    "detail": "You hold more than one role. Pick the one you want to work in.",
+    "continue": "Continue"
+  },
+  "noAccess": {
+    "title": "No access yet",
+    "detail": "Your account is not attached to a project yet. Ask your programme manager to add you.",
+    "signOut": "Sign out"
+  },
+  "role": {
+    "farmer": "Farmer",
+    "field_officer": "Field officer",
+    "ops": "Operations",
+    "admin": "Administrator"
   }
 }

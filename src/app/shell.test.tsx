@@ -6,21 +6,45 @@ import { expect, test } from 'vitest'
 import { routeTree } from '@/routeTree.gen'
 import '@/i18n'
 
-// The one smoke test for session 1: the route tree compiles, the shell mounts
-// and a placeholder route resolves. Real coverage arrives with the features.
-test('app shell renders and /ops/tower resolves', async () => {
+function renderAt(path: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/ops/tower'] }),
+    context: { queryClient },
+    history: createMemoryHistory({ initialEntries: [path] }),
   })
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router as never} />
     </QueryClientProvider>,
   )
+  return router
+}
 
+test('the shell mounts and renders the wordmark', async () => {
+  renderAt('/login')
   expect(await screen.findByText('Ruaha 360')).toBeInTheDocument()
-  expect(await screen.findByText(/Control Tower/)).toBeInTheDocument()
+})
+
+test('an unauthenticated visit to a guarded surface lands on /login', async () => {
+  const router = renderAt('/ops/tower')
+
+  // Route guards are UX: with no session there is nothing to scope a Tower to,
+  // so the guard sends the visitor to sign in rather than rendering an empty
+  // Control Tower.
+  expect(await screen.findByTestId('login-submit')).toBeInTheDocument()
+  expect(router.state.location.pathname).toBe('/login')
+})
+
+test('the demo banner renders when VITE_DATA_MODE is demo', async () => {
+  renderAt('/login')
+  expect(await screen.findByTestId('demo-banner')).toBeInTheDocument()
+})
+
+test('signed out, the shell offers no surface nav and no sign out', async () => {
+  renderAt('/login')
+  await screen.findByTestId('login-submit')
+  expect(screen.queryByTestId('sign-out')).not.toBeInTheDocument()
+  expect(screen.queryByText('Control Tower')).not.toBeInTheDocument()
 })

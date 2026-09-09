@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 
-import { router } from '@/app/router'
+import { createAppRouter } from '@/app/router'
 import '@/i18n'
 
 // Zero rows is a legitimate answer, not an error: RLS returning nothing means
@@ -15,6 +15,8 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+const router = createAppRouter(queryClient)
 
 export function AppProviders() {
   return (

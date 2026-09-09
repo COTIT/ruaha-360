@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
-import { activeMemberships, resolveLanding, roleHome } from '@/app/membership'
+import {
+  activeMemberships,
+  canAccessSurface,
+  resolveLanding,
+  roleHome,
+  safeRedirect,
+} from '@/app/membership'
 import type { ActiveMembership } from '@/app/membership'
 
 const m = (
@@ -68,5 +74,71 @@ describe('resolveLanding', () => {
     expect(resolveLanding([m('ops', { revoked_at: '2026-09-01T00:00:00Z' })])).toEqual({
       to: '/no-access',
     })
+  })
+})
+
+describe('canAccessSurface', () => {
+  // Spec 3: beforeLoad redirects when the role does not match. Spec 13: the
+  // guard is UX, not security — RLS still returns zero rows if someone gets
+  // through. This function only answers the UX question.
+  test('a farmer may only enter the farmer surface', () => {
+    const rows = [m('farmer')]
+    expect(canAccessSurface(rows, 'farmer')).toBe(true)
+    expect(canAccessSurface(rows, 'officer')).toBe(false)
+    expect(canAccessSurface(rows, 'ops')).toBe(false)
+  })
+
+  test('an officer may only enter the officer surface', () => {
+    const rows = [m('field_officer')]
+    expect(canAccessSurface(rows, 'officer')).toBe(true)
+    expect(canAccessSurface(rows, 'farmer')).toBe(false)
+  })
+
+  test('ops and admin both reach the ops surface, Tower included', () => {
+    expect(canAccessSurface([m('ops')], 'ops')).toBe(true)
+    expect(canAccessSurface([m('admin')], 'ops')).toBe(true)
+  })
+
+  test('holding two roles opens both surfaces', () => {
+    const rows = [m('farmer'), m('field_officer')]
+    expect(canAccessSurface(rows, 'farmer')).toBe(true)
+    expect(canAccessSurface(rows, 'officer')).toBe(true)
+    expect(canAccessSurface(rows, 'ops')).toBe(false)
+  })
+
+  test('a revoked role closes its surface on the next evaluation', () => {
+    const rows = [m('ops', { revoked_at: '2026-09-01T00:00:00Z' })]
+    expect(canAccessSurface(rows, 'ops')).toBe(false)
+  })
+})
+
+describe('safeRedirect', () => {
+  test('keeps an in-app path', () => {
+    expect(safeRedirect('/ops/tower')).toBe('/ops/tower')
+    expect(safeRedirect('/farm')).toBe('/farm')
+  })
+
+  test('keeps a path with a query string', () => {
+    expect(safeRedirect('/ops/requests?status=submitted')).toBe('/ops/requests?status=submitted')
+  })
+
+  // The value arrives from the URL, so it is attacker-controllable. Anything
+  // that could leave the origin is discarded rather than sanitised.
+  test('discards anything that could leave the origin', () => {
+    expect(safeRedirect('//evil.example.com')).toBeUndefined()
+    expect(safeRedirect('https://evil.example.com')).toBeUndefined()
+    expect(safeRedirect('http://evil.example.com')).toBeUndefined()
+    expect(safeRedirect('javascript:alert(1)')).toBeUndefined()
+    expect(safeRedirect('/\\evil.example.com')).toBeUndefined()
+  })
+
+  test('discards relative and empty values', () => {
+    expect(safeRedirect('ops')).toBeUndefined()
+    expect(safeRedirect('')).toBeUndefined()
+    expect(safeRedirect(undefined)).toBeUndefined()
+  })
+
+  test('does not send anyone back to the login screen', () => {
+    expect(safeRedirect('/login')).toBeUndefined()
   })
 })

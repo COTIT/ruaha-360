@@ -48,3 +48,44 @@ export function resolveLanding(rows: ActiveMembership[]): { to: string } {
   if (active.length === 1) return { to: roleHome(active[0].role) }
   return { to: '/select-role' }
 }
+
+/** The three layout route groups. The Tower lives inside `ops`. */
+export type Surface = 'farmer' | 'officer' | 'ops'
+
+const SURFACE_ROLES: Record<Surface, AppRole[]> = {
+  farmer: ['farmer'],
+  officer: ['field_officer'],
+  // admin is operational and shares the ops surface — see roleHome.
+  ops: ['ops', 'admin'],
+}
+
+/**
+ * Whether a role held by this user opens this surface.
+ *
+ * This answers a UX question only. RLS is the security boundary: someone who
+ * reaches a surface anyway gets the page shell and zero rows, which is correct
+ * behaviour rather than a hole.
+ */
+export function canAccessSurface(rows: ActiveMembership[], surface: Surface): boolean {
+  const allowed = SURFACE_ROLES[surface]
+  return activeMemberships(rows).some((m) => allowed.includes(m.role))
+}
+
+/**
+ * Validates the `redirect` search param the surface guards attach when they
+ * bounce an unauthenticated visitor.
+ *
+ * The value comes from the URL and is therefore attacker-controllable, so
+ * anything that could leave this origin is discarded rather than patched up:
+ * a scheme, a protocol-relative `//host`, or a backslash Windows-style host.
+ * Returns undefined when the value cannot be trusted, and the caller falls
+ * back to the role's own home.
+ */
+export function safeRedirect(target: string | undefined): string | undefined {
+  if (!target) return undefined
+  if (!target.startsWith('/')) return undefined
+  if (target.startsWith('//') || target.startsWith('/\\')) return undefined
+  // Sending someone back to /login after signing in would loop.
+  if (target === '/login' || target.startsWith('/login?')) return undefined
+  return target
+}
