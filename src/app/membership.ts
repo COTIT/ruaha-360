@@ -89,3 +89,20 @@ export function safeRedirect(target: string | undefined): string | undefined {
   if (target === '/login' || target.startsWith('/login?')) return undefined
   return target
 }
+
+/**
+ * Villages a field officer is assigned to, and may therefore register into.
+ *
+ * `village_id` NULL is whole-project scope, which is ops and admin — there is
+ * no single village to infer, so those yield nothing and the surface has to
+ * ask. This mirrors app_villages() but answers a narrower question: not "what
+ * may I read" but "where may I create a record".
+ */
+export function writableVillageIds(rows: ActiveMembership[]): string[] {
+  const ids = new Set<string>()
+  for (const m of activeMemberships(rows)) {
+    if (m.role !== 'field_officer') continue
+    if (m.village_id) ids.add(m.village_id)
+  }
+  return [...ids]
+}

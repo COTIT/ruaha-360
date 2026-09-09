@@ -6,6 +6,7 @@ import {
   resolveLanding,
   roleHome,
   safeRedirect,
+  writableVillageIds,
 } from '@/app/membership'
 import type { ActiveMembership } from '@/app/membership'
 
@@ -140,5 +141,48 @@ describe('safeRedirect', () => {
 
   test('does not send anyone back to the login screen', () => {
     expect(safeRedirect('/login')).toBeUndefined()
+  })
+})
+
+describe('writableVillageIds', () => {
+  const ILUNDO = '30000000-0000-4000-8000-000000000001'
+  const MGAMA = '30000000-0000-4000-8000-000000000002'
+
+  test('an officer may write into the village they are assigned', () => {
+    expect(writableVillageIds([m('field_officer', { village_id: ILUNDO })])).toEqual([ILUNDO])
+  })
+
+  test('two assignments give two villages', () => {
+    const rows = [
+      m('field_officer', { village_id: ILUNDO }),
+      m('field_officer', { village_id: MGAMA }),
+    ]
+    expect(writableVillageIds(rows).sort()).toEqual([ILUNDO, MGAMA].sort())
+  })
+
+  // village_id NULL is whole-project scope. There is no single village to
+  // register into, so ops must choose one rather than have one inferred.
+  test('a project-wide membership yields no specific village', () => {
+    expect(writableVillageIds([m('ops', { village_id: null })])).toEqual([])
+  })
+
+  test('a farmer village is not writable', () => {
+    expect(writableVillageIds([m('farmer', { village_id: ILUNDO })])).toEqual([])
+  })
+
+  test('revoked assignments do not grant a village', () => {
+    expect(
+      writableVillageIds([
+        m('field_officer', { village_id: ILUNDO, revoked_at: '2026-09-01T00:00:00Z' }),
+      ]),
+    ).toEqual([])
+  })
+
+  test('duplicates collapse', () => {
+    const rows = [
+      m('field_officer', { village_id: ILUNDO }),
+      m('field_officer', { village_id: ILUNDO }),
+    ]
+    expect(writableVillageIds(rows)).toEqual([ILUNDO])
   })
 })

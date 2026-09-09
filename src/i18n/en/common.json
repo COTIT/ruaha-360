@@ -75,5 +75,54 @@
   },
   "common": {
     "loading": "Loading…"
+  },
+  "draft": {
+    "notSubmitted": "Not yet submitted"
+  },
+  "register": {
+    "title": "Register a farmer",
+    "intro": "One page, one submit. Everything below is created together.",
+    "sections": {
+      "person": "Person",
+      "household": "Household",
+      "farm": "Farm",
+      "plot": "Plot",
+      "cycle": "Crop cycle",
+      "harvest": "Expected harvest"
+    },
+    "givenName": "First name",
+    "familyName": "Family name",
+    "phone": "Phone (optional)",
+    "householdLabel": "Household name (optional)",
+    "isHead": "This person heads the household",
+    "farmLabel": "Farm name",
+    "latitude": "Latitude (optional)",
+    "longitude": "Longitude (optional)",
+    "plotLabel": "Plot name",
+    "plotArea": "Plot area (ha)",
+    "crop": "Crop",
+    "chooseCrop": "Choose a crop",
+    "cycleArea": "Planted area (ha)",
+    "treeCount": "Number of trees",
+    "unitCount": "Number of units",
+    "plantedOn": "Planted on (optional)",
+    "harvestStart": "Harvest window starts",
+    "harvestEnd": "Harvest window ends",
+    "harvestKg": "Expected harvest (kg)",
+    "confidence": "Confidence",
+    "submit": "Register",
+    "submitting": "Registering…",
+    "successTitle": "Registered",
+    "successDetail": "The records were created together.",
+    "registerAnother": "Register another",
+    "required": "This is required.",
+    "noVillage": "No village to register into",
+    "noVillageDetail": "Registration needs a village assignment. Ask your programme manager.",
+    "provenanceNote": "Recorded as field-verified, captured by you. This is not a choice."
+  },
+  "confidence": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
   }
 }
