@@ -26,8 +26,62 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
 
-# Not run here, deliberately:
-#   supabase/tests/rls_test.sql needs Docker, a local Supabase and the demo
-#   seed. It is the highest-value test in the repo and currently only runs on
-#   a developer machine. Moving it into CI is on the tier-7 list alongside the
-#   Playwright acceptance journey.
+  # The browser suite needs a seeded database, so it is gated on secrets being
+  # present rather than failing the build for anyone without them.
+  #
+  # Configure: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY as repository
+  # secrets. Point them at a DEMO database only — the suite signs in as the
+  # seeded accounts and the language test writes app_user.locale (restoring it
+  # afterwards). Never point this at anything holding real data.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: check
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_DATA_MODE: demo
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is a demo database configured?
+        id: gate
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No demo database secrets set — skipping the browser suite."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.gate.outputs.run == 'true'
+
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.gate.outputs.run == 'true'
+
+      - run: pnpm e2e
+        if: steps.gate.outputs.run == 'true'
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() && steps.gate.outputs.run == 'true' }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+# Still not run in CI:
+#   supabase/tests/rls_test.sql needs a direct Postgres connection and the
+#   service-level password. It is the highest-value test in the repo and
+#   currently only runs from a developer machine. Wiring it up is on the
+#   tier-7 list.
