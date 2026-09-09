@@ -17,6 +17,11 @@ export default defineConfig({
   // real regression: a test that fails twice in a row still fails.
   retries: 1,
   reporter: 'list',
+  // The suite creates real records. Both hooks remove anything carrying the
+  // E2E- marker, so the seeded figures rls_test.sql asserts stay intact even
+  // if a run crashes mid-test.
+  globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
   use: { baseURL: 'http://localhost:5173', trace: 'on-first-retry' },
   webServer: {
     command: 'pnpm dev',
