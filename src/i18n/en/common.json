@@ -1,7 +1,8 @@
 {
   "language": {
     "en": "English",
-    "sw": "Kiswahili"
+    "sw": "Kiswahili",
+    "notSaved": "Language changed for now, but could not be saved:"
   },
   "demoBanner": {
     "label": "Demo data",
@@ -20,7 +21,8 @@
     "catalogue": "Catalogue",
     "buyers": "Buyers",
     "villages": "Villages",
-    "tower": "Control Tower"
+    "tower": "Control Tower",
+    "signingOut": "Signing out…"
   },
   "login": {
     "title": "Sign in",
@@ -29,12 +31,19 @@
     "submit": "Sign in",
     "submitting": "Signing in…",
     "invalid": "That email and password do not match an account.",
-    "network": "Could not reach the server. Check your connection and try again."
+    "network": "Could not reach the server. Check your connection and try again.",
+    "emailRequired": "Enter your email address.",
+    "emailInvalid": "That does not look like an email address.",
+    "passwordRequired": "Enter your password.",
+    "unexpected": "Something went wrong signing in."
   },
   "selectRole": {
     "title": "Choose a role",
     "detail": "You hold more than one role. Pick the one you want to work in.",
-    "continue": "Continue"
+    "continue": "Continue",
+    "wholeProject": "Whole project",
+    "noneTitle": "No roles to choose from",
+    "noneDetail": "Your access may have changed. Ask your programme manager."
   },
   "noAccess": {
     "title": "No access yet",
@@ -63,5 +72,8 @@
     "title": "That page does not exist",
     "detail": "The link may be out of date.",
     "home": "Go to your home screen"
+  },
+  "common": {
+    "loading": "Loading…"
   }
 }

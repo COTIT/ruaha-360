@@ -14,9 +14,12 @@ import { queryKeys } from '@/lib/queryKeys'
 // By route id rather than by importing the route, which would be circular.
 const route = getRouteApi('/(auth)/login')
 
+// Messages are i18n keys, resolved at render. Validation is client-side only
+// because it costs a round trip to learn an empty field is empty — it is not a
+// copy of any server rule.
 const schema = z.object({
-  email: z.string().min(1).email(),
-  password: z.string().min(1),
+  email: z.string().min(1, 'login.emailRequired').email('login.emailInvalid'),
+  password: z.string().min(1, 'login.passwordRequired'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -31,30 +34,31 @@ export function LoginScreen() {
   const {
     register,
     handleSubmit,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
   const onSubmit = async (values: FormValues) => {
     setFormError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    })
-
-    if (error) {
-      // Two distinguishable states, per spec 4.2: bad credentials vs the
-      // server being unreachable. Anything else surfaces verbatim.
-      if (error.status === 400) setFormError(t('login.invalid'))
-      else if (error.status === undefined) setFormError(t('login.network'))
-      else setFormError(error.message)
-      return
-    }
-
-    // The password can be accepted and the follow-up session read still fail.
-    // Swallowing that leaves the user staring at the login form with no
-    // explanation, having just typed a correct password.
     try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      })
+
+      if (error) {
+        // Three distinguishable states, per spec 4.2: bad credentials, an
+        // unreachable server, and anything else — which is surfaced verbatim
+        // because the messages in this system are written to be read.
+        if (error.status === 400) setFormError(t('login.invalid'))
+        else if (error.status === undefined) setFormError(t('login.network'))
+        else setFormError(error.message)
+        return
+      }
+
+      // The password can be accepted and the follow-up session read still
+      // fail. Swallowing that leaves the user staring at the login form with
+      // no explanation, having just typed a correct password.
       await queryClient.invalidateQueries({ queryKey: queryKeys.session() })
       const session = await ensureSession(queryClient)
 
@@ -64,9 +68,19 @@ export function LoginScreen() {
       const target = safeRedirect(requested) ?? resolveLanding(session?.memberships ?? []).to
       await navigate({ to: target, replace: true })
     } catch (cause) {
-      setFormError(cause instanceof Error ? cause.message : String(cause))
+      // signInWithPassword can reject outright, not just resolve with an
+      // error — a rejection here must not escape into an unhandled promise.
+      setFormError(cause instanceof Error ? cause.message : t('login.unexpected'))
     }
   }
+
+  const fieldError = (name: keyof FormValues) => {
+    const key = errors[name]?.message
+    return key ? t(key) : undefined
+  }
+
+  const emailError = fieldError('email')
+  const passwordError = fieldError('password')
 
   return (
     <section className="mx-auto max-w-sm space-y-4">
@@ -82,9 +96,16 @@ export function LoginScreen() {
             data-testid="login-email"
             type="email"
             autoComplete="email"
-            className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? 'login-email-error' : undefined}
+            className="w-full rounded border border-deep/20 bg-white px-3 py-2 aria-[invalid]:border-destructive"
             {...register('email')}
           />
+          {emailError && (
+            <p id="login-email-error" data-testid="login-email-error" className="text-sm text-destructive">
+              {emailError}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -96,9 +117,20 @@ export function LoginScreen() {
             data-testid="login-password"
             type="password"
             autoComplete="current-password"
-            className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+            aria-invalid={passwordError ? true : undefined}
+            aria-describedby={passwordError ? 'login-password-error' : undefined}
+            className="w-full rounded border border-deep/20 bg-white px-3 py-2 aria-[invalid]:border-destructive"
             {...register('password')}
           />
+          {passwordError && (
+            <p
+              id="login-password-error"
+              data-testid="login-password-error"
+              className="text-sm text-destructive"
+            >
+              {passwordError}
+            </p>
+          )}
         </div>
 
         {formError && (

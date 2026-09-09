@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const signInWithPassword = vi.fn()
 const ensureSession = vi.fn()
@@ -83,4 +83,147 @@ test('a successful sign-in navigates to the resolved landing route', async () =>
   await user.click(screen.getByTestId('login-submit'))
 
   expect(navigate).toHaveBeenCalledWith({ to: '/ops', replace: true })
+})
+
+// ── validation: the idle -> invalid edge ────────────────────
+describe('field validation', () => {
+  test('an empty form reports both fields and never reaches the network', async () => {
+    renderLogin()
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-email-error')).toBeInTheDocument()
+    expect(screen.getByTestId('login-password-error')).toBeInTheDocument()
+    expect(signInWithPassword).not.toHaveBeenCalled()
+  })
+
+  test('a malformed email is reported without a round trip', async () => {
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'not-an-email')
+    await user.type(screen.getByTestId('login-password'), 'demo1234')
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-email-error')).toBeInTheDocument()
+    expect(signInWithPassword).not.toHaveBeenCalled()
+  })
+
+  test('a missing password alone is reported', async () => {
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'ops@demo.ruaha360.test')
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-password-error')).toBeInTheDocument()
+    expect(screen.queryByTestId('login-email-error')).not.toBeInTheDocument()
+    expect(signInWithPassword).not.toHaveBeenCalled()
+  })
+
+  test('fields are marked invalid for assistive tech, not just visually', async () => {
+    renderLogin()
+    const user = userEvent.setup()
+    await user.click(screen.getByTestId('login-submit'))
+
+    await screen.findByTestId('login-email-error')
+    expect(screen.getByTestId('login-email')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByTestId('login-email')).toHaveAccessibleDescription(/email/i)
+  })
+})
+
+// ── the error branches of a real attempt ───────────────────
+describe('sign-in failure states', () => {
+  test('bad credentials get the credentials message, not a raw status', async () => {
+    signInWithPassword.mockResolvedValue({
+      error: { status: 400, message: 'Invalid login credentials' },
+    })
+
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'neema@demo.ruaha360.test')
+    await user.type(screen.getByTestId('login-password'), 'wrong')
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      'That email and password do not match an account.',
+    )
+  })
+
+  test('an unreachable server is distinguished from bad credentials', async () => {
+    signInWithPassword.mockResolvedValue({
+      error: { status: undefined, message: 'Failed to fetch' },
+    })
+
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'neema@demo.ruaha360.test')
+    await user.type(screen.getByTestId('login-password'), 'demo1234')
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(/connection/i)
+  })
+
+  test('any other failure is surfaced verbatim', async () => {
+    signInWithPassword.mockResolvedValue({
+      error: { status: 429, message: 'Email rate limit exceeded' },
+    })
+
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'neema@demo.ruaha360.test')
+    await user.type(screen.getByTestId('login-password'), 'demo1234')
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent('Email rate limit exceeded')
+  })
+
+  test('a thrown rejection is caught rather than escaping the handler', async () => {
+    signInWithPassword.mockRejectedValue(new Error('socket hang up'))
+
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'neema@demo.ruaha360.test')
+    await user.type(screen.getByTestId('login-password'), 'demo1234')
+    await user.click(screen.getByTestId('login-submit'))
+
+    expect(await screen.findByTestId('login-error')).toHaveTextContent('socket hang up')
+  })
+
+  test('a stale error clears when the next attempt starts', async () => {
+    signInWithPassword.mockResolvedValueOnce({ error: { status: 400, message: 'nope' } })
+    ensureSession.mockResolvedValue({ memberships: [] })
+
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'neema@demo.ruaha360.test')
+    await user.type(screen.getByTestId('login-password'), 'wrong')
+    await user.click(screen.getByTestId('login-submit'))
+    await screen.findByTestId('login-error')
+
+    signInWithPassword.mockResolvedValueOnce({ error: null })
+    await user.clear(screen.getByTestId('login-password'))
+    await user.type(screen.getByTestId('login-password'), 'demo1234')
+    await user.click(screen.getByTestId('login-submit'))
+
+    await waitFor(() => expect(screen.queryByTestId('login-error')).not.toBeInTheDocument())
+  })
+})
+
+// ── loading ────────────────────────────────────────────────
+describe('submitting state', () => {
+  test('the button is disabled and relabelled while in flight', async () => {
+    let release: (v: unknown) => void = () => {}
+    signInWithPassword.mockReturnValue(new Promise((r) => (release = r)))
+
+    renderLogin()
+    const user = userEvent.setup()
+    await user.type(screen.getByTestId('login-email'), 'ops@demo.ruaha360.test')
+    await user.type(screen.getByTestId('login-password'), 'demo1234')
+    await user.click(screen.getByTestId('login-submit'))
+
+    await waitFor(() => expect(screen.getByTestId('login-submit')).toBeDisabled())
+    expect(screen.getByTestId('login-submit')).toHaveTextContent(/signing in/i)
+
+    release({ error: { status: 400, message: 'nope' } })
+    await waitFor(() => expect(screen.getByTestId('login-submit')).toBeEnabled())
+  })
 })

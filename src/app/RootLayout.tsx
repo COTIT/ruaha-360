@@ -1,13 +1,12 @@
-import { Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
+import { Link, Outlet, useLocation } from '@tanstack/react-router'
 
 import { DemoBanner } from '@/app/DemoBanner'
 import { LanguageSwitch } from '@/app/LanguageSwitch'
+import { SignOutButton } from '@/app/SignOutButton'
 import { SurfaceNav } from '@/app/SurfaceNav'
 import { activeMemberships } from '@/app/membership'
 import { navItemsFor, navLayoutForPath, surfaceForPath } from '@/app/nav'
-import { signOut, useSession } from '@/app/session'
+import { useSession } from '@/app/session'
 
 /**
  * App shell — spec 4.1.
@@ -18,10 +17,7 @@ import { signOut, useSession } from '@/app/session'
  * roles and the active one lives in the URL.
  */
 export function RootLayout() {
-  const { t } = useTranslation()
   const { data: session } = useSession()
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
   const { pathname } = useLocation()
 
   const memberships = activeMemberships(session?.memberships ?? [])
@@ -47,19 +43,7 @@ export function RootLayout() {
             </span>
           )}
           <LanguageSwitch />
-          {signedIn && (
-            <button
-              type="button"
-              data-testid="sign-out"
-              className="rounded border border-deep/20 px-2 py-1 text-sm"
-              onClick={async () => {
-                await signOut(queryClient)
-                await navigate({ to: '/login', replace: true })
-              }}
-            >
-              {t('nav.signOut')}
-            </button>
-          )}
+          {signedIn && <SignOutButton />}
         </div>
       </header>
 

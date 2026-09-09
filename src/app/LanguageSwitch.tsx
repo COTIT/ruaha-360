@@ -41,36 +41,61 @@ export function LanguageSwitch() {
       // app_user_update_self: `id = auth.uid()`. Nobody else's locale is
       // writable, so there is nothing to guard client-side.
       const { error } = await supabase.from('app_user').update({ locale }).eq('id', userId)
-      if (error) throw error
+      // Wrapped, not rethrown as-is: a PostgrestError is a plain object and
+      // stringifies to [object Object], which would hide the message the
+      // schema wrote to be read.
+      if (error) throw new Error(error.message)
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.session() }),
   })
 
   const onChange = async (locale: string) => {
+    // Clear any previous failure first, so a stale message cannot outlive the
+    // attempt that replaces it.
+    persist.reset()
     await i18n.changeLanguage(locale)
     if (!session?.appUser?.id) return
     // Awaited, and the control is disabled while it runs. Fire-and-forget lost
     // the write whenever the page navigated before the request finished, and
     // an unsaved change must not look saved.
-    await persist.mutateAsync(locale)
+    //
+    // A failure is reported rather than swallowed: the language has already
+    // changed on screen, so silence would let the user believe it was stored.
+    try {
+      await persist.mutateAsync(locale)
+    } catch {
+      // The message is rendered from the mutation's own error state below.
+    }
   }
 
+  const failure = persist.error
+  const failureMessage =
+    failure instanceof Error ? failure.message : failure ? String(failure) : undefined
+
   return (
-    <label className="inline-flex items-center gap-2 text-sm">
-      <span className="sr-only">{t('language.en')}</span>
-      <select
-        data-testid="language-switch"
-        className="rounded border border-deep/20 bg-white px-2 py-1 disabled:opacity-60"
-        value={i18n.resolvedLanguage}
-        disabled={persist.isPending}
-        onChange={(e) => void onChange(e.target.value)}
-      >
-        {supportedLanguages.map((lng) => (
-          <option key={lng} value={lng}>
-            {t(`language.${lng}`)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="inline-flex flex-col items-end gap-1">
+      <label className="inline-flex items-center gap-2 text-sm">
+        <span className="sr-only">{t('a11y.language')}</span>
+        <select
+          data-testid="language-switch"
+          className="rounded border border-deep/20 bg-white px-2 py-1 disabled:opacity-60"
+          value={i18n.resolvedLanguage}
+          disabled={persist.isPending}
+          onChange={(e) => void onChange(e.target.value)}
+        >
+          {supportedLanguages.map((lng) => (
+            <option key={lng} value={lng}>
+              {t(`language.${lng}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {failureMessage && (
+        <p data-testid="language-error" role="alert" className="text-xs text-destructive">
+          {t('language.notSaved')} {failureMessage}
+        </p>
+      )}
+    </div>
   )
 }
