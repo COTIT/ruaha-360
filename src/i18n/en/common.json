@@ -169,5 +169,18 @@
     "window": "Harvest window",
     "unverifiedCount_one": "{{count}} record still needs verifying",
     "unverifiedCount_other": "{{count}} records still need verifying"
+  },
+  "estimate": {
+    "title": "Energy estimate",
+    "isEstimate": "This is an estimate, not a measurement.",
+    "basis": "Calculated from rated power and the operating assumptions below (Level 1).",
+    "ratedPower": "Rated power",
+    "quantity": "Quantity",
+    "hours": "Hours per day",
+    "days": "Days per week",
+    "peak": "Estimated peak",
+    "perDay": "Estimated per day",
+    "perWeek": "Estimated per week",
+    "peakNote": "Peak power does not change with hours of use."
   }
 }
