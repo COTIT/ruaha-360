@@ -3,15 +3,10 @@
  * after the thirtieth call site.
  */
 
-// TODO(tier 1): import from the generated types instead of restating them:
-//   import type { Database } from '@/lib/db.types'
-//   type SourceType = Database['public']['Enums']['source_type']
-export type SourceType =
-  | 'farmer_reported'
-  | 'field_verified'
-  | 'transaction_derived'
-  | 'sensor_derived'
-  | 'model_estimated'
+import type { Database } from '@/lib/db.types'
+
+/** The five S13 source categories, straight from the database enum. */
+export type SourceType = Database['public']['Enums']['source_type']
 
 /**
  * OBSERVED tables, which carry the full provenance block and must go through
