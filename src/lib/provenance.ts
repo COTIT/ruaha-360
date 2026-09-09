@@ -9,20 +9,42 @@ import type { Database } from '@/lib/db.types'
 export type SourceType = Database['public']['Enums']['source_type']
 
 /**
- * OBSERVED tables, which carry the full provenance block and must go through
- * withProvenance():
- *   person · household · farm · plot · crop_cycle · harvest_report ·
- *   pue_request
- *
- * CONFIG tables, which have NO provenance columns — do not try to set them:
- *   country · project · village · crop · equipment_category · equipment ·
- *   buyer · village_capacity
- *
- * buyer_demand is neither: it deliberately has no `source` column. The five
- * source categories classify how a fact about the productive economy was
- * learned, and a buyer's stated requirement is a counterparty input. It
- * carries captured_by / verification instead.
+ * Tables carrying the full provenance block. Every insert into one of these
+ * goes through withProvenance().
  */
+export const OBSERVED_TABLES = [
+  'person',
+  'household',
+  'farm',
+  'plot',
+  'crop_cycle',
+  'harvest_report',
+  'pue_request',
+] as const
+
+/**
+ * Tables with NO provenance columns. Setting them is an error, not a no-op.
+ */
+export const CONFIG_TABLES = [
+  'country',
+  'project',
+  'village',
+  'crop',
+  'equipment_category',
+  'equipment',
+  'buyer',
+  'village_capacity',
+] as const
+
+/**
+ * `buyer_demand` is in neither list, on purpose. The five source categories
+ * classify how a fact about the *productive economy* was learned; a buyer's
+ * stated requirement is a counterparty input recorded by ops, so the table
+ * carries captured_by / verification but no `source`.
+ */
+
+export type ObservedTable = (typeof OBSERVED_TABLES)[number]
+export type ConfigTable = (typeof CONFIG_TABLES)[number]
 
 /**
  * Which source to use, by writer (business-rules §4):
@@ -39,23 +61,35 @@ export type SourceType = Database['public']['Enums']['source_type']
  * Nothing in the MVP writes sensor_derived or transaction_derived.
  */
 
+export interface ProvenanceStamp {
+  source: SourceType
+  captured_at: string
+  captured_by: string
+}
+
 /**
- * Injects `source`, `captured_at` and `captured_by` into an observed-table
- * insert.
+ * Stamps an observed-table insert with where the data came from.
  *
- * `captured_by` is the caller's app_user.id, which is auth.uid(). Never
- * accepted as an argument: a client that can assert who captured a record can
- * launder provenance.
+ * The stamp is applied LAST, so a payload cannot smuggle its own `source` or
+ * `captured_by` past it — a client that can assert who captured a record can
+ * launder provenance. The payload is copied rather than mutated.
  *
- * `verification` is deliberately NOT set here. It stays at its column default
- * of 'unverified' and only ever changes through app_verify(), so a record
- * cannot be marked verified without a verifier.
+ * `verification` is deliberately absent: it stays at the column default of
+ * 'unverified' and only moves through app_verify(), so nothing can be marked
+ * verified without a verifier.
+ *
+ * Prefer the bound two-argument form from useProvenance() at call sites.
  */
 export function withProvenance<T extends object>(
-  _payload: T,
-  _source: SourceType,
-): T & { source: SourceType; captured_at: string; captured_by: string } {
-  // TODO(tier 1): read the session's app_user.id, stamp captured_at as an ISO
-  // timestamptz, and return the merged payload.
-  throw new Error('withProvenance is not implemented yet')
+  payload: T,
+  source: SourceType,
+  capturedBy: string,
+  capturedAt: string = new Date().toISOString(),
+): T & ProvenanceStamp {
+  return {
+    ...payload,
+    source,
+    captured_at: capturedAt,
+    captured_by: capturedBy,
+  }
 }
