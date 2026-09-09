@@ -179,13 +179,13 @@ on conflict (id) do nothing;
 -- now the provenance back-references resolve
 update person set captured_by = '80000000-0000-4000-8000-000000000003',
                   verified_by = case when verification = 'verified'
-                                then '80000000-0000-4000-8000-000000000003' end,
+                                then '80000000-0000-4000-8000-000000000003'::uuid end,
                   verified_at = case when verification = 'verified' then now() end
  where village_id = '30000000-0000-4000-8000-000000000001';
 
 update person set captured_by = '80000000-0000-4000-8000-000000000004',
                   verified_by = case when verification = 'verified'
-                                then '80000000-0000-4000-8000-000000000004' end,
+                                then '80000000-0000-4000-8000-000000000004'::uuid end,
                   verified_at = case when verification = 'verified' then now() end
  where village_id = '30000000-0000-4000-8000-000000000002';
 
