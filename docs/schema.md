@@ -104,6 +104,26 @@ RLS helper functions are `SECURITY DEFINER` because they read `membership`;
 `membership`'s own read policy is kept trivial (`user_id = auth.uid()`) so
 nothing recurses.
 
+**No policy may join back through a policied table.** Two tables that each
+reference the other inside a policy make Postgres abort the query with
+`infinite recursion detected in policy for relation ...` — it is not a slow
+query or a wrong answer, it is a hard error. `person` → `household_member` →
+`household` → `household_member` was exactly that shape. Any cross-table
+question a policy needs answered is therefore resolved in a `SECURITY DEFINER`
+helper, which reads with RLS off and so cannot cycle:
+
+| helper | answers |
+|---|---|
+| `app_households()` | households the caller's person belongs to |
+| `app_household_persons()` | persons sharing a household with the caller |
+| `app_staff_households()` | households in the caller's villages, **if staff** |
+
+The staff guard lives *inside* `app_staff_households()`, not at the call site.
+`app_villages()` returns villages for every role holding a membership row —
+farmers included — so a village-scoped helper that omitted `app_is_staff()`
+would quietly hand a farmer every household in their village while still
+satisfying the RLS test suite.
+
 ## Distinctions the schema enforces
 
 - planned capacity vs measured — `capacity_basis` has **no** `'measured'` value

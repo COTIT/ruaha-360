@@ -140,6 +140,43 @@ language sql stable security definer set search_path = public as $$
   select person_id from app_user where id = auth.uid()
 $$;
 
+-- ── household visibility, as SECURITY DEFINER ────────────
+-- These exist to break policy recursion, not to add convenience. A policy on
+-- `person` that reads `household_member` invokes household_member's policy,
+-- which reads `household`, whose policy reads `household_member` again:
+-- Postgres aborts with `infinite recursion detected in policy for relation
+-- "household_member"`. Resolving the membership question inside a
+-- SECURITY DEFINER function reads those tables with RLS off, so there is no
+-- cycle to detect.
+--
+-- NOTE the staff guard sits INSIDE app_staff_households(), not at the call
+-- site. app_villages() returns villages for every role that holds a
+-- membership row, farmers included, so a village-scoped helper without
+-- app_is_staff() would hand a farmer every household in their village.
+
+create or replace function app_households() returns setof uuid
+language sql stable security definer set search_path = public as $$
+  select hm.household_id
+  from household_member hm
+  where hm.person_id = app_person_id()
+$$;
+
+create or replace function app_household_persons() returns setof uuid
+language sql stable security definer set search_path = public as $$
+  select them.person_id
+  from household_member me
+  join household_member them on them.household_id = me.household_id
+  where me.person_id = app_person_id()
+$$;
+
+create or replace function app_staff_households() returns setof uuid
+language sql stable security definer set search_path = public as $$
+  select h.id
+  from household h
+  where app_is_staff()
+    and h.village_id in (select app_villages())
+$$;
+
 -- ops OR admin in that specific project
 create or replace function app_manages_project(p uuid) returns boolean
 language sql stable security definer set search_path = public as $$
@@ -162,7 +199,8 @@ $$;
 
 grant execute on function
   app_villages, app_has_role, app_is_staff, app_person_id,
-  app_manages_project, app_admins_project
+  app_manages_project, app_admins_project,
+  app_households, app_household_persons, app_staff_households
 to authenticated;
 
 create trigger person_updated_at    before update on person    for each row execute function set_updated_at();
@@ -188,12 +226,7 @@ create policy person_read_self on person for select to authenticated
   using (id = app_person_id());
 
 create policy person_read_household on person for select to authenticated
-  using (exists (
-    select 1
-    from household_member me
-    join household_member them on them.household_id = me.household_id
-    where me.person_id = app_person_id() and them.person_id = person.id
-  ));
+  using (id in (select app_household_persons()));
 
 create policy person_read_staff on person for select to authenticated
   using (app_is_staff() and village_id in (select app_villages()));
@@ -211,10 +244,7 @@ create policy person_update_self on person for update to authenticated
 create policy household_read on household for select to authenticated
   using (
     (app_is_staff() and village_id in (select app_villages()))
-    or exists (
-      select 1 from household_member hm
-      where hm.household_id = household.id and hm.person_id = app_person_id()
-    )
+    or id in (select app_households())
   );
 
 create policy household_write on household for insert to authenticated
@@ -225,7 +255,10 @@ create policy household_update on household for update to authenticated
   with check (app_is_staff() and village_id in (select app_villages()));
 
 create policy hm_read on household_member for select to authenticated
-  using (exists (select 1 from household h where h.id = household_id));
+  using (
+    household_id in (select app_households())
+    or household_id in (select app_staff_households())
+  );
 
 create policy hm_write on household_member for insert to authenticated
   with check (app_is_staff());
