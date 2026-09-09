@@ -43,7 +43,10 @@ begin;
   select assert_eq((select count(*) from farm
                     where id = '90000000-0000-4000-8000-000000000002'), 0,
                    'farmer Neema cannot see the Kimaro farm');
-  select assert_eq((select count(*) from person), 3,
+  -- Two: Neema herself, plus Rehema, the only other member of the
+  -- Mwakalinga household (70...01). person_read_household exposes household
+  -- co-members and nothing else, so 2 is the whole of what she may see.
+  select assert_eq((select count(*) from person), 2,
                    'farmer Neema sees herself plus her household only');
 rollback;
 
