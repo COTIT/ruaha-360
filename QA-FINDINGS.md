@@ -600,3 +600,196 @@ With view queries held 4s, each Tower tile correctly shows its own "Loading…",
 but the tile header's "See the records" link renders immediately and is
 clickable. Clicking through before the headline resolves lands on a drill-down
 whose own query has not started. Cosmetic ordering issue.
+
+---
+---
+
+# Triage — work, then right, then fast
+
+All 29 findings above, sorted by `docs/screens-and-components.md` §1:
+
+> **Working order: make it work → make it right → make it fast.**
+> T1 is "make it work". Validation depth, empty/error polish and
+> accessibility are "make it right". Visual design is deliberately last.
+
+The rule is the spec's, not mine, and it decides most of these on its own.
+Where it forced a placement that reads oddly, that is called out rather than
+quietly overridden — see "Where the rule and the risk disagree" at the end.
+
+**The test applied to each finding:** does the thing not exist, or produce a
+wrong number? → *work*. Does it exist and give the right answer, but handle
+input, failure, or assistive technology badly? → *right*. Is it only slow?
+→ *fast*.
+
+---
+
+## Phase 1 · Make it work — 7 items
+
+Screens that do not exist, transitions that cannot be reached, and one figure
+that does not reconcile. Nothing here is a polish item; all of it is absence.
+
+| order | # | finding | effort | why it is "work" |
+|---|---|---|---|---|
+| 1 | 15 | one spec that signs in as each role and asserts its landing page and every nav destination renders | S | the gate. Without it, everything in this phase can regress into a green suite exactly as it did the first time |
+| 2 | 1 | build the eleven placeholder screens | L | the screens do not exist. Every role's first screen is the words "Session 1 placeholder" |
+| 3 | 7 | make the energy drill-down reconcile with its headline | M | the trace is **wrong**, not ugly. Spec 8.2 makes traceability the Tower's licence to show a number |
+| 4 | 6 | give ops and admin a way back from officer screens | S | the route out does not exist, so the Tower→farmer journey cannot be completed and returned from |
+| 5 | 5 | let a farmer submit or withdraw a draft request | S | `pue_request_guard` permits `draft → submitted`; no UI reaches it. The feature is absent, not rough |
+| 6 | 12 | opportunity status transitions, and detaching a supply line | M | `opportunity_status` carries shared and accepted; nothing can set them. Attaching the wrong harvest is unrecoverable |
+| 7 | 2 | complete Swahili for the farmer and officer surfaces | L | CLAUDE.md files this under product requirements, not copy: those two surfaces "ship complete Swahili". 363 strings absent |
+
+**Dependency:** #1 before #6. There is no point routing ops back to an officer
+tab that is itself a placeholder.
+
+**#2 is not an engineering task.** It is blocked on a native Swahili reviewer,
+and CLAUDE.md forbids shipping machine translation to Tanzanian stakeholders.
+The engineering half is hours; the lead time on a person is not. **Start the
+ask on day one of this phase**, in parallel with everything else, or it becomes
+the thing that misses 30 September while the code sits finished.
+
+---
+
+## Phase 2 · Make it right — 21 items
+
+Everything here already returns the correct answer. What is wrong is how it
+handles bad input, how it explains failure, and how it behaves for a screen
+reader — which is precisely the list §1 assigns to this phase.
+
+### 2a · Validation depth — fix the cause, not the five symptoms
+
+| order | # | finding | effort |
+|---|---|---|---|
+| 1 | **17** | **give the register form a Zod schema** | M |
+| 2 | 16 | trim before the required check — no blank names | S · inside #17 |
+| 3 | 19 | make the conditional measure field required | S · inside #17 |
+| 4 | 21 | check the harvest window order before submitting | S · inside #17 |
+| 5 | 9 | bound hours/day, days/week and quantity on the request form | S |
+
+**#17 first, and the four beneath it mostly disappear into it.** One schema on
+the form the spec calls "the most important screen in the build" closes the
+blank-name hole, the missing-measure round-trip and the backwards date window
+together. Doing 16, 19 and 21 as separate patches means three more places for
+the next field to be forgotten.
+
+This is also the phase's only real ordering constraint: #16 lets the app write
+a record it has no screen to repair, so within phase 2 it goes first. See the
+disagreement note below.
+
+### 2b · Error copy — five instances of one pattern
+
+| order | # | finding | effort |
+|---|---|---|---|
+| 6 | 3 | validate route params, so a bad id is "not found", not a uuid parse error | S |
+| 7 | 4 · 20 · 21 | map constraint violations to human messages | M |
+| 8 | 25 | replace raw exception text with "check your connection" | S |
+| 9 | 24 | clear the error banner on navigation | S |
+
+#4, #20 and #21 are **one fix**: a single place that turns
+`pue_request_hours_per_day_check`, `cycle_window_sane`, `demand_window_sane`,
+`contributed_kg > 0` and `numeric field overflow` into sentences. Built once,
+every future constraint inherits it.
+
+Keep the *behaviour* in #25 exactly as it is. "Changed for now, but could not
+be saved" is the honest report a silent failure would not give. Only the
+appended `TypeError: Failed to fetch` needs to go.
+
+### 2c · State cycle — the states the spec names but the code lacks
+
+| order | # | finding | effort |
+|---|---|---|---|
+| 10 | 23 | disable submit in flight — spec 5.2's "saving" state | S |
+| 11 | 22 | validate a draft's shape before restoring it | S |
+| 12 | 29 | hold drill links until their figures resolve | S |
+
+#22 earns its place because the realistic trigger is not tampering: it is a
+draft written by an older deployment of the form, on a phone that was
+mid-registration when the app updated. Which is the exact scenario drafts exist
+to survive.
+
+### 2d · Accessibility — §1 assigns this here explicitly
+
+| order | # | finding | effort |
+|---|---|---|---|
+| 13 | 18 | set `<html lang>` from the active language | XS |
+| 14 | 11 | make the action buttons real form submits | S |
+
+#18 is a one-line change with a disproportionate effect: today every English
+ops and admin page is announced to a screen reader with Swahili pronunciation.
+
+### 2e · The rest
+
+| order | # | finding | effort |
+|---|---|---|---|
+| 15 | 26 | send a signed-in visitor away from `/login` | XS |
+| 16 | 10 | guard `/select-role` and fix its copy for single-role users | XS |
+| 17 | 27 | say when a typed decimal was rounded | S |
+| 18 | 28 | a placeholder or hint on the phone field | XS |
+| 19 | 8 | collapse the ops sidebar below ~800px | M |
+| 20 | 13 | stop the post-sign-out token refresh | S |
+
+#8 sits last on purpose. §1 puts visual design last, `docs/screens-and-components.md`
+permits ops to be desktop-first, and a stakeholder demo runs on a laptop. It is
+only on the list at all because figures are *silently truncated* rather than
+scrolled — which is a correctness smell wearing a layout costume.
+
+---
+
+## Phase 3 · Make it fast — 0 items
+
+**Nothing on this list is a performance finding, and that is the honest
+answer rather than a gap in the sweep.** Both passes measured response times
+incidentally throughout: the Tower renders inside a second against a remote
+database on the other side of the world, and the full 103-test browser suite
+completes in 4.2 minutes serialised on one worker.
+
+Recorded so this phase has a starting point when its turn comes — an
+observation, **not a finding, and not something to act on now**: one Tower page
+load issues 15 Supabase requests, being roughly one per tile plus the crop
+lookup that `useTower` deliberately keeps separate because the views declare no
+foreign keys for PostgREST to embed through. If the Tower is ever slow, that is
+where to look first. It is not slow today.
+
+---
+
+## Not in any phase
+
+**#14 · Vite HMR 404s for route files that do not exist.** Dev-server noise
+from the TanStack Router plugin's generated route tree. No effect on the built
+bundle or on any screen, and no user-visible behaviour to make work, right or
+fast. Left on the list as an explanation for anyone who sees it in a terminal
+and goes looking.
+
+---
+
+## Where the rule and the risk disagree
+
+Stated plainly, because applying the rule strictly is what was asked and
+hiding the tension would make the ordering less useful, not more.
+
+**#16 — whitespace-only names — lands in phase 2 and is the finding I would
+most want in phase 1.** §1 is unambiguous that validation depth is "make it
+right", so that is where it sits. But its consequence is unlike anything else
+in phase 2: a person registered with a blank name is *permanently* blank. It
+propagates to person detail, the people list, the Tower's farmer column and
+every supply line tracing back to them, and there is no rename screen anywhere
+in scope to repair it. Every other phase-2 item produces a bad message or a
+missed keystroke; this one produces a corrupt record that outlives the fix.
+
+Two ways to resolve it, both defensible:
+
+1. **Keep the rule, front-load the item.** #16 is already first in phase 2,
+   and it rides along with #17 which is that phase's opening move anyway.
+   Phase 1's largest item (#1, eleven screens) will outlast it regardless, so
+   in practice #16 gets fixed while phase 1 is still running.
+2. **Promote it.** Argue that "cannot be corrected once written" is a
+   works/does-not-work property rather than a validation-depth one.
+
+Recommendation: **option 1.** The ordering inside phase 2 already gets the fix
+in early, and re-litigating what counts as "work" for one item costs more than
+the two days of overlap buys.
+
+**#23 — no saving state — is the mirror case.** Spec 5.2 names six states for
+the register screen and one of them simply does not exist, which reads like
+absence. It stays in phase 2 because the data is provably safe: three submits
+in one tick produced exactly one person and one receipt. The user gets no
+feedback; the record is never wrong. Feedback is "right".
