@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
-import { navItemsFor, navLayoutForPath, surfaceForPath } from '@/app/nav'
+import {
+  navItemsFor,
+  navLayoutForPath,
+  navLayoutForSurface,
+  navSurfaceFor,
+  surfaceForPath,
+} from '@/app/nav'
 import type { ActiveMembership } from '@/app/membership'
 
 const m = (role: ActiveMembership['role']): ActiveMembership => ({
@@ -98,5 +104,55 @@ describe('navItemsFor', () => {
   test('a surface the session does not open lists nothing', () => {
     expect(navItemsFor('ops', [m('farmer')])).toEqual([])
     expect(navItemsFor('farmer', [m('ops')])).toEqual([])
+  })
+})
+
+/**
+ * QA-FINDINGS.md #6. `navLayoutForPath` keys off the URL alone, so an ops user
+ * who drilled from a Tower headline into `/officer/people/<id>` — a path the
+ * Tower's own traceability claim (spec §8.2) sends them down — lost the ops
+ * sidebar and was handed the officer's tab bar instead. Two of those three
+ * tabs were placeholders, so the only route back was the browser's back button.
+ */
+describe('navSurfaceFor', () => {
+  test('a session on its own surface keeps that surface', () => {
+    expect(navSurfaceFor('/officer/register', [m('field_officer')])).toBe('officer')
+    expect(navSurfaceFor('/farm/my-farm', [m('farmer')])).toBe('farmer')
+    expect(navSurfaceFor('/ops/requests', [m('ops')])).toBe('ops')
+  })
+
+  test('ops viewing an officer screen keeps the ops nav', () => {
+    expect(navSurfaceFor('/officer/people/abc', [m('ops')])).toBe('ops')
+    expect(navSurfaceFor('/officer/cycles/abc', [m('admin')])).toBe('ops')
+  })
+
+  // Not symmetrical with the officer case, and deliberately so. The officer
+  // surface is readable by ops and admin — the Tower drills into it — but the
+  // FARMER surface is farmer-only, and the guard redirects ops away (asserted
+  // in e2e/my-farm.spec.ts). So there is no ops-on-a-farmer-screen state to
+  // keep a nav for; what matters is that they are not handed the farmer's tabs
+  // on the way out.
+  test('ops on a farmer path is given no farmer nav', () => {
+    const surface = navSurfaceFor('/farm/my-farm', [m('ops')])
+    expect(navItemsFor(surface!, [m('ops')])).toEqual([])
+  })
+
+  // The guard bounces them, and until it does they get no nav rather than
+  // someone else's — nav must never advertise a surface the session cannot open.
+  test('a farmer hand-typing an ops path is not given the ops nav', () => {
+    expect(navItemsFor(navSurfaceFor('/ops/requests', [m('farmer')])!, [m('farmer')])).toEqual([])
+  })
+
+  test('auth routes still belong to no surface', () => {
+    expect(navSurfaceFor('/login', [m('ops')])).toBeUndefined()
+  })
+})
+
+describe('navLayoutForSurface', () => {
+  test('ops gets a sidebar, the mobile-first surfaces get tabs', () => {
+    expect(navLayoutForSurface('ops')).toBe('sidebar')
+    expect(navLayoutForSurface('officer')).toBe('tabs')
+    expect(navLayoutForSurface('farmer')).toBe('tabs')
+    expect(navLayoutForSurface(undefined)).toBe('none')
   })
 })

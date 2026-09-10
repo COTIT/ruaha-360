@@ -28,6 +28,16 @@ export const queryKeys = {
   people: (villageId: string, filters?: unknown) =>
     ['people', villageId, filters] as const,
 
+  /**
+   * Added beyond business-rules §10's list, which enumerated keys for the
+   * screens it named and predates spec 5.1's officer home. Keyed by the whole
+   * assigned-village set because the screen's figures are per membership, not
+   * per village — an officer assigned to a second village must not read a
+   * cached single-village answer.
+   */
+  officerHome: (villageIds: readonly string[]) =>
+    ['officerHome', [...villageIds].sort()] as const,
+
   farm: (farmId: string) => ['farm', farmId] as const,
   farms: (villageId: string) => ['farms', villageId] as const,
 

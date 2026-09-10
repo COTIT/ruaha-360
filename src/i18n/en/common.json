@@ -431,5 +431,30 @@
     "energyDrill": "Requests behind the energy figures",
     "marketDrill": "Demand against available supply",
     "backToTower": "Back to the Tower"
+  },
+  "officerHome": {
+    "title": "Your villages",
+    "register": "Register a farmer",
+    "villages": "Assigned villages",
+    "people": "People",
+    "farms": "Farms",
+    "requests": "Equipment requests",
+    "outstanding_one": "1 record still needs verifying.",
+    "outstanding_other": "{{count}} records still need verifying.",
+    "openVerifyQueue": "Open the verify queue",
+    "nothingOutstanding": "Every record in your villages is verified.",
+    "villageOutstanding_one": "1 record here still needs verifying",
+    "villageOutstanding_other": "{{count}} records here still need verifying",
+    "noVillagesTitle": "No village assigned yet",
+    "noVillagesDetail": "Your account is on the project but not yet attached to a village. Ask your programme manager to assign one."
+  },
+  "catalogue": {
+    "title": "Equipment catalogue",
+    "colName": "Equipment",
+    "colCategory": "Category",
+    "colPower": "Rated power",
+    "colHours": "Typical h/day",
+    "colDays": "Typical days/week",
+    "colPrice": "Indicative price"
   }
 }

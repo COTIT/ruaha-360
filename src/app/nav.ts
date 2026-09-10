@@ -1,4 +1,9 @@
-import { canAccessSurface, type ActiveMembership, type Surface } from '@/app/membership'
+import {
+  canAccessSurface,
+  resolveLanding,
+  type ActiveMembership,
+  type Surface,
+} from '@/app/membership'
 
 /** Bottom tab bar for the mobile-first surfaces, sidebar for desktop-first ops. */
 export type NavLayout = 'tabs' | 'sidebar' | 'none'
@@ -36,9 +41,49 @@ export function surfaceForPath(pathname: string): Surface | undefined {
  * held in memory and the URL, never in a token.
  */
 export function navLayoutForPath(pathname: string): NavLayout {
-  const surface = surfaceForPath(pathname)
+  return navLayoutForSurface(surfaceForPath(pathname))
+}
+
+/** The layout a given surface uses. Spec 4.1, expressed once. */
+export function navLayoutForSurface(surface: Surface | undefined): NavLayout {
   if (!surface) return 'none'
   return surface === 'ops' ? 'sidebar' : 'tabs'
+}
+
+/**
+ * Which surface's nav to SHOW, which is not always the surface of the path.
+ *
+ * QA-FINDINGS.md #6: deciding from the URL alone stranded ops and admin users.
+ * The Tower's traceability claim (spec §8.2) sends them from a headline into
+ * `/officer/people/$personId` — an officer path they are legitimately allowed
+ * to read — and they arrived to find the ops sidebar replaced by the officer's
+ * tab bar, two of whose three tabs were placeholders. No route back to
+ * Requests, Demand or the Tower except the browser's back button.
+ *
+ * So a session that is visiting another surface it can also read keeps its
+ * OWN nav. Spec 4.1's tabs-vs-sidebar split is preserved — it is keyed to the
+ * surface the user works in, rather than to whichever record they opened.
+ */
+export function navSurfaceFor(
+  pathname: string,
+  memberships: ActiveMembership[],
+): Surface | undefined {
+  const pathSurface = surfaceForPath(pathname)
+  if (!pathSurface) return undefined
+
+  const homeSurface = surfaceForPath(resolveLanding(memberships).to)
+  if (
+    homeSurface &&
+    homeSurface !== pathSurface &&
+    // Only for a surface they may actually read. Someone who hand-typed a path
+    // they cannot open is about to be redirected, and until then gets no nav
+    // rather than a nav for a surface they do not hold.
+    canAccessSurface(memberships, pathSurface)
+  ) {
+    return homeSurface
+  }
+
+  return pathSurface
 }
 
 // Only routes that exist. Screens still to be built are listed as they land,

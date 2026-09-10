@@ -5,7 +5,7 @@ import { LanguageSwitch } from '@/app/LanguageSwitch'
 import { SignOutButton } from '@/app/SignOutButton'
 import { SurfaceNav } from '@/app/SurfaceNav'
 import { activeMemberships } from '@/app/membership'
-import { navItemsFor, navLayoutForPath, surfaceForPath } from '@/app/nav'
+import { navItemsFor, navLayoutForSurface, navSurfaceFor } from '@/app/nav'
 import { useSession } from '@/app/session'
 
 /**
@@ -21,8 +21,10 @@ export function RootLayout() {
   const { pathname } = useLocation()
 
   const memberships = activeMemberships(session?.memberships ?? [])
-  const surface = surfaceForPath(pathname)
-  const layout = navLayoutForPath(pathname)
+  // The surface whose nav to show — not always the surface of the path. An ops
+  // user reading an officer record keeps the ops sidebar; see navSurfaceFor.
+  const surface = navSurfaceFor(pathname, memberships)
+  const layout = navLayoutForSurface(surface)
   const items = surface ? navItemsFor(surface, memberships) : []
   const signedIn = Boolean(session)
 
