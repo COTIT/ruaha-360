@@ -63,16 +63,22 @@ test.describe('/ops/requests', () => {
     await page.goto('/ops/requests?status=approved')
 
     await expect(page.getByTestId('filter-status')).toHaveValue('approved')
+    // Wait for the table before counting: locator.count() does not auto-wait,
+    // so counting while the query is still in flight reads zero.
+    await expect(page.getByTestId('requests-table')).toBeVisible()
+
     // The filter's claim is that every row matches it, which holds however
     // many rows the rest of the suite has created.
     const pills = page.getByTestId('status-pill')
-    expect(await pills.count()).toBeGreaterThanOrEqual(2)
-    for (let i = 0; i < (await pills.count()); i += 1) {
+    const count = await pills.count()
+    expect(count).toBeGreaterThanOrEqual(2)
+    for (let i = 0; i < count; i += 1) {
       await expect(pills.nth(i)).toHaveAttribute('data-status', 'approved')
     }
 
     await page.reload()
     await expect(page.getByTestId('filter-status')).toHaveValue('approved')
+    await expect(page.getByTestId('requests-table')).toBeVisible()
     await expect(page.getByTestId('status-pill').first()).toHaveAttribute(
       'data-status',
       'approved',
@@ -85,6 +91,7 @@ test.describe('/ops/requests', () => {
 
     await page.getByTestId('filter-status').selectOption('rejected')
     await expect(page).toHaveURL(/status=rejected/)
+    await expect(page.getByTestId('requests-table')).toBeVisible()
     await expect(page.getByTestId('status-pill').first()).toHaveAttribute(
       'data-status',
       'rejected',

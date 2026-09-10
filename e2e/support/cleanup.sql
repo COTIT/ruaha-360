@@ -30,7 +30,22 @@ create temporary table _e2e_plot on commit drop as
 create temporary table _e2e_cycle on commit drop as
   select id from crop_cycle where plot_id in (select id from _e2e_plot);
 
+-- Demands and opportunities the suite created, marked through their own free
+-- text: quality_note on buyer_demand and note on opportunity. Both are
+-- created against SEEDED crops and villages, so there is no person to trace
+-- them from.
+create temporary table _e2e_demand on commit drop as
+  select id from buyer_demand where quality_note like 'E2E-%';
+
+create temporary table _e2e_opportunity on commit drop as
+  select id from opportunity
+  where note like 'E2E-%' or buyer_demand_id in (select id from _e2e_demand);
+
 -- leaves first
+delete from opportunity_supply where opportunity_id in (select id from _e2e_opportunity);
+delete from opportunity where id in (select id from _e2e_opportunity);
+delete from buyer_demand where id in (select id from _e2e_demand);
+
 delete from opportunity_supply where crop_cycle_id in (select id from _e2e_cycle);
 delete from harvest_report where crop_cycle_id in (select id from _e2e_cycle);
 -- PUE requests are marked through `purpose`, because the suite submits them
