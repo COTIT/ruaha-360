@@ -47,6 +47,11 @@ breakages, in order:
 so corrections are edits, not new migrations. Once `db push` runs, that freedom
 is gone forever.
 
+> **No longer true, as of 11 September 2026.** The nine migrations are now
+> recorded in `supabase_migrations.schema_migrations` on the dev project,
+> statements included. A schema change is a NEW migration from here on — never
+> an edit to an existing one. See `supabase/README.md`.
+
 Only when every assertion passes does UI work begin.
 
 ---
