@@ -1,5 +1,10 @@
 # supabase/
 
+**Cloud dev project only.** No local Supabase, no Docker, no `--local` flags.
+Everything — the app, Playwright, `rls_test.sql`, type generation, migrations —
+runs against the project in `.env`. The `db:*` scripts in `package.json` are
+the entry points.
+
 `migrations/` is the only source of schema truth. Never change schema in the
 dashboard — that is what makes a later self-host a copy rather than a rewrite.
 
@@ -25,25 +30,25 @@ Management API privileges for the project ref. Not a blocker — every
 migration command takes `--db-url` instead, which needs no link:
 
 ```bash
-set -a; . ./.env; set +a
-DBURL=$(python3 -c "
-import os,urllib.parse as u
-print('postgresql://%s:%s@%s:%s/postgres' % (
-  u.quote(os.environ['SUPABASE_DB_USER'], safe=''),
-  u.quote(os.environ['SUPABASE_DB_PASSWORD'], safe=''),
-  os.environ['SUPABASE_DB_HOST'],
-  os.environ.get('SUPABASE_DB_PORT', '5432')))")
-
-pnpm supabase migration list --db-url "$DBURL"      # local vs remote
-pnpm supabase db push --db-url "$DBURL" --dry-run   # what would apply
-pnpm supabase db push --db-url "$DBURL"
+pnpm db:list        # migration history: files vs database
+pnpm db:push:dry    # what would apply
+pnpm db:push        # apply
+pnpm db:types       # regenerate src/lib/db.types.ts — commit it
+pnpm db:rls         # the 24 policy assertions
 ```
 
-The password is percent-encoded because the CLI takes a URL, not a keyword
-conninfo string. `SUPABASE_DB_HOST` is the **session-mode** pooler (port 5432):
-`db.<ref>.supabase.co` is IPv6-only on this project, and transaction mode
-(6543) cannot hold the transaction-local `request.jwt.claims` that
-`tests/rls_test.sql` sets.
+`db:types` is the exception: it goes through the Management API with
+`--project-id`, because `gen types --db-url` still shells out to Docker to run
+pg_meta and there is no Docker here. It writes to `db.types.ts.new` and moves
+it on success — a shell `>` truncates its target *before* the command runs, so
+a failed generation would otherwise destroy the committed types.
+
+The rest build their connection URL with `scripts/db-url.mjs`, which reads
+`SUPABASE_DB_*` from `.env` and percent-encodes the password (the CLI takes a
+URL, not a keyword conninfo string). `SUPABASE_DB_HOST` is the **session-mode**
+pooler on 5432: `db.<ref>.supabase.co` is IPv6-only on this project, and
+transaction mode (6543) cannot hold the transaction-local
+`request.jwt.claims` that `tests/rls_test.sql` sets.
 
 ## How the history came to be recorded
 
@@ -52,22 +57,25 @@ failed on objects that exist. The history was recorded without re-running
 anything:
 
 ```bash
-pnpm supabase migration repair --status applied --db-url "$DBURL" \
+pnpm supabase migration repair --status applied \
+  --db-url "$(node scripts/db-url.mjs)" \
   20260909090001 20260909090002 20260909090003 20260909090004 20260909090005 \
   20260909090006 20260909090007 20260909090008 20260909090009
 ```
 
 After which `db push` reports `Remote database is up to date`.
 
-**Still unproven:** that the nine migrations replay from empty. They have only
-ever been applied by hand, in order, to a database that then kept running.
-Proving it needs a scratch project or a local `supabase start`, and a
-`db reset` there — not on the dev project, which is what the demo runs against.
+**Recorded as unproven:** that the nine migrations replay from empty. They have
+only ever been applied by hand, in order, to a database that then kept running.
+Demonstrating it would need a throwaway database, and this project deliberately
+has exactly one — the cloud dev project the demo runs against. So it stays
+unproven, on purpose, and the mitigation is that history now stores every
+migration's statements: the files and the database cannot drift silently.
 
 ## tests/
 
 ```bash
-psql "$CONN" -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql
+pnpm db:rls
 ```
 
 24 assertions over the policies. RLS is the security boundary, so this is the

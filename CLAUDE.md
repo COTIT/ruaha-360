@@ -25,6 +25,11 @@ working agreement.
 
 ## Start here — the first session
 
+> **Done, and superseded.** Tier 0 passed on 10 September 2026 and all seven
+> tiers are built. This section is kept as the record of what the gate was.
+> **There is no local Supabase on this project and none is wanted** — the cloud
+> dev project is the only database. Use `pnpm db:rls`, not the commands below.
+
 **Do not write UI first.** The migrations have never been applied. Everything
 downstream inherits their assumptions.
 
@@ -112,12 +117,18 @@ pnpm dev                # vite
 pnpm build              # static bundle
 pnpm typecheck
 pnpm test               # vitest
-pnpm e2e                # playwright, against local supabase + seed
+pnpm e2e                # playwright, against the cloud dev project + seed
+pnpm e2e journey        # the acceptance journey alone
 
-supabase start
-supabase db reset       # migrations + seed. Safe: seed refuses non-demo databases
-supabase gen types typescript --local > src/lib/db.types.ts
+pnpm db:list            # migration history: files vs database
+pnpm db:push            # apply pending migrations (db:push:dry to preview)
+pnpm db:types           # regenerate src/lib/db.types.ts (Management API)
+pnpm db:rls             # the 24 policy assertions
 ```
+
+**No local Supabase.** The cloud dev project is the only database — every
+`db:*` script points there through `scripts/db-url.mjs`. Do not reach for
+`supabase start`, `db reset` or any `--local` flag; see `supabase/README.md`.
 
 Regenerate `db.types.ts` after every migration change and commit it. No
 hand-written row types.

@@ -1,17 +1,24 @@
 # Ruaha 360 — database schema
 
-Status: **written, reviewed, not applied.** Nothing has touched Supabase.
+Status: **applied and in service** on the cloud dev project since
+10 September 2026; migration history recorded 11 September 2026.
 Authority: Ruaha 360 Overview Plan v2. Target: MVP demo, 30 September 2026.
 
 ## Apply order
 
 ```bash
-supabase start                 # local, Docker
-supabase db reset              # runs migrations + seed.sql
-psql "$LOCAL_DB_URL" -f supabase/tests/rls_test.sql
-# only once assertions pass:
-supabase db push               # cloud
+pnpm db:list        # migration history: files vs database
+pnpm db:push:dry    # what would apply
+pnpm db:push        # apply
+pnpm db:rls         # the 24 policy assertions
 ```
+
+**Cloud dev project only** — there is no local Supabase and none is wanted.
+Details, and the `--db-url` route the CLI needs here, are in
+`supabase/README.md`.
+
+A schema change is a **new migration**. History stores each migration's
+statements, so editing an existing file desyncs it from the database silently.
 
 Never edit schema in the dashboard. Migrations in the repo are the single
 source of truth, and they are what makes a later self-host a copy rather
