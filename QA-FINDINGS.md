@@ -337,3 +337,266 @@ driven live against the cloud dev project:
 - Demo banner on every page, driven by `VITE_DATA_MODE`
 - Role guards hold: farmer → `/ops/*` bounces to `/farm`; officer → `/farm/*`
   bounces to `/officer`
+
+---
+---
+
+# Second sweep — edge cases and error cases
+
+**Swept:** 11 September 2026, same session, same cloud dev project.
+
+**Method:** hostile and boundary inputs through the real forms; failure
+injected at the network layer by patching `window.fetch` in the page; the auth
+token deleted from `localStorage`; a corrupt draft written directly into
+IndexedDB; submit clicked three times in one tick; view queries delayed 4s to
+hold the loading state open.
+
+**Records created and removed:** two marked persons with their full record
+graphs. `e2e/support/cleanup.sql` ran afterwards; seeded counts verified back
+to 8 persons · 5 farms · 8 cycles · 9 harvest reports · 6 requests · 2 demands
+· 1 opportunity · 2 supply lines, zero `E2E-` leftovers, and `rls_test.sql`
+passing 24/24. Nothing seeded was verified or decided.
+
+---
+
+## Summary
+
+| # | severity | area | finding |
+|---|---|---|---|
+| 16 | **high** | register | whitespace-only text passes every required check — a person can be registered with a blank name |
+| 17 | **high** | register | the register form has no Zod schema at all, though the stack pairs it with react-hook-form |
+| 18 | **high** | a11y | `<html lang="sw">` is hardcoded and never follows the language, so English pages are announced as Swahili |
+| 19 | **medium** | register | the conditional measure field is not required, so the failure is a server round-trip |
+| 20 | **medium** | errors | `numeric field overflow` reaches the user naming no field at all |
+| 21 | **medium** | register | a backwards harvest window shows the raw `cycle_window_sane` constraint |
+| 22 | **medium** | drafts | a corrupt or stale draft is restored into the form unvalidated |
+| 23 | **medium** | forms | submit is never disabled in flight, so the "saving" state spec 5.2 names does not exist |
+| 24 | **medium** | errors | a transient error banner survives navigation to another screen |
+| 25 | **medium** | errors | raw JS exceptions (`TypeError: Failed to fetch`) are rendered as user copy |
+| 26 | low | auth | `/login` renders the sign-in form while already signed in |
+| 27 | low | register | high-precision decimals are silently rounded with no feedback |
+| 28 | low | register | phone accepts anything, including `not-a-phone-!!!` |
+| 29 | low | tower | drill links are clickable while the figures behind them are still loading |
+
+## Held up under attack — recorded deliberately
+
+These were probed and **passed**. Worth knowing which parts are solid.
+
+| probe | result |
+|---|---|
+| **XSS** — `<img src=x onerror="window.__xss=1">` as a first name | escaped end to end. Stored, returned through PostgREST, rendered as literal text. Zero `<img>` elements in `main`, handler never fired, on both the register success screen and person detail |
+| **SQL injection** — `'; drop table person; --` as a farm name | stored and displayed as a literal string. Parameterised throughout |
+| **Double submit** — submit clicked 3× in one tick | exactly **one** person and **one** `registration_receipt` row. The `client_ref` idempotency in `app_register_farmer` does what it was built for |
+| **Atomicity** — a registration that fails on the last table | nothing partially written. The backwards-window failure left no person, household or farm behind |
+| **Expired session on reload** | correctly bounced to `/login?redirect=%2Fofficer%2Fregister`, preserving the destination |
+| **Loading states** — view queries delayed 4s | each Tower tile shows its own "Loading…" independently; the page never blanks |
+| **Offline read** | with every REST call failing, the register form still rendered with its crop list from the TanStack Query cache |
+| **Unreadable record** — another farmer's request by id | "Request not found · It may not exist, or you may not have access to it." Not an error |
+
+---
+
+## 16 · Whitespace-only input passes every required check — high
+
+**Repro:** `/officer/register`, put a single space in First name, Family name
+and Farm name, fill nothing else, submit.
+
+**Observed:** the only validation errors raised are for Plot name and Crop —
+the two fields left genuinely empty. **First name, Family name and Farm name
+are accepted as `"   "`.**
+
+**Cause:** `src/features/officer/RegisterScreen.tsx` validates with
+react-hook-form's `{ required: true }`:
+
+```
+register('given_name',  { required: true })
+register('family_name', { required: true })
+register('farm_label',  { required: true })
+register('plot_label',  { required: true })
+```
+
+`required: true` rejects only an empty string. It does not trim.
+
+**Consequence:** the database does not catch it either — `person.given_name`
+and `family_name` are `not null`, and `'   '` is not null. So a farmer can be
+registered with a blank name, which then appears as a blank row on person
+detail, the officer's people list, the Tower production drill's farmer column,
+and every opportunity supply line tracing back to them. There is no rename
+screen, so it cannot be corrected in the app.
+
+## 17 · The register form has no Zod schema — high
+
+Related to #16 but worth separating, because it is the reason #16 and #19 both
+exist. The locked stack is "react-hook-form + Zod ... forms", and
+`@hookform/resolvers` is installed — but the only `z.object` in `src/` is in
+`LoginScreen.tsx`:
+
+```
+$ grep -rln "z\.object" src/
+src/app/LoginScreen.tsx
+```
+
+The most important form in the build (spec 5.2) validates with inline
+`required` flags and one `if (!measure) throw` at submit time. A schema would
+have caught the whitespace case, the missing measure field, the backwards date
+window and the numeric ranges in one place, before any request.
+
+## 18 · `<html lang>` is hardcoded to Swahili — high
+
+```
+$ grep -rn "lang=" index.html src/
+index.html:2:<html lang="sw">
+```
+
+Nothing ever updates it. So:
+
+- Ops and admin, whose surfaces are English by design, serve a document
+  declared as Swahili. A screen reader applies Swahili pronunciation rules to
+  English text — which is close to unusable.
+- Switching language in the app changes the rendered strings and does **not**
+  change `document.documentElement.lang`. Verified: switch set to `en`, `<h1>`
+  reading "Register a farmer", `document.documentElement.lang` still `"sw"`.
+
+## 19 · The conditional measure field is not required — medium
+
+**Repro:** on `/officer/register`, choose Mahindi (maize), fill everything
+except "Planted area (ha)", submit.
+
+**Observed:** no inline error. The submit goes to the server and comes back
+with the RPC's own message:
+
+```
+this crop is measured by area: area_ha is required
+```
+
+The measure field is rendered conditionally on `crop.measured_by`, and unlike
+its five siblings it carries no `required`. So the one field whose presence
+depends on another field's value is the one field with no client-side check —
+costing a round-trip and showing server prose where an inline message belongs.
+
+## 20 · `numeric field overflow` names no field — medium
+
+**Repro:** expected harvest `999999999999`, everything else valid, submit.
+
+**Shows:**
+
+```
+Something went wrong
+numeric field overflow
+Try again
+```
+
+Worse than the named-constraint errors in #4 and #21: there is no indication
+of *which* input was too large. The form has three numeric fields (plot area,
+planted area, expected harvest) and the officer must guess.
+
+## 21 · A backwards harvest window shows a raw constraint name — medium
+
+**Repro:** harvest window starts `2026-09-30`, ends `2026-09-01`, submit.
+
+**Shows:**
+
+```
+Something went wrong
+new row for relation "crop_cycle" violates check constraint "cycle_window_sane"
+Try again
+```
+
+Same family as #4 (`pue_request_hours_per_day_check` on the farmer surface) and
+as the `demand_window_sane` message the ops demand form already surfaces. Three
+instances of one pattern: constraint identifiers used as user-facing copy.
+
+Two dates sitting next to each other in the same form is the clearest possible
+case for an inline check — it needs no knowledge of any database rule, only
+that an end date follows a start date.
+
+The transaction did roll back cleanly: no orphan person, household or farm.
+
+Also derived from the schema, same family, not separately reproduced here:
+`opportunity_supply.contributed_kg` is `check (contributed_kg > 0)`, so 0 or a
+negative contribution on the attach-supply form will surface the same way.
+
+## 22 · A corrupt or stale draft is restored unvalidated — medium
+
+**Repro:** write an object of the wrong shape into IndexedDB
+(`ruaha360` → `drafts`) under `register:<uuid>`, then open
+`/officer/register?draft=<uuid>`.
+
+**Observed:** the form restores it verbatim. First name renders as the literal
+string `[object Object]`; Family name renders as `array` (from
+`['array'].toString()`). The "Not yet submitted" badge appears and the form
+would submit those values.
+
+`useDraft` restores with `reset(draft.draft)` and no shape check. The realistic
+route to this is not tampering — it is **a stale draft written by an older
+deployment of the form**. Any field renamed or retyped in `RegisterForm` turns
+every draft in the field into this, on phones that were mid-registration when
+the app updated. Which is precisely the scenario the draft feature exists for.
+
+## 23 · Submit is never disabled in flight — medium
+
+Measured directly: `register-submit.disabled` is `false` immediately after the
+first click and still `false` after three clicks in the same tick.
+
+Spec 5.2 names six states for this screen, one of which is **saving**. There is
+no saving state: no disabled control, no spinner, no text change. On a slow
+rural connection the officer's only feedback is that nothing has happened yet.
+
+The data is safe — the "held up" table above shows the `client_ref`
+idempotency absorbed a triple submit into one person — so this is a feedback
+defect, not a duplication one. The same pattern applies to every other action
+button listed in #11.
+
+## 24 · A transient error banner survives navigation — medium
+
+**Repro:** with writes failing, change the language on `/officer/register`, then
+click through to another screen.
+
+**Observed:** the banner "Language changed for now, but could not be saved: …"
+is still on screen after the route change, and stayed through two further
+navigations. The message describes an event that is over, on a screen that has
+nothing to do with it.
+
+## 25 · Raw JS exceptions are rendered as user copy — medium
+
+Same repro. Two places print the exception's `toString()`:
+
+```
+Language changed for now, but could not be saved: TypeError: Failed to fetch
+```
+```
+Something went wrong
+TypeError: Failed to fetch
+```
+
+The **behaviour** is right and worth keeping — the switch tells the truth
+("changed for now, but could not be saved") rather than silently pretending it
+saved. Only the message needs replacing: "TypeError: Failed to fetch" tells a
+field officer nothing, and "check your connection" tells them everything.
+
+## 26 · `/login` renders while already signed in — low
+
+Visiting `/login` with a live session shows the sign-in form *and* the header's
+"Sign out" button. A signed-in user should be sent to their own home, the way
+`resolveLanding` already does elsewhere. Harmless, but it is a route with two
+mutually exclusive states rendered at once.
+
+## 27 · High-precision decimals are silently rounded — low
+
+Plot area `1.23456789` was stored and is displayed as `1.2346 ha`, the
+`hectares` domain being `numeric(_,4)`. Correct rounding, no feedback: the
+operator typed one number and the record holds another, with nothing on screen
+saying so.
+
+## 28 · Phone accepts anything — low
+
+`not-a-phone-!!!` was stored and rendered as the person's phone number.
+`person.phone` is free-text `text` by design and the seed uses `+255…`, so
+there is no rule to enforce — but there is also no hint, mask or placeholder,
+and the field is how a field officer would later reach this farmer.
+
+## 29 · Drill links are live while figures are still loading — low
+
+With view queries held 4s, each Tower tile correctly shows its own "Loading…",
+but the tile header's "See the records" link renders immediately and is
+clickable. Clicking through before the headline resolves lands on a drill-down
+whose own query has not started. Cosmetic ordering issue.
