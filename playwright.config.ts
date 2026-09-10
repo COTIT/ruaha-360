@@ -1,8 +1,8 @@
 import { defineConfig } from '@playwright/test'
 
-// Configured, deliberately empty. The acceptance journey is tier 7 in
-// CLAUDE.md's build order and runs against local Supabase + seed. Until then
-// `pnpm e2e` reports no tests found, which is the honest result.
+// The browser suite, run against the demo Supabase project and its seed.
+// `journey.spec.ts` is CLAUDE.md's acceptance journey end to end; every other
+// spec covers one screen and its state cycle.
 export default defineConfig({
   testDir: './e2e',
   // Serialised on purpose. The suite runs against a single shared Supabase

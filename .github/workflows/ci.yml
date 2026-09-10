@@ -80,8 +80,50 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-# Still not run in CI:
-#   supabase/tests/rls_test.sql needs a direct Postgres connection and the
-#   service-level password. It is the highest-value test in the repo and
-#   currently only runs from a developer machine. Wiring it up is on the
-#   tier-7 list.
+  # RLS is the security boundary, so its assertion suite is the highest-value
+  # test in the repo. It needs a direct Postgres connection rather than the
+  # anon key, so it is gated on its own secrets the same way.
+  #
+  # Configure: SUPABASE_DB_HOST, SUPABASE_DB_USER, SUPABASE_DB_PASSWORD and
+  # optionally SUPABASE_DB_PORT. Use the SESSION-mode pooler — transaction
+  # mode does not hold the transaction-local `request.jwt.claims` the suite
+  # sets to impersonate each seeded role.
+  #
+  # Runs after the browser suite, not beside it: both drive the same database,
+  # and the e2e teardown deletes rows while these assertions count them.
+  rls:
+    runs-on: ubuntu-latest
+    needs: [check, e2e]
+    # Runs even if the browser suite failed: a policy regression is worth
+    # knowing about regardless.
+    if: ${{ always() && needs.check.result == 'success' }}
+    env:
+      SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+      SUPABASE_DB_PORT: ${{ secrets.SUPABASE_DB_PORT }}
+      SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      # Read from the environment, never interpolated into a shell line: an
+      # expression is expanded into the generated script before it runs.
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is a demo database configured?
+        id: gate
+        run: |
+          if [ -z "$SUPABASE_DB_HOST" ] || [ -z "$SUPABASE_DB_USER" ] \
+             || [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No database connection secrets set — skipping the RLS suite."
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The suite prints `pass` per assertion and raises on the first failure,
+      # so ON_ERROR_STOP is what turns a failed policy into a failed build.
+      - name: Run the RLS assertion suite
+        if: steps.gate.outputs.run == 'true'
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          CONN="host=$SUPABASE_DB_HOST port=${SUPABASE_DB_PORT:-5432} dbname=postgres user=$SUPABASE_DB_USER sslmode=require"
+          psql "$CONN" -v ON_ERROR_STOP=1 -f supabase/tests/rls_test.sql
