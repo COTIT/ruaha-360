@@ -250,5 +250,52 @@
     "notFoundDetail": "It may not exist, or you may not have access to it.",
     "noEstimate": "No estimate stored for this request",
     "noEstimateDetail": "This equipment has no rated power recorded, so no estimate could be calculated."
+  },
+  "table": {
+    "emptyTitle": "Nothing to show",
+    "emptyDetail": "No records match."
+  },
+  "ops": {
+    "requestsTitle": "Request pipeline",
+    "filterStatus": "Status",
+    "filterVillage": "Village",
+    "allStatuses": "All statuses",
+    "allVillages": "All villages",
+    "colApplicant": "Applicant",
+    "colVillage": "Village",
+    "colEquipment": "Equipment",
+    "colEstKw": "Est. kW",
+    "colStatus": "Status",
+    "colSubmitted": "Submitted",
+    "noRequestsTitle": "No requests match",
+    "noRequestsDetail": "Try a different status or village.",
+    "reviewTitle": "Review request",
+    "applicant": "Applicant",
+    "village": "Village",
+    "farm": "Farm",
+    "snapshotted": "Snapshotted inputs",
+    "snapshottedNote": "These are the assumptions as they were when the estimate was calculated.",
+    "headroom": "Village headroom",
+    "capacity": "Planned capacity",
+    "capacityBasis": "Basis",
+    "approvedPeak": "Approved peak",
+    "prospectivePeak": "Prospective peak",
+    "neverSummed": "Prospective and approved demand are separate figures and are never added together.",
+    "simultaneity": "Simultaneity factor",
+    "decisionNote": "Decision note",
+    "decisionNoteRequired": "A decision needs a note explaining it.",
+    "startReview": "Start review",
+    "approve": "Approve",
+    "reject": "Reject",
+    "working": "Working…",
+    "noActions": "No actions are available in this state.",
+    "notFoundTitle": "Request not found",
+    "notFoundDetail": "It may not exist, or you may not have access to it.",
+    "noHeadroom": "No capacity recorded for this village",
+    "noHeadroomDetail": "A current village_capacity row is needed before headroom can be shown."
+  },
+  "capacityBasis": {
+    "planned": "Planned",
+    "nameplate": "Nameplate"
   }
 }

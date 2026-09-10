@@ -20,19 +20,14 @@ import { Route as FarmerFarmRouteImport } from './routes/_farmer/farm'
 import { Route as OfficerOfficerRouteImport } from './routes/_officer/officer'
 import { Route as OpsOpsRouteImport } from './routes/_ops/ops'
 import { Route as FarmerFarmIndexRouteImport } from './routes/_farmer/farm.index'
-import { Route as FarmerFarmEquipmentRouteImport } from './routes/_farmer/farm.equipment'
 import { Route as FarmerFarmMyFarmRouteImport } from './routes/_farmer/farm.my-farm'
 import { Route as FarmerFarmOpportunitiesRouteImport } from './routes/_farmer/farm.opportunities'
-import { Route as FarmerFarmRequestsRouteImport } from './routes/_farmer/farm.requests'
 import { Route as OfficerOfficerIndexRouteImport } from './routes/_officer/officer.index'
-import { Route as OfficerOfficerPeopleRouteImport } from './routes/_officer/officer.people'
 import { Route as OfficerOfficerRegisterRouteImport } from './routes/_officer/officer.register'
 import { Route as OfficerOfficerVerifyRouteImport } from './routes/_officer/officer.verify'
 import { Route as OpsOpsIndexRouteImport } from './routes/_ops/ops.index'
 import { Route as OpsOpsBuyersRouteImport } from './routes/_ops/ops.buyers'
 import { Route as OpsOpsCatalogueRouteImport } from './routes/_ops/ops.catalogue'
-import { Route as OpsOpsDemandRouteImport } from './routes/_ops/ops.demand'
-import { Route as OpsOpsRequestsRouteImport } from './routes/_ops/ops.requests'
 import { Route as OpsOpsTowerRouteImport } from './routes/_ops/ops.tower'
 import { Route as OpsOpsVillagesRouteImport } from './routes/_ops/ops.villages'
 import { Route as FarmerFarmEquipmentIndexRouteImport } from './routes/_farmer/farm.equipment.index'
@@ -105,11 +100,6 @@ const FarmerFarmIndexRoute = FarmerFarmIndexRouteImport.update({
   path: '/',
   getParentRoute: () => FarmerFarmRoute,
 } as any)
-const FarmerFarmEquipmentRoute = FarmerFarmEquipmentRouteImport.update({
-  id: '/equipment',
-  path: '/equipment',
-  getParentRoute: () => FarmerFarmRoute,
-} as any)
 const FarmerFarmMyFarmRoute = FarmerFarmMyFarmRouteImport.update({
   id: '/my-farm',
   path: '/my-farm',
@@ -120,19 +110,9 @@ const FarmerFarmOpportunitiesRoute = FarmerFarmOpportunitiesRouteImport.update({
   path: '/opportunities',
   getParentRoute: () => FarmerFarmRoute,
 } as any)
-const FarmerFarmRequestsRoute = FarmerFarmRequestsRouteImport.update({
-  id: '/requests',
-  path: '/requests',
-  getParentRoute: () => FarmerFarmRoute,
-} as any)
 const OfficerOfficerIndexRoute = OfficerOfficerIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => OfficerOfficerRoute,
-} as any)
-const OfficerOfficerPeopleRoute = OfficerOfficerPeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
   getParentRoute: () => OfficerOfficerRoute,
 } as any)
 const OfficerOfficerRegisterRoute = OfficerOfficerRegisterRouteImport.update({
@@ -160,16 +140,6 @@ const OpsOpsCatalogueRoute = OpsOpsCatalogueRouteImport.update({
   path: '/catalogue',
   getParentRoute: () => OpsOpsRoute,
 } as any)
-const OpsOpsDemandRoute = OpsOpsDemandRouteImport.update({
-  id: '/demand',
-  path: '/demand',
-  getParentRoute: () => OpsOpsRoute,
-} as any)
-const OpsOpsRequestsRoute = OpsOpsRequestsRouteImport.update({
-  id: '/requests',
-  path: '/requests',
-  getParentRoute: () => OpsOpsRoute,
-} as any)
 const OpsOpsTowerRoute = OpsOpsTowerRouteImport.update({
   id: '/tower',
   path: '/tower',
@@ -182,26 +152,26 @@ const OpsOpsVillagesRoute = OpsOpsVillagesRouteImport.update({
 } as any)
 const FarmerFarmEquipmentIndexRoute =
   FarmerFarmEquipmentIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => FarmerFarmEquipmentRoute,
+    id: '/equipment/',
+    path: '/equipment/',
+    getParentRoute: () => FarmerFarmRoute,
   } as any)
 const FarmerFarmEquipmentEquipmentIdRoute =
   FarmerFarmEquipmentEquipmentIdRouteImport.update({
-    id: '/$equipmentId',
-    path: '/$equipmentId',
-    getParentRoute: () => FarmerFarmEquipmentRoute,
+    id: '/equipment/$equipmentId',
+    path: '/equipment/$equipmentId',
+    getParentRoute: () => FarmerFarmRoute,
   } as any)
 const FarmerFarmRequestsIndexRoute = FarmerFarmRequestsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => FarmerFarmRequestsRoute,
+  id: '/requests/',
+  path: '/requests/',
+  getParentRoute: () => FarmerFarmRoute,
 } as any)
 const FarmerFarmRequestsRequestIdRoute =
   FarmerFarmRequestsRequestIdRouteImport.update({
-    id: '/$requestId',
-    path: '/$requestId',
-    getParentRoute: () => FarmerFarmRequestsRoute,
+    id: '/requests/$requestId',
+    path: '/requests/$requestId',
+    getParentRoute: () => FarmerFarmRoute,
   } as any)
 const OfficerOfficerCyclesCycleIdRoute =
   OfficerOfficerCyclesCycleIdRouteImport.update({
@@ -217,25 +187,25 @@ const OfficerOfficerFarmsFarmIdRoute =
   } as any)
 const OfficerOfficerPeopleIndexRoute =
   OfficerOfficerPeopleIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => OfficerOfficerPeopleRoute,
+    id: '/people/',
+    path: '/people/',
+    getParentRoute: () => OfficerOfficerRoute,
   } as any)
 const OfficerOfficerPeoplePersonIdRoute =
   OfficerOfficerPeoplePersonIdRouteImport.update({
-    id: '/$personId',
-    path: '/$personId',
-    getParentRoute: () => OfficerOfficerPeopleRoute,
+    id: '/people/$personId',
+    path: '/people/$personId',
+    getParentRoute: () => OfficerOfficerRoute,
   } as any)
 const OpsOpsDemandIndexRoute = OpsOpsDemandIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => OpsOpsDemandRoute,
+  id: '/demand/',
+  path: '/demand/',
+  getParentRoute: () => OpsOpsRoute,
 } as any)
 const OpsOpsDemandDemandIdRoute = OpsOpsDemandDemandIdRouteImport.update({
-  id: '/$demandId',
-  path: '/$demandId',
-  getParentRoute: () => OpsOpsDemandRoute,
+  id: '/demand/$demandId',
+  path: '/demand/$demandId',
+  getParentRoute: () => OpsOpsRoute,
 } as any)
 const OpsOpsOpportunitiesOpportunityIdRoute =
   OpsOpsOpportunitiesOpportunityIdRouteImport.update({
@@ -244,14 +214,14 @@ const OpsOpsOpportunitiesOpportunityIdRoute =
     getParentRoute: () => OpsOpsRoute,
   } as any)
 const OpsOpsRequestsIndexRoute = OpsOpsRequestsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => OpsOpsRequestsRoute,
+  id: '/requests/',
+  path: '/requests/',
+  getParentRoute: () => OpsOpsRoute,
 } as any)
 const OpsOpsRequestsRequestIdRoute = OpsOpsRequestsRequestIdRouteImport.update({
-  id: '/$requestId',
-  path: '/$requestId',
-  getParentRoute: () => OpsOpsRequestsRoute,
+  id: '/requests/$requestId',
+  path: '/requests/$requestId',
+  getParentRoute: () => OpsOpsRoute,
 } as any)
 const OpsOpsTowerIndexRoute = OpsOpsTowerIndexRouteImport.update({
   id: '/',
@@ -282,17 +252,12 @@ export interface FileRoutesByFullPath {
   '/farm': typeof FarmerFarmRouteWithChildren
   '/officer': typeof OfficerOfficerRouteWithChildren
   '/ops': typeof OpsOpsRouteWithChildren
-  '/farm/equipment': typeof FarmerFarmEquipmentRouteWithChildren
   '/farm/my-farm': typeof FarmerFarmMyFarmRoute
   '/farm/opportunities': typeof FarmerFarmOpportunitiesRoute
-  '/farm/requests': typeof FarmerFarmRequestsRouteWithChildren
-  '/officer/people': typeof OfficerOfficerPeopleRouteWithChildren
   '/officer/register': typeof OfficerOfficerRegisterRoute
   '/officer/verify': typeof OfficerOfficerVerifyRoute
   '/ops/buyers': typeof OpsOpsBuyersRoute
   '/ops/catalogue': typeof OpsOpsCatalogueRoute
-  '/ops/demand': typeof OpsOpsDemandRouteWithChildren
-  '/ops/requests': typeof OpsOpsRequestsRouteWithChildren
   '/ops/tower': typeof OpsOpsTowerRouteWithChildren
   '/ops/villages': typeof OpsOpsVillagesRoute
   '/farm/': typeof FarmerFarmIndexRoute
@@ -361,17 +326,12 @@ export interface FileRoutesById {
   '/_farmer/farm': typeof FarmerFarmRouteWithChildren
   '/_officer/officer': typeof OfficerOfficerRouteWithChildren
   '/_ops/ops': typeof OpsOpsRouteWithChildren
-  '/_farmer/farm/equipment': typeof FarmerFarmEquipmentRouteWithChildren
   '/_farmer/farm/my-farm': typeof FarmerFarmMyFarmRoute
   '/_farmer/farm/opportunities': typeof FarmerFarmOpportunitiesRoute
-  '/_farmer/farm/requests': typeof FarmerFarmRequestsRouteWithChildren
-  '/_officer/officer/people': typeof OfficerOfficerPeopleRouteWithChildren
   '/_officer/officer/register': typeof OfficerOfficerRegisterRoute
   '/_officer/officer/verify': typeof OfficerOfficerVerifyRoute
   '/_ops/ops/buyers': typeof OpsOpsBuyersRoute
   '/_ops/ops/catalogue': typeof OpsOpsCatalogueRoute
-  '/_ops/ops/demand': typeof OpsOpsDemandRouteWithChildren
-  '/_ops/ops/requests': typeof OpsOpsRequestsRouteWithChildren
   '/_ops/ops/tower': typeof OpsOpsTowerRouteWithChildren
   '/_ops/ops/villages': typeof OpsOpsVillagesRoute
   '/_farmer/farm/': typeof FarmerFarmIndexRoute
@@ -405,17 +365,12 @@ export interface FileRouteTypes {
     | '/farm'
     | '/officer'
     | '/ops'
-    | '/farm/equipment'
     | '/farm/my-farm'
     | '/farm/opportunities'
-    | '/farm/requests'
-    | '/officer/people'
     | '/officer/register'
     | '/officer/verify'
     | '/ops/buyers'
     | '/ops/catalogue'
-    | '/ops/demand'
-    | '/ops/requests'
     | '/ops/tower'
     | '/ops/villages'
     | '/farm/'
@@ -483,17 +438,12 @@ export interface FileRouteTypes {
     | '/_farmer/farm'
     | '/_officer/officer'
     | '/_ops/ops'
-    | '/_farmer/farm/equipment'
     | '/_farmer/farm/my-farm'
     | '/_farmer/farm/opportunities'
-    | '/_farmer/farm/requests'
-    | '/_officer/officer/people'
     | '/_officer/officer/register'
     | '/_officer/officer/verify'
     | '/_ops/ops/buyers'
     | '/_ops/ops/catalogue'
-    | '/_ops/ops/demand'
-    | '/_ops/ops/requests'
     | '/_ops/ops/tower'
     | '/_ops/ops/villages'
     | '/_farmer/farm/'
@@ -607,13 +557,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerFarmIndexRouteImport
       parentRoute: typeof FarmerFarmRoute
     }
-    '/_farmer/farm/equipment': {
-      id: '/_farmer/farm/equipment'
-      path: '/equipment'
-      fullPath: '/farm/equipment'
-      preLoaderRoute: typeof FarmerFarmEquipmentRouteImport
-      parentRoute: typeof FarmerFarmRoute
-    }
     '/_farmer/farm/my-farm': {
       id: '/_farmer/farm/my-farm'
       path: '/my-farm'
@@ -628,25 +571,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FarmerFarmOpportunitiesRouteImport
       parentRoute: typeof FarmerFarmRoute
     }
-    '/_farmer/farm/requests': {
-      id: '/_farmer/farm/requests'
-      path: '/requests'
-      fullPath: '/farm/requests'
-      preLoaderRoute: typeof FarmerFarmRequestsRouteImport
-      parentRoute: typeof FarmerFarmRoute
-    }
     '/_officer/officer/': {
       id: '/_officer/officer/'
       path: '/'
       fullPath: '/officer/'
       preLoaderRoute: typeof OfficerOfficerIndexRouteImport
-      parentRoute: typeof OfficerOfficerRoute
-    }
-    '/_officer/officer/people': {
-      id: '/_officer/officer/people'
-      path: '/people'
-      fullPath: '/officer/people'
-      preLoaderRoute: typeof OfficerOfficerPeopleRouteImport
       parentRoute: typeof OfficerOfficerRoute
     }
     '/_officer/officer/register': {
@@ -684,20 +613,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OpsOpsCatalogueRouteImport
       parentRoute: typeof OpsOpsRoute
     }
-    '/_ops/ops/demand': {
-      id: '/_ops/ops/demand'
-      path: '/demand'
-      fullPath: '/ops/demand'
-      preLoaderRoute: typeof OpsOpsDemandRouteImport
-      parentRoute: typeof OpsOpsRoute
-    }
-    '/_ops/ops/requests': {
-      id: '/_ops/ops/requests'
-      path: '/requests'
-      fullPath: '/ops/requests'
-      preLoaderRoute: typeof OpsOpsRequestsRouteImport
-      parentRoute: typeof OpsOpsRoute
-    }
     '/_ops/ops/tower': {
       id: '/_ops/ops/tower'
       path: '/tower'
@@ -714,31 +629,31 @@ declare module '@tanstack/react-router' {
     }
     '/_farmer/farm/equipment/': {
       id: '/_farmer/farm/equipment/'
-      path: '/'
+      path: '/equipment'
       fullPath: '/farm/equipment/'
       preLoaderRoute: typeof FarmerFarmEquipmentIndexRouteImport
-      parentRoute: typeof FarmerFarmEquipmentRoute
+      parentRoute: typeof FarmerFarmRoute
     }
     '/_farmer/farm/equipment/$equipmentId': {
       id: '/_farmer/farm/equipment/$equipmentId'
-      path: '/$equipmentId'
+      path: '/equipment/$equipmentId'
       fullPath: '/farm/equipment/$equipmentId'
       preLoaderRoute: typeof FarmerFarmEquipmentEquipmentIdRouteImport
-      parentRoute: typeof FarmerFarmEquipmentRoute
+      parentRoute: typeof FarmerFarmRoute
     }
     '/_farmer/farm/requests/': {
       id: '/_farmer/farm/requests/'
-      path: '/'
+      path: '/requests'
       fullPath: '/farm/requests/'
       preLoaderRoute: typeof FarmerFarmRequestsIndexRouteImport
-      parentRoute: typeof FarmerFarmRequestsRoute
+      parentRoute: typeof FarmerFarmRoute
     }
     '/_farmer/farm/requests/$requestId': {
       id: '/_farmer/farm/requests/$requestId'
-      path: '/$requestId'
+      path: '/requests/$requestId'
       fullPath: '/farm/requests/$requestId'
       preLoaderRoute: typeof FarmerFarmRequestsRequestIdRouteImport
-      parentRoute: typeof FarmerFarmRequestsRoute
+      parentRoute: typeof FarmerFarmRoute
     }
     '/_officer/officer/cycles/$cycleId': {
       id: '/_officer/officer/cycles/$cycleId'
@@ -756,31 +671,31 @@ declare module '@tanstack/react-router' {
     }
     '/_officer/officer/people/': {
       id: '/_officer/officer/people/'
-      path: '/'
+      path: '/people'
       fullPath: '/officer/people/'
       preLoaderRoute: typeof OfficerOfficerPeopleIndexRouteImport
-      parentRoute: typeof OfficerOfficerPeopleRoute
+      parentRoute: typeof OfficerOfficerRoute
     }
     '/_officer/officer/people/$personId': {
       id: '/_officer/officer/people/$personId'
-      path: '/$personId'
+      path: '/people/$personId'
       fullPath: '/officer/people/$personId'
       preLoaderRoute: typeof OfficerOfficerPeoplePersonIdRouteImport
-      parentRoute: typeof OfficerOfficerPeopleRoute
+      parentRoute: typeof OfficerOfficerRoute
     }
     '/_ops/ops/demand/': {
       id: '/_ops/ops/demand/'
-      path: '/'
+      path: '/demand'
       fullPath: '/ops/demand/'
       preLoaderRoute: typeof OpsOpsDemandIndexRouteImport
-      parentRoute: typeof OpsOpsDemandRoute
+      parentRoute: typeof OpsOpsRoute
     }
     '/_ops/ops/demand/$demandId': {
       id: '/_ops/ops/demand/$demandId'
-      path: '/$demandId'
+      path: '/demand/$demandId'
       fullPath: '/ops/demand/$demandId'
       preLoaderRoute: typeof OpsOpsDemandDemandIdRouteImport
-      parentRoute: typeof OpsOpsDemandRoute
+      parentRoute: typeof OpsOpsRoute
     }
     '/_ops/ops/opportunities/$opportunityId': {
       id: '/_ops/ops/opportunities/$opportunityId'
@@ -791,17 +706,17 @@ declare module '@tanstack/react-router' {
     }
     '/_ops/ops/requests/': {
       id: '/_ops/ops/requests/'
-      path: '/'
+      path: '/requests'
       fullPath: '/ops/requests/'
       preLoaderRoute: typeof OpsOpsRequestsIndexRouteImport
-      parentRoute: typeof OpsOpsRequestsRoute
+      parentRoute: typeof OpsOpsRoute
     }
     '/_ops/ops/requests/$requestId': {
       id: '/_ops/ops/requests/$requestId'
-      path: '/$requestId'
+      path: '/requests/$requestId'
       fullPath: '/ops/requests/$requestId'
       preLoaderRoute: typeof OpsOpsRequestsRequestIdRouteImport
-      parentRoute: typeof OpsOpsRequestsRoute
+      parentRoute: typeof OpsOpsRoute
     }
     '/_ops/ops/tower/': {
       id: '/_ops/ops/tower/'
@@ -834,46 +749,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface FarmerFarmEquipmentRouteChildren {
+interface FarmerFarmRouteChildren {
+  FarmerFarmMyFarmRoute: typeof FarmerFarmMyFarmRoute
+  FarmerFarmOpportunitiesRoute: typeof FarmerFarmOpportunitiesRoute
+  FarmerFarmIndexRoute: typeof FarmerFarmIndexRoute
   FarmerFarmEquipmentEquipmentIdRoute: typeof FarmerFarmEquipmentEquipmentIdRoute
-  FarmerFarmEquipmentIndexRoute: typeof FarmerFarmEquipmentIndexRoute
-}
-
-const FarmerFarmEquipmentRouteChildren: FarmerFarmEquipmentRouteChildren = {
-  FarmerFarmEquipmentEquipmentIdRoute: FarmerFarmEquipmentEquipmentIdRoute,
-  FarmerFarmEquipmentIndexRoute: FarmerFarmEquipmentIndexRoute,
-}
-
-const FarmerFarmEquipmentRouteWithChildren =
-  FarmerFarmEquipmentRoute._addFileChildren(FarmerFarmEquipmentRouteChildren)
-
-interface FarmerFarmRequestsRouteChildren {
   FarmerFarmRequestsRequestIdRoute: typeof FarmerFarmRequestsRequestIdRoute
+  FarmerFarmEquipmentIndexRoute: typeof FarmerFarmEquipmentIndexRoute
   FarmerFarmRequestsIndexRoute: typeof FarmerFarmRequestsIndexRoute
 }
 
-const FarmerFarmRequestsRouteChildren: FarmerFarmRequestsRouteChildren = {
-  FarmerFarmRequestsRequestIdRoute: FarmerFarmRequestsRequestIdRoute,
-  FarmerFarmRequestsIndexRoute: FarmerFarmRequestsIndexRoute,
-}
-
-const FarmerFarmRequestsRouteWithChildren =
-  FarmerFarmRequestsRoute._addFileChildren(FarmerFarmRequestsRouteChildren)
-
-interface FarmerFarmRouteChildren {
-  FarmerFarmEquipmentRoute: typeof FarmerFarmEquipmentRouteWithChildren
-  FarmerFarmMyFarmRoute: typeof FarmerFarmMyFarmRoute
-  FarmerFarmOpportunitiesRoute: typeof FarmerFarmOpportunitiesRoute
-  FarmerFarmRequestsRoute: typeof FarmerFarmRequestsRouteWithChildren
-  FarmerFarmIndexRoute: typeof FarmerFarmIndexRoute
-}
-
 const FarmerFarmRouteChildren: FarmerFarmRouteChildren = {
-  FarmerFarmEquipmentRoute: FarmerFarmEquipmentRouteWithChildren,
   FarmerFarmMyFarmRoute: FarmerFarmMyFarmRoute,
   FarmerFarmOpportunitiesRoute: FarmerFarmOpportunitiesRoute,
-  FarmerFarmRequestsRoute: FarmerFarmRequestsRouteWithChildren,
   FarmerFarmIndexRoute: FarmerFarmIndexRoute,
+  FarmerFarmEquipmentEquipmentIdRoute: FarmerFarmEquipmentEquipmentIdRoute,
+  FarmerFarmRequestsRequestIdRoute: FarmerFarmRequestsRequestIdRoute,
+  FarmerFarmEquipmentIndexRoute: FarmerFarmEquipmentIndexRoute,
+  FarmerFarmRequestsIndexRoute: FarmerFarmRequestsIndexRoute,
 }
 
 const FarmerFarmRouteWithChildren = FarmerFarmRoute._addFileChildren(
@@ -891,35 +784,24 @@ const FarmerRouteChildren: FarmerRouteChildren = {
 const FarmerRouteWithChildren =
   FarmerRoute._addFileChildren(FarmerRouteChildren)
 
-interface OfficerOfficerPeopleRouteChildren {
-  OfficerOfficerPeoplePersonIdRoute: typeof OfficerOfficerPeoplePersonIdRoute
-  OfficerOfficerPeopleIndexRoute: typeof OfficerOfficerPeopleIndexRoute
-}
-
-const OfficerOfficerPeopleRouteChildren: OfficerOfficerPeopleRouteChildren = {
-  OfficerOfficerPeoplePersonIdRoute: OfficerOfficerPeoplePersonIdRoute,
-  OfficerOfficerPeopleIndexRoute: OfficerOfficerPeopleIndexRoute,
-}
-
-const OfficerOfficerPeopleRouteWithChildren =
-  OfficerOfficerPeopleRoute._addFileChildren(OfficerOfficerPeopleRouteChildren)
-
 interface OfficerOfficerRouteChildren {
-  OfficerOfficerPeopleRoute: typeof OfficerOfficerPeopleRouteWithChildren
   OfficerOfficerRegisterRoute: typeof OfficerOfficerRegisterRoute
   OfficerOfficerVerifyRoute: typeof OfficerOfficerVerifyRoute
   OfficerOfficerIndexRoute: typeof OfficerOfficerIndexRoute
   OfficerOfficerCyclesCycleIdRoute: typeof OfficerOfficerCyclesCycleIdRoute
   OfficerOfficerFarmsFarmIdRoute: typeof OfficerOfficerFarmsFarmIdRoute
+  OfficerOfficerPeoplePersonIdRoute: typeof OfficerOfficerPeoplePersonIdRoute
+  OfficerOfficerPeopleIndexRoute: typeof OfficerOfficerPeopleIndexRoute
 }
 
 const OfficerOfficerRouteChildren: OfficerOfficerRouteChildren = {
-  OfficerOfficerPeopleRoute: OfficerOfficerPeopleRouteWithChildren,
   OfficerOfficerRegisterRoute: OfficerOfficerRegisterRoute,
   OfficerOfficerVerifyRoute: OfficerOfficerVerifyRoute,
   OfficerOfficerIndexRoute: OfficerOfficerIndexRoute,
   OfficerOfficerCyclesCycleIdRoute: OfficerOfficerCyclesCycleIdRoute,
   OfficerOfficerFarmsFarmIdRoute: OfficerOfficerFarmsFarmIdRoute,
+  OfficerOfficerPeoplePersonIdRoute: OfficerOfficerPeoplePersonIdRoute,
+  OfficerOfficerPeopleIndexRoute: OfficerOfficerPeopleIndexRoute,
 }
 
 const OfficerOfficerRouteWithChildren = OfficerOfficerRoute._addFileChildren(
@@ -936,34 +818,6 @@ const OfficerRouteChildren: OfficerRouteChildren = {
 
 const OfficerRouteWithChildren =
   OfficerRoute._addFileChildren(OfficerRouteChildren)
-
-interface OpsOpsDemandRouteChildren {
-  OpsOpsDemandDemandIdRoute: typeof OpsOpsDemandDemandIdRoute
-  OpsOpsDemandIndexRoute: typeof OpsOpsDemandIndexRoute
-}
-
-const OpsOpsDemandRouteChildren: OpsOpsDemandRouteChildren = {
-  OpsOpsDemandDemandIdRoute: OpsOpsDemandDemandIdRoute,
-  OpsOpsDemandIndexRoute: OpsOpsDemandIndexRoute,
-}
-
-const OpsOpsDemandRouteWithChildren = OpsOpsDemandRoute._addFileChildren(
-  OpsOpsDemandRouteChildren,
-)
-
-interface OpsOpsRequestsRouteChildren {
-  OpsOpsRequestsRequestIdRoute: typeof OpsOpsRequestsRequestIdRoute
-  OpsOpsRequestsIndexRoute: typeof OpsOpsRequestsIndexRoute
-}
-
-const OpsOpsRequestsRouteChildren: OpsOpsRequestsRouteChildren = {
-  OpsOpsRequestsRequestIdRoute: OpsOpsRequestsRequestIdRoute,
-  OpsOpsRequestsIndexRoute: OpsOpsRequestsIndexRoute,
-}
-
-const OpsOpsRequestsRouteWithChildren = OpsOpsRequestsRoute._addFileChildren(
-  OpsOpsRequestsRouteChildren,
-)
 
 interface OpsOpsTowerRouteChildren {
   OpsOpsTowerEnergyRoute: typeof OpsOpsTowerEnergyRoute
@@ -986,23 +840,27 @@ const OpsOpsTowerRouteWithChildren = OpsOpsTowerRoute._addFileChildren(
 interface OpsOpsRouteChildren {
   OpsOpsBuyersRoute: typeof OpsOpsBuyersRoute
   OpsOpsCatalogueRoute: typeof OpsOpsCatalogueRoute
-  OpsOpsDemandRoute: typeof OpsOpsDemandRouteWithChildren
-  OpsOpsRequestsRoute: typeof OpsOpsRequestsRouteWithChildren
   OpsOpsTowerRoute: typeof OpsOpsTowerRouteWithChildren
   OpsOpsVillagesRoute: typeof OpsOpsVillagesRoute
   OpsOpsIndexRoute: typeof OpsOpsIndexRoute
+  OpsOpsDemandDemandIdRoute: typeof OpsOpsDemandDemandIdRoute
   OpsOpsOpportunitiesOpportunityIdRoute: typeof OpsOpsOpportunitiesOpportunityIdRoute
+  OpsOpsRequestsRequestIdRoute: typeof OpsOpsRequestsRequestIdRoute
+  OpsOpsDemandIndexRoute: typeof OpsOpsDemandIndexRoute
+  OpsOpsRequestsIndexRoute: typeof OpsOpsRequestsIndexRoute
 }
 
 const OpsOpsRouteChildren: OpsOpsRouteChildren = {
   OpsOpsBuyersRoute: OpsOpsBuyersRoute,
   OpsOpsCatalogueRoute: OpsOpsCatalogueRoute,
-  OpsOpsDemandRoute: OpsOpsDemandRouteWithChildren,
-  OpsOpsRequestsRoute: OpsOpsRequestsRouteWithChildren,
   OpsOpsTowerRoute: OpsOpsTowerRouteWithChildren,
   OpsOpsVillagesRoute: OpsOpsVillagesRoute,
   OpsOpsIndexRoute: OpsOpsIndexRoute,
+  OpsOpsDemandDemandIdRoute: OpsOpsDemandDemandIdRoute,
   OpsOpsOpportunitiesOpportunityIdRoute: OpsOpsOpportunitiesOpportunityIdRoute,
+  OpsOpsRequestsRequestIdRoute: OpsOpsRequestsRequestIdRoute,
+  OpsOpsDemandIndexRoute: OpsOpsDemandIndexRoute,
+  OpsOpsRequestsIndexRoute: OpsOpsRequestsIndexRoute,
 }
 
 const OpsOpsRouteWithChildren =
