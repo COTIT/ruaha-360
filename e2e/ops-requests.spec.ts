@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { VILLAGE } from './support/seed'
+import { assertsSeededFigures } from './support/seeded'
 
 /**
  * Specs 7.2 and 7.3 — the request pipeline, review and decide.
@@ -14,6 +15,9 @@ import { VILLAGE } from './support/seed'
  * permanently break the demo's headline number.
  */
 const PASSWORD = 'demo1234'
+
+// This spec asserts seeded figures, so it starts from seeded state.
+assertsSeededFigures()
 const MILL = '51000000-0000-4000-8000-000000000001'
 
 async function signIn(page: Page, email: string, home: RegExp) {

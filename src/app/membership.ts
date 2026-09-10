@@ -53,8 +53,16 @@ export function resolveLanding(rows: ActiveMembership[]): { to: string } {
 export type Surface = 'farmer' | 'officer' | 'ops'
 
 const SURFACE_ROLES: Record<Surface, AppRole[]> = {
+  // Scoped by app_farms(), which resolves through a person. Ops holds no
+  // person_id, so this surface would render empty for them — a redirect is
+  // the more honest answer than a page of nothing.
   farmer: ['farmer'],
-  officer: ['field_officer'],
+  // Ops and admin belong here too. The role matrix gives them read + write on
+  // person, farm, plot and crop_cycle, and those records live on this surface.
+  // It is also what makes the Tower's traceability claim work: spec 8.2
+  // requires reaching a farmer's record from any headline in three clicks, and
+  // the opportunity screen drills to /officer/people/$personId.
+  officer: ['field_officer', 'ops', 'admin'],
   // admin is operational and shares the ops surface — see roleHome.
   ops: ['ops', 'admin'],
 }

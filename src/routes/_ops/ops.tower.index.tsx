@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { Placeholder } from '@/app/Placeholder'
+import { TowerScreen } from '@/features/tower/TowerScreen'
+import { validateVillageSearch } from '@/features/tower/towerSearch'
 
 export const Route = createFileRoute('/_ops/ops/tower/')({
-  component: () => <Placeholder route="/ops/tower — overview" tier="tier 6" />,
+  validateSearch: validateVillageSearch,
+  component: TowerScreen,
 })

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { assertsSeededFigures } from './support/seeded'
+
 /**
  * Specs 7.6, 7.7 and 7.8 — demand, coverage, opportunity and supply.
  *
@@ -16,6 +18,9 @@ import { expect, test, type Page } from '@playwright/test'
  * nothing may be left behind.
  */
 const PASSWORD = 'demo1234'
+
+// This spec asserts seeded figures, so it starts from seeded state.
+assertsSeededFigures()
 
 // Seeded: Iringa Grain Traders wants 9,000 kg of maize in September.
 const MAIZE_DEMAND = 'e1000000-0000-4000-8000-000000000001'

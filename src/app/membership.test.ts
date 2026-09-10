@@ -90,10 +90,11 @@ describe('canAccessSurface', () => {
     expect(canAccessSurface(rows, 'ops')).toBe(false)
   })
 
-  test('an officer may only enter the officer surface', () => {
+  test('an officer reaches the officer surface but not the others', () => {
     const rows = [m('field_officer')]
     expect(canAccessSurface(rows, 'officer')).toBe(true)
     expect(canAccessSurface(rows, 'farmer')).toBe(false)
+    expect(canAccessSurface(rows, 'ops')).toBe(false)
   })
 
   test('ops and admin both reach the ops surface, Tower included', () => {
@@ -101,10 +102,34 @@ describe('canAccessSurface', () => {
     expect(canAccessSurface([m('admin')], 'ops')).toBe(true)
   })
 
+  // The role matrix gives ops and admin read + write on person, farm, plot and
+  // crop_cycle, and those records live on the officer surface. Blocking them
+  // also breaks the Tower's traceability claim: the opportunity screen drills
+  // to /officer/people/$personId, and spec 8.2 requires ops to reach a
+  // farmer's record from any Tower headline in at most three clicks.
+  test('ops and admin reach the officer surface, because the records live there', () => {
+    expect(canAccessSurface([m('ops')], 'officer')).toBe(true)
+    expect(canAccessSurface([m('admin')], 'officer')).toBe(true)
+  })
+
+  // Not symmetric: the farmer surface is scoped by app_farms(), which resolves
+  // through a person. Ops holds no person_id, so /farm/my-farm would render an
+  // empty state for them — a redirect is the more honest answer.
+  test('ops does not enter the farmer surface', () => {
+    expect(canAccessSurface([m('ops')], 'farmer')).toBe(false)
+    expect(canAccessSurface([m('admin')], 'farmer')).toBe(false)
+  })
+
   test('holding two roles opens both surfaces', () => {
     const rows = [m('farmer'), m('field_officer')]
     expect(canAccessSurface(rows, 'farmer')).toBe(true)
     expect(canAccessSurface(rows, 'officer')).toBe(true)
+    expect(canAccessSurface(rows, 'ops')).toBe(false)
+  })
+
+  test('a revoked ops role closes the officer surface too', () => {
+    const rows = [m('ops', { revoked_at: '2026-09-01T00:00:00Z' })]
+    expect(canAccessSurface(rows, 'officer')).toBe(false)
     expect(canAccessSurface(rows, 'ops')).toBe(false)
   })
 

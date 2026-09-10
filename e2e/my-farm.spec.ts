@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { assertsSeededFigures } from './support/seeded'
+
 /**
  * Spec 6.2 — read-only, mobile-first, every figure carrying provenance.
  *
@@ -7,6 +9,9 @@ import { expect, test, type Page } from '@playwright/test'
  * farmer Neema sees one farm and cannot reach Joseph's."
  */
 const PASSWORD = 'demo1234'
+
+// This spec asserts seeded figures, so it starts from seeded state.
+assertsSeededFigures()
 
 async function signIn(page: Page, email: string, home: RegExp) {
   await page.goto('/login')
