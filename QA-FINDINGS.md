@@ -793,3 +793,302 @@ the register screen and one of them simply does not exist, which reads like
 absence. It stays in phase 2 because the data is provably safe: three submits
 in one tick produced exactly one person and one receipt. The user gets no
 feedback; the record is never wrong. Feedback is "right".
+
+---
+---
+
+# Batches — one unit of work per plan-mode phase
+
+The 29 findings regrouped into **17 batches**, each one a single coherent
+change: it touches one cluster of files, has one root cause, and has one way to
+prove it is done. A plan-mode phase should take exactly one batch.
+
+**How the grouping was decided**, in priority order:
+
+1. **Same root cause** — one fix, not five patches. `P2-A` is the clearest
+   case: one schema closes four findings.
+2. **Same files** — two batches editing `RegisterScreen.tsx` in different
+   phases means reading it twice, re-testing it twice, and a merge risk for
+   nothing.
+3. **One verification story** — a batch that cannot be proven done in one test
+   pass is two batches.
+4. **Never spans a phase.** Batches are phase-pure so a phase never inherits
+   half of one. Where a later-phase finding touches an earlier batch's files it
+   is listed as a **ride-along candidate**, and taking it is a judgement call
+   at planning time, not a silent merge.
+
+Effort is relative, not calendar: **XS** trivial · **S** an afternoon ·
+**M** a day or two · **L** longer than a day and worth its own plan.
+
+---
+
+## Phase 1 — make it work · 9 batches
+
+### `P1-GATE` · the landing-route spec
+- **Finding:** #15
+- **Files:** `e2e/nav.spec.ts` (new)
+- **Why alone:** it is the acceptance test for every other phase-1 batch. It
+  must exist and be **red** before `P1-OFFICER` starts, or those batches have
+  no definition of done beyond eyeballing.
+- **Done when:** signing in as each of the four roles asserts the landing page
+  and every nav destination renders real content — no `Placeholder`.
+- **Depends on:** nothing. **Effort:** S.
+
+### `P1-OFFICER` · the officer surface's five missing screens
+- **Finding:** #1 (part 1 of 3)
+- **Files:** `src/routes/_officer/officer.index.tsx`, `officer.people.index.tsx`,
+  `officer.verify.tsx`, `officer.cycles.$cycleId.tsx`,
+  `officer.farms.$farmId.tsx` + new screens under `src/features/officer/`
+- **Why together:** one surface, one nav bar, one role's mental model. The
+  People list and the Verify queue share a query shape, and the officer's
+  landing page is a summary of both.
+- **Do first of the three:** it is the largest hole (two of three tabs), and
+  `officer.cycles.$cycleId` / `officer.farms.$farmId` are the Tower's own drill
+  targets, so `P1-TOWER-TRUTH` and `P1-NAV` both read better afterwards.
+- **Done when:** `P1-GATE`'s officer assertions pass, and the Tower's
+  production drill reaches a cycle and a farm rather than a placeholder.
+- **Depends on:** `P1-GATE`. **Effort:** L — plan this one on its own.
+
+### `P1-OPS` · the ops surface's four missing screens
+- **Finding:** #1 (part 2 of 3)
+- **Files:** `src/routes/_ops/ops.index.tsx`, `ops.buyers.tsx`,
+  `ops.catalogue.tsx`, `ops.villages.tsx` + new screens under `src/features/ops/`
+- **Why together:** three of the four are flat reference-data lists over
+  `buyer`, `equipment` and `village` — near-identical read-and-table work, and
+  the ops landing page is the roll-up above them.
+- **Done when:** `P1-GATE`'s ops and admin assertions pass; every sidebar link
+  resolves to real content.
+- **Depends on:** `P1-GATE`. **Effort:** M.
+
+### `P1-FARMER` · the farmer surface's two missing screens
+- **Finding:** #1 (part 3 of 3)
+- **Files:** `src/routes/_farmer/farm.index.tsx`, `farm.opportunities.tsx`
+  + new screens under `src/features/farmer/`
+- **Why separate from the other two:** it is the only surface that ships
+  complete Swahili, so it is the batch whose copy feeds `P1-SWAHILI`. Landing
+  it before the translation ask goes out means the string list is final.
+- **Done when:** `P1-GATE`'s farmer assertions pass, and `/farm/opportunities`
+  shows the one opportunity RLS grants Neema — the count `rls_test.sql` asserts.
+- **Depends on:** `P1-GATE`. **Effort:** S.
+
+### `P1-TOWER-TRUTH` · make the energy drill reconcile
+- **Finding:** #7
+- **Files:** `src/features/tower/TowerDrillScreens.tsx`, `useTower.ts`
+- **Why alone:** this is not a screen to build, it is a claim to correct. The
+  drill lists draft and rejected requests as the records behind prospective
+  7.200 kW and approved 10.800 kW, which they do not feed. Deciding what the
+  rows should be — filtered by contributing status, split by which figure they
+  serve, with simultaneity shown — is a spec-reading job, not a UI job.
+- **Done when:** every row listed contributes to a stated figure, and the
+  column reconciles to the headline on screen.
+- **Ride-along candidate:** #29 (`P2-C`) touches `TowerTile.tsx`, next door.
+  Cheap to take here; not required.
+- **Depends on:** nothing. **Effort:** M.
+
+### `P1-NAV` · a way back for ops and admin
+- **Finding:** #6
+- **Files:** `src/app/` layout and nav components
+- **Why alone:** one decision about spec 4.1's surface split — whether an ops
+  user on an officer screen keeps the ops sidebar, gets a breadcrumb, or gets
+  both bars. Small change, but it is a design call that should not be buried
+  inside a screen-building batch.
+- **Done when:** an ops user who drills from a Tower headline to a person can
+  reach Requests, Demand and the Tower without the browser's back button.
+- **Depends on:** `P1-OFFICER` — routing ops back to a placeholder tab is not
+  a fix. **Effort:** S.
+
+### `P1-DRAFT-ACTIONS` · let a farmer act on a draft request
+- **Finding:** #5
+- **Files:** `src/features/farmer/RequestDetailScreen.tsx`, `useRequests.ts`
+- **Why alone:** its own screen, its own mutation, and its own rule — the
+  status machine in `pue_request_guard` already permits `draft → submitted`,
+  so this is wiring a transition the database is waiting for.
+- **Done when:** the seeded cold-room draft can be submitted and appears in the
+  ops pipeline; a draft can also be withdrawn.
+- **Depends on:** nothing. **Effort:** S.
+
+### `P1-OPPORTUNITY` · opportunity lifecycle
+- **Finding:** #12
+- **Files:** `src/features/ops/OpportunityDetailScreen.tsx`, `useOpportunity.ts`
+- **Why together:** status transitions and detaching a supply line are the same
+  screen, the same hook, and the same question — what an ops user is allowed to
+  change after an opportunity exists. The ambiguous "Quantity" label is on that
+  screen too, so it rides here.
+- **Watch:** detaching means deleting an `opportunity_supply` row, and the
+  schema has **no DELETE policies by design**. Check whether the intended path
+  is a policy, an RPC, or a status change — and if the answer is not in
+  `docs/business-rules.md`, **that is a question to ask, not a guess to make.**
+- **Done when:** an opportunity can move proposed → shared → accepted, a
+  wrongly attached line can be removed, and `opportunity_resum` re-sums the
+  offered total after both.
+- **Depends on:** nothing. **Effort:** M.
+
+### `P1-SWAHILI` · complete the farmer and officer strings
+- **Finding:** #2
+- **Files:** `src/i18n/sw/common.json` (2 keys → ~365)
+- **Why alone:** the engineering is one file. The work is a person.
+- **Start the ask on day one of phase 1, not when this batch comes up.** The
+  translation cannot begin until the string list is final, which means after
+  `P1-OFFICER` and `P1-FARMER` land — so send the reviewer everything that
+  exists now and top it up, rather than waiting.
+- **Ride-along candidate:** #18 (`P2-LANG-ATTR`) is the `<html lang>` fix and
+  is the natural companion to any i18n work. XS. Take it here.
+- **Done when:** both surfaces render Swahili with no English fallback, signed
+  off by a native reviewer.
+- **Depends on:** `P1-OFFICER`, `P1-FARMER` for the final list. **Effort:** L,
+  mostly waiting.
+
+---
+
+## Phase 2 — make it right · 8 batches
+
+### `P2-A` · what the write forms accept, and what they say about it
+- **Findings:** #17, #16, #19, #21, #9, #27, #28
+- **Files:** `src/features/officer/RegisterScreen.tsx`, `registerPayload.ts`,
+  `src/features/farmer/EquipmentDetailScreen.tsx`
+- **Why this is the biggest batch and should stay one:** every finding in it is
+  the same missing thing — a schema on a write form. #17 adds it; #16 (trim),
+  #19 (conditional measure required), #21 (date order) and #9 (hours, days,
+  quantity ranges) are then fields in that schema rather than four separate
+  patches. #27 (say when a decimal was rounded) and #28 (a phone hint) are the
+  same two files and the same conversation about what the form tells the
+  operator.
+- **The one thing to get right:** a schema is **not** a client-side copy of a
+  database rule, which CLAUDE.md forbids. Bound each field to its own column's
+  type — `hours_per_day between 0 and 24` is the column's shape, not business
+  logic — and let every genuine rule still come back from the database.
+- **Done when:** `"   "` is rejected as a name, hours 99 and quantity 0 cannot
+  be submitted, a backwards window is caught inline, and no valid registration
+  is newly blocked.
+- **Depends on:** nothing. **Do first in phase 2** — #16 writes a permanently
+  uncorrectable record, per the triage note above. **Effort:** M.
+
+### `P2-B` · one error-message layer
+- **Findings:** #3, #4, #20, #25 (and #21's message half)
+- **Files:** a new `src/lib/errors.ts`, `src/components/ErrorState.tsx`, every
+  `$id` route file
+- **Why together:** four findings, one absence — nothing translates a failure
+  into a sentence. `invalid input syntax for type uuid`,
+  `pue_request_hours_per_day_check`, `cycle_window_sane`, `demand_window_sane`,
+  `contributed_kg > 0`, `numeric field overflow` and
+  `TypeError: Failed to fetch` are all the same defect wearing different text.
+  Built once, every future constraint inherits it.
+- **Route params (#3) belong here** rather than with the schemas: a bad id is a
+  read failing, not a form being wrong, and the right answer is the "not found"
+  empty state the app already renders for a well-formed id that matches nothing.
+- **Keep #25's behaviour.** "Changed for now, but could not be saved" is the
+  honest report; only the appended exception text goes.
+- **Done when:** no user-facing string contains a table name, a constraint
+  name, or `TypeError`.
+- **Depends on:** `P1-OFFICER` — its two new `$id` routes need the same
+  treatment, and doing this first means doing it twice. **Effort:** M.
+
+### `P2-C` · form semantics and in-flight feedback
+- **Findings:** #11, #23, #29
+- **Files:** `EquipmentDetailScreen.tsx`, `DemandListScreen.tsx`,
+  `DemandDetailScreen.tsx`, `OpportunityDetailScreen.tsx`,
+  `OpsRequestReviewScreen.tsx`, `VerifyButton.tsx`, `RegisterScreen.tsx`,
+  `src/features/tower/TowerTile.tsx`
+- **Why together:** one sweep over every action control in the app asking two
+  questions — is it a real form submit (#11, so Enter works and screen readers
+  see a form), and is it disabled while its request is in flight (#23, spec
+  5.2's missing "saving" state). #29 is the same question about a link: a drill
+  affordance should not be live before the figure behind it resolves.
+- **Why it comes after `P1-DRAFT-ACTIONS` and `P1-OPPORTUNITY`:** both add
+  controls to screens on this list. Sweeping first means sweeping twice.
+- **Done when:** Enter submits every form, every action control disables while
+  its mutation runs, and a drill link is inert until its tile has data.
+- **Depends on:** `P1-DRAFT-ACTIONS`, `P1-OPPORTUNITY`. **Effort:** S.
+
+### `P2-D` · draft integrity
+- **Finding:** #22
+- **Files:** `src/lib/drafts.ts`, `RegisterScreen.tsx`
+- **Why alone and why it must follow `P2-A`:** the fix is to validate a
+  restored draft against the form's schema and discard it if it does not
+  match — which needs the schema `P2-A` introduces. Doing it before means
+  writing a second, throwaway validator.
+- **Done when:** a draft of the wrong shape is discarded with a plain message
+  rather than restored as `[object Object]`, and a valid draft still restores
+  intact — the acceptance criterion `register.spec.ts` already asserts.
+- **Depends on:** `P2-A`. **Effort:** S.
+
+### `P2-E` · transient state that outlives its moment
+- **Findings:** #24, #13
+- **Files:** `src/app/` shell and session code, `LanguageSwitch`
+- **Why together:** both are something that should have ended and did not — an
+  error banner surviving three navigations, and a token refresh firing after
+  sign-out. Same area of the code, same class of bug, one small batch.
+- **Done when:** an error banner clears on route change, and signing out
+  produces no further requests.
+- **Depends on:** nothing. **Effort:** S.
+
+### `P2-F` · routing edges
+- **Findings:** #26, #10
+- **Files:** `src/routes/(auth)/login.tsx`, `select-role.tsx`,
+  `src/app/membership.ts`
+- **Why together:** two auth routes that render a state that cannot be true —
+  a sign-in form for someone signed in, and "you hold more than one role" for
+  someone holding one. `resolveLanding` already knows the right answer in both
+  cases; neither route asks it.
+- **Done when:** a signed-in visitor to `/login` lands on their home, and
+  `/select-role` either redirects a single-role user or stops claiming they
+  have several.
+- **Depends on:** nothing. **Effort:** XS. Good filler between larger batches.
+
+### `P2-LANG-ATTR` · document language
+- **Finding:** #18
+- **Files:** `index.html`, `src/i18n/`
+- **Why it exists as its own batch:** so it is not lost. One line, and it stops
+  every English ops page being announced to a screen reader in Swahili.
+- **Strong ride-along:** fold into `P1-SWAHILI`. It is the same subject and
+  costs nothing there.
+- **Depends on:** nothing. **Effort:** XS.
+
+### `P2-G` · ops layout below 800px
+- **Finding:** #8
+- **Files:** `src/app/` ops layout, `src/styles/`
+- **Why last:** §1 puts visual design last, and the demo runs on a laptop. It
+  is on the list only because figures are silently truncated rather than
+  scrolled.
+- **Done when:** at 375px no figure is clipped — the sidebar collapses or the
+  tiles reflow.
+- **Depends on:** `P1-OPS` — new sidebar destinations change what has to
+  collapse. **Effort:** M.
+
+---
+
+## Phase 3 — make it fast · 0 batches
+
+Nothing measured warrants one. If a batch is ever needed, its first line is
+already written in the triage above: the Tower's 15 requests per page load.
+
+---
+
+## Not batched
+
+**#14** · Vite HMR 404s. Dev-server noise, no user-visible behaviour. Nothing
+to batch it with, and nothing to do.
+
+---
+
+## Reading this into a plan
+
+**The critical path** is `P1-GATE` → `P1-OFFICER` → `P1-NAV`, with
+`P2-B` waiting on `P1-OFFICER` and `P2-C` waiting on `P1-DRAFT-ACTIONS` and
+`P1-OPPORTUNITY`. Everything else is free to move.
+
+**Runnable in any order:** `P1-TOWER-TRUTH`, `P1-DRAFT-ACTIONS`,
+`P1-OPPORTUNITY`, `P2-A`, `P2-E`, `P2-F`. Solo developer, so this means
+"reorder freely if blocked", not "run at once".
+
+**`P1-SWAHILI` is the only calendar risk on the board.** Every other batch is
+bounded by how fast the code gets written. That one is bounded by a person's
+availability, and 30 September does not move.
+
+**Batches worth splitting if a phase runs long:** `P1-OFFICER` (five screens —
+People list, Verify queue and the landing page are three natural halts) and
+`P2-A` (the schema plus #16/#19/#21 is the necessary core; #9, #27 and #28 can
+follow).
+
+**Batches not worth splitting:** `P2-B` — splitting the error layer by call
+site is what produced five instances of one bug in the first place.
