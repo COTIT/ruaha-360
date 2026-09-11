@@ -1092,3 +1092,35 @@ follow).
 
 **Batches not worth splitting:** `P2-B` — splitting the error layer by call
 site is what produced five instances of one bug in the first place.
+
+---
+
+# Found while fixing — additions to the board
+
+Findings that surfaced during remediation rather than in the two sweeps.
+Numbered on from the sweeps so ticket references stay unambiguous.
+
+## 30 · Sign-in intermittently lands on `/no-access` — medium
+
+**Found:** M5, in `e2e/opportunity.spec.ts`. Twice, always on the FIRST test of
+a cold worker, ops sign-in redirected to `/no-access` instead of `/ops`; both
+times the retry passed, and it did not recur in a full-suite run.
+
+`resolveLanding([])` sends a user with no membership rows to `/no-access`, so
+the redirect means `fetchSession` returned an `appUser` **and zero
+memberships**. That combination should not be reachable: both reads run under
+the same JWT in one `Promise.all`, and if the client were still anonymous the
+`app_user` read would have been empty too — which `session.ts` deliberately
+raises on rather than treating as no-access.
+
+So either the two reads are not seeing the same auth state, or `membership`'s
+policies evaluate differently in the moment after `signInWithPassword`
+resolves. Worth an answer before a stakeholder sees "You do not have access"
+on their first sign-in of the day.
+
+**Not a regression from M5** — `signInAsOps` is copied verbatim from
+`e2e/demand.spec.ts`, which predates it.
+
+**Where it belongs:** `P2-E` or its own ticket. Effort unknown until the cause
+is found; the fix may be one line or may be a retry that masks it, and the
+difference matters.

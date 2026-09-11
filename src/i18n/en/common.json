@@ -372,7 +372,21 @@
     "noneAvailableTitle": "Nothing available to attach",
     "noneAvailableDetail": "Every current harvest figure for this village, crop and window is already committed.",
     "notFoundTitle": "Opportunity not found",
-    "notFoundDetail": "It may not exist, or you may not have access to it."
+    "notFoundDetail": "It may not exist, or you may not have access to it.",
+    "demandQuantity": "Buyer's demand",
+    "harvestOption": "{{expected}} expected · {{available}} available",
+    "actionShare": "Share with buyer",
+    "actionAccept": "Buyer accepted",
+    "actionDecline": "Buyer declined",
+    "actionLapse": "Mark lapsed",
+    "moving": "Saving…",
+    "releaseTitle": "Release the committed supply?",
+    "releaseDetail": "{{kg}} returns to available supply for this village, and the buyer's coverage falls. This cannot be undone: a declined or lapsed opportunity cannot be reopened.",
+    "releaseYes": "Yes, release the supply",
+    "releaseNo": "Cancel",
+    "releasedNote": "Closed. Its {{kg}} has gone back to available supply for this village. The supply lines below stay on the record — nothing was deleted.",
+    "attachClosedTitle": "Nothing more can be attached",
+    "attachClosedDetail": "This opportunity is closed, so its supply no longer counts as committed. A line attached here would record a commitment against nothing."
   },
   "tower": {
     "title": "Control Tower",

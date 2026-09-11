@@ -7,13 +7,28 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { StatusPill } from '@/components/StatusPill'
 import {
+  OPPORTUNITY_ACTION_TARGET,
+  opportunityActions,
+  releasesSupply,
+  type OpportunityAction,
+} from '@/features/ops/opportunityTransitions'
+import {
   useAttachSupply,
   useAvailableHarvest,
   useOpportunity,
+  useOpportunityStatus,
 } from '@/features/ops/useOpportunity'
 import { formatKg, formatPlainDate } from '@/lib/format'
 
 const route = getRouteApi('/_ops/ops/opportunities/$opportunityId')
+
+/** The four controls the machine can offer, in translation-key form. */
+const ACTION_LABEL: Record<OpportunityAction, string> = {
+  share: 'opportunity.actionShare',
+  accept: 'opportunity.actionAccept',
+  decline: 'opportunity.actionDecline',
+  lapse: 'opportunity.actionLapse',
+}
 
 /**
  * Spec 7.8 — the opportunity and its supply lines.
@@ -24,6 +39,12 @@ const route = getRouteApi('/_ops/ops/opportunities/$opportunityId')
  * The over-commitment error from opportunity_supply_guard is shown as written.
  * There is deliberately no client-side pre-check — a copy of the guard drifts,
  * and the message names the real numbers.
+ *
+ * Status is the screen's other action. Declining or lapsing RELEASES the
+ * committed supply (business-rules §7) and cannot be undone, so both go
+ * through a confirmation that names the kilograms going back. There is no
+ * "detach" control: `opportunity_supply` has no DELETE policy and no
+ * `deleted_at`, and the release is how a wrong commitment is unwound.
  */
 export function OpportunityDetailScreen() {
   const { opportunityId } = route.useParams()
@@ -32,9 +53,16 @@ export function OpportunityDetailScreen() {
   const opportunity = query.opportunity
   const available = useAvailableHarvest(opportunity?.village_id, opportunity?.crop_id)
   const attach = useAttachSupply(opportunityId, opportunity?.village_id)
+  const move = useOpportunityStatus(
+    opportunityId,
+    opportunity?.village_id,
+    opportunity?.buyer_demand_id ?? undefined,
+  )
 
   const [harvestId, setHarvestId] = useState('')
   const [kg, setKg] = useState('')
+  /** The releasing action awaiting confirmation, if any. */
+  const [confirming, setConfirming] = useState<OpportunityAction | null>(null)
 
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
@@ -53,6 +81,16 @@ export function OpportunityDetailScreen() {
 
   const rows = available.data ?? []
   const selected = rows.find((r) => r.harvest_report_id === harvestId)
+  const actions = opportunityActions(opportunity.status)
+  const released = actions.length === 0
+  const offered = formatKg(opportunity.offered_quantity_kg)
+
+  function act(action: OpportunityAction) {
+    // Forward moves go straight through; the two that release supply and
+    // cannot be reversed ask first.
+    if (releasesSupply(action)) setConfirming(action)
+    else move.mutate(OPPORTUNITY_ACTION_TARGET[action])
+  }
 
   return (
     <section className="max-w-3xl space-y-5" data-testid="opportunity-detail">
@@ -65,15 +103,14 @@ export function OpportunityDetailScreen() {
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <Row label={t('demand.colCrop')} value={opportunity.crop_name} />
+          {/* Two quantities, and the screen's whole job is keeping them
+              apart. "Quantity" named neither of them — QA #12. */}
           <Row
-            label={t('demand.colQuantity')}
+            label={t('opportunity.demandQuantity')}
             value={formatKg(opportunity.demand_quantity_kg)}
+            rowTestId="demand-quantity-row"
           />
-          <Row
-            label={t('opportunity.offered')}
-            value={formatKg(opportunity.offered_quantity_kg)}
-            testId="offered-total"
-          />
+          <Row label={t('opportunity.offered')} value={offered} testId="offered-total" />
         </dl>
         <p data-testid="offered-total-note" className="text-xs text-deep/60">
           {t('opportunity.offeredNote')}
@@ -84,6 +121,84 @@ export function OpportunityDetailScreen() {
       <p className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70">
         {t('opportunity.notASale')}
       </p>
+
+      {released ? (
+        // Declined and lapsed are terminal, so there is nothing to offer —
+        // only an explanation of where the supply went. The lines stay listed
+        // below: the record of what was offered is not erased.
+        <p
+          data-testid="released-note"
+          className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70"
+        >
+          {t('opportunity.releasedNote', { kg: offered })}
+        </p>
+      ) : confirming ? (
+        <div
+          data-testid="release-confirm"
+          role="alertdialog"
+          aria-label={t('opportunity.releaseTitle')}
+          className="space-y-2 rounded border border-destructive/30 bg-destructive/5 p-3"
+        >
+          <p className="text-sm font-medium text-deep">{t('opportunity.releaseTitle')}</p>
+          <p className="text-xs text-deep/70">
+            {t('opportunity.releaseDetail', { kg: offered })}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-testid="release-confirm-yes"
+              onClick={() => {
+                move.mutate(OPPORTUNITY_ACTION_TARGET[confirming])
+                setConfirming(null)
+              }}
+              className="rounded bg-destructive px-3 py-2 text-sm font-medium text-white"
+            >
+              {t('opportunity.releaseYes')}
+            </button>
+            <button
+              type="button"
+              data-testid="release-confirm-no"
+              onClick={() => setConfirming(null)}
+              className="rounded border border-deep/20 px-3 py-2 text-sm font-medium"
+            >
+              {t('opportunity.releaseNo')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div data-testid="opportunity-actions" className="flex flex-wrap items-center gap-2">
+          {actions.map((action) => (
+            <button
+              key={action}
+              type="button"
+              data-testid={`action-${action}`}
+              disabled={move.isPending}
+              onClick={() => act(action)}
+              className={`rounded px-3 py-2 text-sm font-medium disabled:opacity-60 ${
+                releasesSupply(action)
+                  ? 'border border-destructive/30 text-destructive'
+                  : 'bg-primary text-primary-foreground'
+              }`}
+            >
+              {t(ACTION_LABEL[action])}
+            </button>
+          ))}
+          {/* One write, so one claim about it — rather than every button
+              announcing that it is the one saving. */}
+          {move.isPending && (
+            <span data-testid="status-saving" className="text-sm text-deep/60">
+              {t('opportunity.moving')}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* The database's message, as written. §9's error contract. */}
+      {move.isError && (
+        <div data-testid="status-error">
+          <ErrorState error={move.error} onRetry={() => move.reset()} />
+        </div>
+      )}
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">{t('opportunity.supplyLines')}</h2>
@@ -134,7 +249,16 @@ export function OpportunityDetailScreen() {
       <section className="max-w-lg space-y-3 rounded border border-deep/10 bg-white/60 p-4">
         <h2 className="text-sm font-semibold">{t('opportunity.attachTitle')}</h2>
 
-        {available.isLoading ? (
+        {released ? (
+          // committed_kg only sums live opportunities, so a line attached
+          // here would be a commitment against nothing.
+          <div data-testid="attach-closed">
+            <EmptyState
+              title={t('opportunity.attachClosedTitle')}
+              detail={t('opportunity.attachClosedDetail')}
+            />
+          </div>
+        ) : available.isLoading ? (
           <p className="text-sm text-deep/60">{t('common.loading')}</p>
         ) : rows.length === 0 ? (
           <EmptyState
@@ -159,7 +283,13 @@ export function OpportunityDetailScreen() {
                     client-side pre-check of the guard. */}
                 {rows.map((r) => (
                   <option key={r.harvest_report_id} value={r.harvest_report_id ?? ''}>
-                    {formatKg(r.quantity_kg)} · {formatKg(r.available_kg)} {t('coverage.available')}
+                    {/* Both figures named, in sentence case: an unlabelled
+                        leading number on this screen is exactly the ambiguity
+                        the rest of it exists to avoid. QA #12. */}
+                    {t('opportunity.harvestOption', {
+                      expected: formatKg(r.quantity_kg),
+                      available: formatKg(r.available_kg),
+                    })}
                     {r.harvest_start ? ` · ${formatPlainDate(r.harvest_start)}` : ''}
                   </option>
                 ))}
@@ -208,9 +338,19 @@ export function OpportunityDetailScreen() {
   )
 }
 
-function Row({ label, value, testId }: { label: string; value: string; testId?: string }) {
+function Row({
+  label,
+  value,
+  testId,
+  rowTestId,
+}: {
+  label: string
+  value: string
+  testId?: string
+  rowTestId?: string
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
+    <div data-testid={rowTestId} className="flex items-baseline justify-between gap-3">
       <dt className="text-deep/60">{label}</dt>
       <dd data-testid={testId} className="tabular font-medium">
         {value}

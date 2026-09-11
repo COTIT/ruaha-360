@@ -171,3 +171,48 @@ export function useAttachSupply(opportunityId: string, villageId: string | undef
     },
   })
 }
+
+/**
+ * Moves an opportunity along its status machine — business-rules §7 and §8.
+ *
+ * Only `status` is sent. Everything else on the row belongs to whoever wrote
+ * it, and `updated_at` is the `opportunity_updated_at` trigger's to stamp.
+ *
+ * **Declining or lapsing is how supply is released.** `v_harvest_available`
+ * counts `opportunity_supply` on opportunities in `proposed`/`shared`/
+ * `accepted` only, so leaving that set returns every committed kg to
+ * `available_kg`. There is no detach and no delete — `opportunity_supply` has
+ * neither a DELETE policy nor a `deleted_at`, by design, because the supply
+ * line is the traceability record and erasing it would erase the history of
+ * what was offered.
+ *
+ * That is why the invalidation list is wider than the row that changed: the
+ * available figures, the demand's coverage and the market tile all read
+ * through that same filter and all move on this one write.
+ */
+export function useOpportunityStatus(
+  opportunityId: string,
+  villageId: string | undefined,
+  demandId: string | undefined,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (status: Database['public']['Enums']['opportunity_status']) => {
+      const { error } = await supabase.from('opportunity').update({ status }).eq('id', opportunityId)
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.opportunity(opportunityId) })
+      await queryClient.invalidateQueries({ queryKey: ['harvest-available'] })
+      if (demandId) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.demand(demandId) })
+      }
+      // A farmer's own view of this opportunity, and the list it sits in.
+      await queryClient.invalidateQueries({ queryKey: ['farmerOpportunities'] })
+      if (villageId) {
+        await queryClient.invalidateQueries({ predicate: isTowerQueryForVillage(villageId) })
+      }
+    },
+  })
+}
