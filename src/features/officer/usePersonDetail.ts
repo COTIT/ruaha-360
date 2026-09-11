@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { supabase } from '@/lib/supabase'
+import { isUuid } from '@/lib/ids'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import type { PersonDetail, VerifiableTable } from '@/features/officer/personDetail'
 
@@ -16,6 +17,10 @@ import type { PersonDetail, VerifiableTable } from '@/features/officer/personDet
  * Both are resolved before the graph read so the nesting stays one query.
  */
 export async function fetchPersonDetail(personId: string): Promise<PersonDetail | null> {
+  // QA #3: a malformed route param must reach the same "not found" state as a
+  // well-formed id matching nothing, rather than a uuid parse failure.
+  if (!isUuid(personId)) return null
+
   const personResult = await supabase
     .from('person')
     .select(

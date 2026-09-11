@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { queryKeys } from '@/lib/queryKeys'
+import { isUuid } from '@/lib/ids'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/db.types'
 
@@ -61,6 +62,10 @@ const PROVENANCE = 'source, verification, confidence, captured_at'
  * relationships and PostgREST refuses to choose between them.
  */
 export async function fetchFarmDetail(farmId: string): Promise<FarmDetail | null> {
+  // QA #3: a malformed route param must reach the same "not found" state as a
+  // well-formed id matching nothing, rather than a uuid parse failure.
+  if (!isUuid(farmId)) return null
+
   const { data, error } = await supabase
     .from('farm')
     .select(
@@ -97,6 +102,10 @@ export function useFarmDetail(farmId: string) {
  * other officer writes.
  */
 export async function fetchCycleDetail(cycleId: string, sw: boolean): Promise<CycleDetail | null> {
+  // QA #3: a malformed route param must reach the same "not found" state as a
+  // well-formed id matching nothing, rather than a uuid parse failure.
+  if (!isUuid(cycleId)) return null
+
   const { data, error } = await supabase
     .from('crop_cycle')
     .select(

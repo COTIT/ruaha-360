@@ -48,6 +48,49 @@ describe('ErrorState', () => {
     expect(screen.getByTestId('error-retry')).toBeInTheDocument()
   })
 
+
+  /**
+   * QA #4, #20, #25. "Surface them verbatim" is right about the messages the
+   * SCHEMA writes, and was being applied to machine noise as well —
+   * `pue_request_hours_per_day_check` and `TypeError: Failed to fetch` both
+   * reached users as copy.
+   */
+  test('a check-constraint identifier is replaced by a sentence', () => {
+    render(
+      <ErrorState
+        error={
+          new Error(
+            'new row for relation "pue_request" violates check constraint "pue_request_hours_per_day_check"',
+          )
+        }
+      />,
+    )
+
+    expect(screen.getByTestId('error-state')).toHaveTextContent(/between 0 and 24/i)
+    expect(screen.getByTestId('error-state')).not.toHaveTextContent('pue_request')
+  })
+
+  test('a JS exception becomes something a field officer can act on', () => {
+    render(<ErrorState error={new TypeError('Failed to fetch')} />)
+
+    expect(screen.getByTestId('error-state')).toHaveTextContent(/check your connection/i)
+    expect(screen.getByTestId('error-state')).not.toHaveTextContent('TypeError')
+  })
+
+  test('a malformed id does not show the parse failure', () => {
+    render(<ErrorState error={new Error('invalid input syntax for type uuid: "nope"')} />)
+
+    expect(screen.getByTestId('error-state')).not.toHaveTextContent('uuid')
+  })
+
+  // The regression that matters most: the mapping must not eat the messages
+  // §9 exists to protect.
+  test('and the schema own messages are still untouched', () => {
+    const message = 'this crop is measured by area: area_ha is required'
+    render(<ErrorState error={new Error(message)} />)
+    expect(screen.getByText(message)).toBeInTheDocument()
+  })
+
   test('handles a non-Error thrown value without crashing', () => {
     render(<ErrorState error={'just a string'} />)
     expect(screen.getByText('just a string')).toBeInTheDocument()

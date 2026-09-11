@@ -136,9 +136,11 @@ describe('BuyersScreen create', () => {
     })
   })
 
-  // The unique (project_id, name) constraint belongs to the database. Its
-  // message names the collision, so it is shown as written rather than
-  // pre-checked (business-rules §0.3).
+  // The unique (project_id, name) constraint belongs to the database, and is
+  // called rather than pre-checked (business-rules §0.3). What reaches the
+  // user is the collision in words: Postgres names the CONSTRAINT, not the
+  // value, so `duplicate key value violates unique constraint
+  // "buyer_project_id_name_key"` is not the sentence anybody needs (QA #4).
   test('a database refusal is surfaced rather than swallowed', () => {
     createState.error = new Error(
       'duplicate key value violates unique constraint "buyer_project_id_name_key"',
@@ -146,7 +148,9 @@ describe('BuyersScreen create', () => {
     useBuyers.mockReturnValue({ isLoading: false, error: null, data: [] })
     render(<BuyersScreen />)
 
-    expect(screen.getByTestId('error-state')).toHaveTextContent(/duplicate key value/i)
+    const shown = screen.getByTestId('error-state')
+    expect(shown).toHaveTextContent(/buyer with that name already exists/i)
+    expect(shown).not.toHaveTextContent('buyer_project_id_name_key')
   })
 
   test('submit is disabled while the write is in flight', () => {

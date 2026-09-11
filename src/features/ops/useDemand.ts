@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { supabase } from '@/lib/supabase'
+import { isUuid } from '@/lib/ids'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
 
@@ -56,6 +57,10 @@ export function useDemand(demandId: string) {
   const query = useQuery({
     queryKey: queryKeys.demand(demandId),
     queryFn: async () => {
+      // QA #3: a malformed route param must reach the same "not found" state
+      // as a well-formed id matching nothing, not a uuid parse failure.
+      if (!isUuid(demandId)) return null
+
       const { data, error } = await supabase
         .from('buyer_demand')
         .select(DEMAND_SELECT)

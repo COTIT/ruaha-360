@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { useSession } from '@/app/session'
+import { humanizeDbError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 import { queryKeys } from '@/lib/queryKeys'
 import { isSupportedLanguage, supportedLanguages } from '@/i18n'
@@ -68,9 +70,24 @@ export function LanguageSwitch() {
     }
   }
 
+  /**
+   * The banner describes one attempt, on one screen. It used to survive the
+   * route change and two more after it, still describing an event that was
+   * over (QA #24). This control lives in the shell header, so nothing else
+   * unmounts it.
+   */
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const reset = persist.reset
+  useEffect(() => {
+    reset()
+  }, [pathname, reset])
+
   const failure = persist.error
+  // `TypeError: Failed to fetch` told a field officer nothing (QA #25). The
+  // honest half of the sentence — changed on screen, not stored — stays.
+  const human = failure ? humanizeDbError(failure) : null
   const failureMessage =
-    failure instanceof Error ? failure.message : failure ? String(failure) : undefined
+    human === null ? undefined : human.kind === 'verbatim' ? human.message : t(human.key)
 
   return (
     <div className="inline-flex flex-col items-end gap-1">

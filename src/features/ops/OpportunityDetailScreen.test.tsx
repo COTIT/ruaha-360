@@ -263,7 +263,10 @@ describe('releasing supply is confirmed first', () => {
     expect(screen.getAllByTestId('status-saving')).toHaveLength(1)
   })
 
-  test('a failed transition shows the database message', () => {
+  // An RLS refusal on a WRITE means the UI offered a control it should not
+  // have — §9 calls that a bug to fix. The user still needs a sentence, and
+  // `new row violates row-level security policy` is not one.
+  test('a failed transition is reported in words, not in policy language', () => {
     loaded({ status: 'shared' })
     useOpportunityStatus.mockReturnValue({
       mutate: statusMutate,
@@ -274,7 +277,9 @@ describe('releasing supply is confirmed first', () => {
     })
     render(<OpportunityDetailScreen />)
 
-    expect(screen.getByTestId('status-error')).toHaveTextContent(/row-level security/i)
+    const shown = screen.getByTestId('status-error')
+    expect(shown).toHaveTextContent(/do not have permission/i)
+    expect(shown).not.toHaveTextContent(/row-level security/i)
   })
 })
 

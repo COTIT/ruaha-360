@@ -82,8 +82,9 @@ test.describe('/ops/demand', () => {
     await expect(page.getByTestId('demand-table')).toContainText('E2E-created-demand')
   })
 
-  // demand_window_sane: window_end >= window_start. Not pre-checked — the
-  // constraint is called and its message surfaced.
+  // demand_window_sane: window_end >= window_start. Still not pre-checked —
+  // the constraint is called. What changed in M7 is what the user READS: a
+  // constraint identifier is not copy in any language (QA #21, #4).
   test('a backwards window is refused with the database message', async ({ page }) => {
     await signInAsOps(page)
     await page.goto('/ops/demand')
@@ -96,7 +97,9 @@ test.describe('/ops/demand', () => {
     await page.getByTestId('demand-quality-note').fill('E2E-backwards-window')
     await page.getByTestId('demand-create-submit').click()
 
-    await expect(page.getByTestId('demand-create-error')).toContainText(/demand_window_sane/i)
+    const error = page.getByTestId('demand-create-error')
+    await expect(error).toContainText(/must end on or after it starts/i)
+    await expect(error).not.toContainText(/demand_window_sane|buyer_demand/i)
   })
 
   test('a farmer cannot reach the order book', async ({ page }) => {
@@ -228,9 +231,13 @@ test.describe('/ops/opportunities/$opportunityId', () => {
     await page.getByTestId('attach-kg').fill('100')
     await page.getByTestId('attach-submit').click()
 
+    // business-rules §9's other half, and the one M7 must not break: the
+    // guard's own message is written to be read and is shown AS WRITTEN. It
+    // names the numbers, which is the only part worth reading.
     await expect(page.getByTestId('attach-error')).toContainText(/over-commitment/i)
     await expect(page.getByTestId('attach-error')).toContainText('4100.00 kg available')
     await expect(page.getByTestId('attach-error')).toContainText('4100.00 kg already committed')
+    await expect(page.getByTestId('attach-error')).toContainText('100.00 kg requested')
   })
 
   test('the offered total is re-summed by the database, never set by the client', async ({

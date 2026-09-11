@@ -2,7 +2,7 @@
   "language": {
     "en": "English",
     "sw": "Kiswahili",
-    "notSaved": "Language changed for now, but could not be saved:"
+    "notSaved": "Language changed for now, but could not be saved."
   },
   "demoBanner": {
     "label": "Demo data",
@@ -62,7 +62,26 @@
   },
   "error": {
     "title": "Something went wrong",
-    "retry": "Try again"
+    "retry": "Try again",
+    "network": "Could not reach the server. Check your connection and try again.",
+    "unexpected": "Something went wrong that should not have. Try again, and tell the programme team if it keeps happening.",
+    "badId": "That record reference is not valid.",
+    "numericOverflow": "One of the numbers is too large for the field it was typed into. Check the figures and try again.",
+    "invalidValue": "One of the values is not allowed here. Check the form and try again.",
+    "duplicate": "That record already exists.",
+    "notAllowed": "You do not have permission to do that.",
+    "missingValue": "A required value is missing.",
+    "badReference": "That refers to a record that does not exist.",
+    "hoursRange": "Hours per day must be between 0 and 24.",
+    "daysRange": "Days per week must be between 0 and 7.",
+    "quantityPositive": "The quantity must be more than zero.",
+    "quantityNotNegative": "The quantity cannot be negative.",
+    "windowBackwards": "The window must end on or after it starts.",
+    "contributionPositive": "A contribution must be more than zero.",
+    "oneCurrentHarvest": "A crop cycle can only have one current harvest figure. Supersede the existing one instead.",
+    "duplicateBuyer": "A buyer with that name already exists in this project.",
+    "duplicateSupply": "That harvest figure is already attached to this opportunity.",
+    "duplicateEquipmentCode": "That equipment code is already in use in this project."
   },
   "empty": {
     "noAccessToThis": "Nothing to show",

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { supabase } from '@/lib/supabase'
+import { isUuid } from '@/lib/ids'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
 
@@ -41,6 +42,10 @@ export function useOpportunity(opportunityId: string) {
   const query = useQuery({
     queryKey: queryKeys.opportunity(opportunityId),
     queryFn: async () => {
+      // QA #3: a malformed route param must reach the same "not found" state
+      // as a well-formed id matching nothing, not a uuid parse failure.
+      if (!isUuid(opportunityId)) return null
+
       const { data, error } = await supabase
         .from('opportunity')
         .select(

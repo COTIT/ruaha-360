@@ -5,23 +5,39 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const update = vi.fn()
 const useSession = vi.fn()
+/** The route the shell is currently on. Mutated by the navigation tests. */
+let pathname = '/officer/register'
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { from: () => ({ update: (v: unknown) => ({ eq: () => update(v) }) }) },
   isDemoData: true,
 }))
 vi.mock('@/app/session', () => ({ useSession: () => useSession() }))
+vi.mock('@tanstack/react-router', () => ({
+  useRouterState: ({ select }: { select: (s: unknown) => unknown }) =>
+    select({ location: { pathname } }),
+}))
 
 const { LanguageSwitch } = await import('@/app/LanguageSwitch')
 const i18n = (await import('@/i18n')).default
 
 function renderSwitch() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <LanguageSwitch />
     </QueryClientProvider>,
   )
+  return {
+    // Re-renders through the same provider, so the mutation state survives —
+    // which is the point of the navigation tests.
+    rerender: () =>
+      result.rerender(
+        <QueryClientProvider client={queryClient}>
+          <LanguageSwitch />
+        </QueryClientProvider>,
+      ),
+  }
 }
 
 const signedIn = (locale: string) => ({
@@ -32,6 +48,7 @@ const signedIn = (locale: string) => ({
 beforeEach(async () => {
   update.mockReset()
   useSession.mockReset()
+  pathname = '/officer/register'
   await i18n.changeLanguage('en')
 })
 
@@ -130,5 +147,72 @@ describe('LanguageSwitch applies the stored locale', () => {
     useSession.mockReturnValue(signedIn('fr'))
     renderSwitch()
     await waitFor(() => expect(i18n.resolvedLanguage).toBe('en'))
+  })
+})
+
+/**
+ * QA #25 and #24. The BEHAVIOUR here is right and worth keeping: the switch
+ * tells the truth — "changed for now, but could not be saved" — rather than
+ * silently pretending it saved. Only the message and its lifetime were wrong.
+ */
+describe('what the failure says, and how long it says it', () => {
+  test('a JS exception is not what the officer reads', async () => {
+    useSession.mockReturnValue(signedIn('en'))
+    update.mockRejectedValue(new TypeError('Failed to fetch'))
+    renderSwitch()
+
+    await userEvent.selectOptions(screen.getByTestId('language-switch'), 'sw')
+
+    const banner = await screen.findByTestId('language-error')
+    expect(banner).toHaveTextContent(/check your connection/i)
+    expect(banner).not.toHaveTextContent('TypeError')
+    // The honest half stays: it changed on screen and was not stored.
+    expect(banner).toHaveTextContent(/could not be saved/i)
+  })
+
+  // A message the schema wrote is still shown as written.
+  test('a real database message still comes through', async () => {
+    useSession.mockReturnValue(signedIn('en'))
+    update.mockResolvedValue({ error: { message: 'permission denied for table app_user' } })
+    renderSwitch()
+
+    await userEvent.selectOptions(screen.getByTestId('language-switch'), 'sw')
+    expect(await screen.findByTestId('language-error')).toHaveTextContent(
+      'permission denied for table app_user',
+    )
+  })
+
+  /**
+   * QA #24. The banner described an event that was over, on a screen with
+   * nothing to do with it — it survived the route change and two more after
+   * that.
+   */
+  test('the banner does not follow the user to the next screen', async () => {
+    useSession.mockReturnValue(signedIn('en'))
+    update.mockRejectedValue(new Error('offline'))
+    const { rerender } = renderSwitch()
+
+    await userEvent.selectOptions(screen.getByTestId('language-switch'), 'sw')
+    await screen.findByTestId('language-error')
+
+    pathname = '/officer/people'
+    rerender()
+
+    await waitFor(() =>
+      expect(screen.queryByTestId('language-error')).not.toBeInTheDocument(),
+    )
+  })
+
+  test('but it survives a re-render on the same screen', async () => {
+    useSession.mockReturnValue(signedIn('en'))
+    update.mockRejectedValue(new Error('offline'))
+    const { rerender } = renderSwitch()
+
+    await userEvent.selectOptions(screen.getByTestId('language-switch'), 'sw')
+    await screen.findByTestId('language-error')
+
+    rerender()
+
+    expect(screen.getByTestId('language-error')).toBeInTheDocument()
   })
 })

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { supabase } from '@/lib/supabase'
+import { isUuid } from '@/lib/ids'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
 
@@ -35,6 +36,10 @@ export async function fetchEquipment(): Promise<Array<Record<string, unknown>>> 
 }
 
 export async function fetchEquipmentItem(id: string): Promise<Record<string, unknown> | null> {
+  // QA #3: a malformed route param must reach the same "not found" state as a
+  // well-formed id matching nothing, rather than a uuid parse failure.
+  if (!isUuid(id)) return null
+
   const { data, error } = await supabase.from('equipment').select(SELECT).eq('id', id).maybeSingle()
   if (error) throw new Error(error.message)
   // Zero rows is an answer: not listed, or out of this project's scope.
