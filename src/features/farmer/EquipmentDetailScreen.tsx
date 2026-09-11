@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
+import { useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 
 import { activeMemberships, ownVillageId } from '@/app/membership'
@@ -8,10 +10,18 @@ import { EmptyState } from '@/components/EmptyState'
 import { EnergyEstimatePanel } from '@/components/EnergyEstimatePanel'
 import { ErrorState } from '@/components/ErrorState'
 import { useEquipmentItem } from '@/features/farmer/useEquipment'
+import { requestSchema, type RequestForm } from '@/features/farmer/requestSchema'
 import { useSubmitRequest } from '@/features/farmer/useRequests'
 import { formatKw, formatMoney } from '@/lib/format'
 
 const route = getRouteApi('/_farmer/farm/equipment/$equipmentId')
+
+const EMPTY: RequestForm = {
+  quantity: '1',
+  hours_per_day: '',
+  days_per_week: '',
+  purpose: '',
+}
 
 /**
  * Spec 6.4 — detail plus the request form, with a live estimate.
@@ -19,6 +29,11 @@ const route = getRouteApi('/_farmer/farm/equipment/$equipmentId')
  * The estimate shown here is a PREVIEW. pue_recompute_estimate writes the
  * stored row, and the request detail reads that stored figure rather than
  * recomputing — so the two can be compared instead of assumed equal.
+ *
+ * The inputs are bounded by `requestSchema` (QA #9). The estimate is only
+ * computed from inputs that pass it: the finding's real complaint was not that
+ * 99 hours was accepted, but that the screen computed a confident
+ * 1,485 kWh/day from it and presented that as an answer.
  */
 export function EquipmentDetailScreen() {
   const { equipmentId } = route.useParams()
@@ -27,21 +42,39 @@ export function EquipmentDetailScreen() {
   const query = useEquipmentItem(equipmentId)
   const submit = useSubmitRequest()
 
-  const [quantity, setQuantity] = useState('1')
-  const [hours, setHours] = useState('')
-  const [days, setDays] = useState('')
-  const [purpose, setPurpose] = useState('')
-  const [prefilled, setPrefilled] = useState(false)
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<RequestForm, unknown, RequestForm>({
+    defaultValues: EMPTY,
+    resolver: zodResolver(requestSchema),
+  })
 
   const item = query.item
 
   // Prefilled from the equipment's typicals, once. Overwriting on every render
-  // would fight the farmer as they type.
-  if (item && !prefilled) {
-    setHours(item.typical_hours_per_day === null ? '' : String(item.typical_hours_per_day))
-    setDays(item.typical_days_per_week === null ? '' : String(item.typical_days_per_week))
-    setPrefilled(true)
-  }
+  // would fight the farmer as they type. A ref rather than state: `reset` is
+  // what re-renders, so a state flag would only add a second render and a
+  // set-state-in-effect to explain away.
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (prefilled.current || !item) return
+    prefilled.current = true
+    reset({
+      ...EMPTY,
+      hours_per_day: item.typical_hours_per_day === null ? '' : String(item.typical_hours_per_day),
+      days_per_week: item.typical_days_per_week === null ? '' : String(item.typical_days_per_week),
+    })
+  }, [item, reset])
+
+  // Subscribed so the estimate recalculates live, and so it can be withheld
+  // while the assumptions behind it are not possible. `useWatch` rather than
+  // `watch()` because the latter returns a fresh object on every render.
+  const values = useWatch({ control })
+  const parsed = requestSchema.safeParse(values)
 
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
@@ -83,6 +116,17 @@ export function EquipmentDetailScreen() {
 
   const canRequest = Boolean(villageId && personId)
 
+  /** One message per reason. The schema's `message` holds an i18n key. */
+  const err = (name: keyof RequestForm) => {
+    const error = errors[name]
+    if (!error) return null
+    return (
+      <p data-testid={`request-${fieldId(name)}-error`} className="text-sm text-destructive">
+        {t(error.message ?? 'equipment.required')}
+      </p>
+    )
+  }
+
   return (
     <section className="max-w-lg space-y-4" data-testid="equipment-detail">
       <header className="space-y-1">
@@ -98,101 +142,137 @@ export function EquipmentDetailScreen() {
 
       <h2 className="text-sm font-semibold">{t('equipment.requestThis')}</h2>
 
-      <div className="space-y-3">
-        <NumberField
-          label={t('equipment.quantity')}
-          testId="request-quantity"
-          value={quantity}
-          onChange={setQuantity}
-        />
-        <NumberField
-          label={t('equipment.hours')}
-          testId="request-hours"
-          value={hours}
-          onChange={setHours}
-        />
-        <NumberField
-          label={t('equipment.days')}
-          testId="request-days"
-          value={days}
-          onChange={setDays}
-        />
-        <div className="space-y-1">
-          <label className="block text-sm font-medium" htmlFor="request-purpose">
-            {t('equipment.purpose')}
-          </label>
-          <textarea
-            id="request-purpose"
-            data-testid="request-purpose"
-            rows={2}
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-            className="w-full rounded border border-deep/20 bg-white px-3 py-2"
-          />
-        </div>
-      </div>
-
-      {/* Recalculates live as the assumptions change. */}
-      <EnergyEstimatePanel
-        ratedPowerKw={item.rated_power_kw ?? 0}
-        quantity={Number(quantity)}
-        hoursPerDay={Number(hours)}
-        daysPerWeek={Number(days)}
-      />
-
-      {submit.isError && (
-        <div data-testid="request-error">
-          <ErrorState error={submit.error} onRetry={() => submit.reset()} />
-        </div>
-      )}
-
-      <button
-        type="button"
-        data-testid="request-submit"
-        disabled={submit.isPending || !canRequest}
-        onClick={() =>
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={handleSubmit((form) =>
           submit.mutate({
             villageId: villageId!,
             personId: personId!,
             equipmentId: item.id,
-            quantity: Number(quantity),
-            hoursPerDay: Number(hours),
-            daysPerWeek: Number(days),
-            purpose,
-          })
-        }
-        className="w-full rounded bg-primary px-3 py-2.5 font-medium text-primary-foreground disabled:opacity-60"
+            quantity: Number(form.quantity),
+            hoursPerDay: Number(form.hours_per_day),
+            daysPerWeek: Number(form.days_per_week),
+            purpose: form.purpose,
+          }),
+        )}
       >
-        {submit.isPending ? t('equipment.submitting') : t('equipment.submit')}
-      </button>
+        <div className="space-y-3">
+          <NumberField label={t('equipment.quantity')} testId="request-quantity">
+            <input
+              id="request-quantity"
+              data-testid="request-quantity"
+              inputMode="numeric"
+              className={inputClass}
+              {...register('quantity')}
+            />
+          </NumberField>
+          {err('quantity')}
+
+          <NumberField label={t('equipment.hours')} testId="request-hours">
+            <input
+              id="request-hours"
+              data-testid="request-hours"
+              inputMode="decimal"
+              className={inputClass}
+              {...register('hours_per_day')}
+            />
+          </NumberField>
+          {err('hours_per_day')}
+
+          <NumberField label={t('equipment.days')} testId="request-days">
+            <input
+              id="request-days"
+              data-testid="request-days"
+              inputMode="decimal"
+              className={inputClass}
+              {...register('days_per_week')}
+            />
+          </NumberField>
+          {err('days_per_week')}
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium" htmlFor="request-purpose">
+              {t('equipment.purpose')}
+            </label>
+            <textarea
+              id="request-purpose"
+              data-testid="request-purpose"
+              rows={2}
+              className={inputClass}
+              {...register('purpose')}
+            />
+          </div>
+        </div>
+
+        {/* Recalculates live as the assumptions change — but only from
+            assumptions that could be true. A figure computed from 99 hours a
+            day is not an estimate, it is a wrong answer stated confidently. */}
+        {parsed.success ? (
+          <EnergyEstimatePanel
+            ratedPowerKw={item.rated_power_kw ?? 0}
+            quantity={Number(parsed.data.quantity)}
+            hoursPerDay={Number(parsed.data.hours_per_day)}
+            daysPerWeek={Number(parsed.data.days_per_week)}
+          />
+        ) : (
+          <div data-testid="estimate-blocked">
+            <EmptyState
+              title={t('equipment.estimateBlockedTitle')}
+              detail={t('equipment.estimateBlockedDetail')}
+            />
+          </div>
+        )}
+
+        {submit.isError && (
+          <div data-testid="request-error">
+            <ErrorState error={submit.error} onRetry={() => submit.reset()} />
+          </div>
+        )}
+
+        <button
+          type="submit"
+          data-testid="request-submit"
+          disabled={submit.isPending || !canRequest}
+          className="w-full rounded bg-primary px-3 py-2.5 font-medium text-primary-foreground disabled:opacity-60"
+        >
+          {submit.isPending ? t('equipment.submitting') : t('equipment.submit')}
+        </button>
+      </form>
     </section>
   )
+}
+
+const inputClass = 'w-full rounded border border-deep/20 bg-white px-3 py-2'
+
+function fieldId(name: keyof RequestForm) {
+  // `hours_per_day` is labelled `request-hours` on screen, as the spec names
+  // it; the schema keys match the COLUMNS, so the two are mapped rather than
+  // derived.
+  const MAP: Record<keyof RequestForm, string> = {
+    quantity: 'quantity',
+    hours_per_day: 'hours',
+    days_per_week: 'days',
+    purpose: 'purpose',
+  }
+  return MAP[name]
 }
 
 function NumberField({
   label,
   testId,
-  value,
-  onChange,
+  children,
 }: {
   label: string
   testId: string
-  value: string
-  onChange: (next: string) => void
+  children: React.ReactNode
 }) {
   return (
     <div className="space-y-1">
       <label className="block text-sm font-medium" htmlFor={testId}>
         {label}
       </label>
-      <input
-        id={testId}
-        data-testid={testId}
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border border-deep/20 bg-white px-3 py-2"
-      />
+      {children}
     </div>
   )
 }

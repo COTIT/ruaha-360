@@ -121,7 +121,16 @@
     "noVillage": "No village to register into",
     "noVillageDetail": "Registration needs a village assignment. Ask your programme manager.",
     "provenanceNote": "Recorded as field-verified, captured by you. This is not a choice.",
-    "viewPerson": "Open the record"
+    "viewPerson": "Open the record",
+    "notANumber": "Enter a number.",
+    "notNegative": "This cannot be negative.",
+    "tooLarge": "This number is too large for the field.",
+    "wholeNumber": "Enter a whole number.",
+    "windowBackwards": "The harvest window must end on or after it starts.",
+    "latitudeRange": "Latitude runs from -90 to 90.",
+    "longitudeRange": "Longitude runs from -180 to 180.",
+    "phoneHint": "Include the country code, for example +255700000101.",
+    "roundedNote": "This will be stored as {{value}}."
   },
   "confidence": {
     "low": "Low",
@@ -237,7 +246,15 @@
     "successDetail": "Ops will review it. You can follow it under Requests.",
     "viewRequest": "View the request",
     "notFoundTitle": "Equipment not found",
-    "notFoundDetail": "It may no longer be listed, or you may not have access to it."
+    "notFoundDetail": "It may no longer be listed, or you may not have access to it.",
+    "required": "This is required.",
+    "notANumber": "Enter a number.",
+    "wholeNumber": "Enter a whole number.",
+    "moreThanZero": "This must be more than zero.",
+    "hoursRange": "Hours per day run from 0 to 24.",
+    "daysRange": "Days per week run from 0 to 7.",
+    "estimateBlockedTitle": "No estimate yet",
+    "estimateBlockedDetail": "Fill in how many, hours per day and days per week, and the estimate appears here."
   },
   "requests": {
     "title": "My requests",
@@ -386,7 +403,12 @@
     "releaseNo": "Cancel",
     "releasedNote": "Closed. Its {{kg}} has gone back to available supply for this village. The supply lines below stay on the record — nothing was deleted.",
     "attachClosedTitle": "Nothing more can be attached",
-    "attachClosedDetail": "This opportunity is closed, so its supply no longer counts as committed. A line attached here would record a commitment against nothing."
+    "attachClosedDetail": "This opportunity is closed, so its supply no longer counts as committed. A line attached here would record a commitment against nothing.",
+    "chooseHarvestRequired": "Choose a harvest figure to attach.",
+    "kgRequired": "Enter how many kilograms.",
+    "kgNotANumber": "Enter a number.",
+    "kgMoreThanZero": "A contribution has to be more than zero.",
+    "kgTooLarge": "This number is too large for the field."
   },
   "tower": {
     "title": "Control Tower",

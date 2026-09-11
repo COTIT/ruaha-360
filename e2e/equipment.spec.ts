@@ -169,3 +169,69 @@ test.describe('/farm/requests', () => {
     )
   })
 })
+/**
+ * QA #9 — the request form's sanity limits.
+ *
+ * `quantity integer check (quantity > 0)` and
+ * `hours_per_day numeric(4,2) check (hours_per_day between 0 and 24)` are the
+ * columns' own shapes. Before this, 99 hours produced a confident
+ * 1,485 kWh/day on screen and a `pue_request_hours_per_day_check` message
+ * after submitting.
+ */
+test.describe('the request form refuses impossible assumptions', () => {
+  test('99 hours in a day is refused inline, and no estimate is computed from it', async ({
+    page,
+  }) => {
+    await signInAsNeema(page)
+    await page.goto(`/farm/equipment/${MILL}`)
+
+    await page.getByTestId('request-hours').fill('99')
+
+    // The finding's real complaint: not that 99 was accepted, but that the
+    // screen answered with 1,485 kWh/day.
+    await expect(page.getByTestId('estimate-panel')).toHaveCount(0)
+    await expect(page.getByTestId('estimate-blocked')).toBeVisible()
+
+    await page.getByTestId('request-submit').click()
+    await expect(page.getByTestId('request-hours-error')).toBeVisible()
+    await expect(page.getByTestId('request-success')).toHaveCount(0)
+    // Not the constraint name coming back from the database.
+    await expect(page.getByTestId('request-error')).toHaveCount(0)
+  })
+
+  // The column permits 0. A request to run a mill for zero hours asks for
+  // nothing, so the form refuses to send it.
+  test('zero hours is refused even though the column allows it', async ({ page }) => {
+    await signInAsNeema(page)
+    await page.goto(`/farm/equipment/${MILL}`)
+
+    await page.getByTestId('request-hours').fill('0')
+    await page.getByTestId('request-submit').click()
+
+    await expect(page.getByTestId('request-hours-error')).toContainText(/more than zero/i)
+    await expect(page.getByTestId('request-success')).toHaveCount(0)
+  })
+
+  test('zero machines is refused', async ({ page }) => {
+    await signInAsNeema(page)
+    await page.goto(`/farm/equipment/${MILL}`)
+
+    await page.getByTestId('request-quantity').fill('0')
+    await page.getByTestId('request-submit').click()
+
+    await expect(page.getByTestId('request-quantity-error')).toBeVisible()
+    await expect(page.getByTestId('request-success')).toHaveCount(0)
+  })
+
+  test('the estimate returns once the assumptions make sense again', async ({ page }) => {
+    await signInAsNeema(page)
+    await page.goto(`/farm/equipment/${MILL}`)
+
+    await page.getByTestId('request-hours').fill('99')
+    await expect(page.getByTestId('estimate-blocked')).toBeVisible()
+
+    await page.getByTestId('request-hours').fill('8')
+    await expect(page.getByTestId('estimate-panel')).toBeVisible()
+    await expect(page.getByTestId('estimate-kwh-day')).toHaveText('120.000 kWh')
+  })
+})

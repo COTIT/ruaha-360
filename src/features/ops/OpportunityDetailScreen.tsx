@@ -6,6 +6,7 @@ import { DrillLink } from '@/components/DrillLink'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { StatusPill } from '@/components/StatusPill'
+import { supplySchema } from '@/features/ops/supplySchema'
 import {
   OPPORTUNITY_ACTION_TARGET,
   opportunityActions,
@@ -61,6 +62,8 @@ export function OpportunityDetailScreen() {
 
   const [harvestId, setHarvestId] = useState('')
   const [kg, setKg] = useState('')
+  /** Field errors from `supplySchema`, as i18n keys. */
+  const [attachErrors, setAttachErrors] = useState<Record<string, string>>({})
   /** The releasing action awaiting confirmation, if any. */
   const [confirming, setConfirming] = useState<OpportunityAction | null>(null)
 
@@ -80,10 +83,43 @@ export function OpportunityDetailScreen() {
   }
 
   const rows = available.data ?? []
-  const selected = rows.find((r) => r.harvest_report_id === harvestId)
   const actions = opportunityActions(opportunity.status)
   const released = actions.length === 0
   const offered = formatKg(opportunity.offered_quantity_kg)
+
+  /**
+   * Validates the column's own shape, then sends.
+   *
+   * Over-commitment is NOT checked here: `opportunity_supply_guard` owns it,
+   * its message names the actual kilograms, and business-rules §8 says to show
+   * it as written. So a figure past `available_kg` is sent on purpose.
+   */
+  function attachSupply() {
+    const parsed = supplySchema.safeParse({ harvest_report_id: harvestId, contributed_kg: kg })
+    if (!parsed.success) {
+      setAttachErrors(
+        Object.fromEntries(
+          parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message]),
+        ),
+      )
+      return
+    }
+
+    setAttachErrors({})
+    const row = rows.find((r) => r.harvest_report_id === parsed.data.harvest_report_id)
+    attach.mutate({
+      harvestReportId: parsed.data.harvest_report_id,
+      cropCycleId: row?.crop_cycle_id ?? '',
+      contributedKg: Number(parsed.data.contributed_kg),
+    })
+  }
+
+  const attachError = (field: 'harvest_report_id' | 'contributed_kg', testId: string) =>
+    attachErrors[field] ? (
+      <p data-testid={`${testId}-error`} className="text-sm text-destructive">
+        {t(attachErrors[field])}
+      </p>
+    ) : null
 
   function act(action: OpportunityAction) {
     // Forward moves go straight through; the two that release supply and
@@ -294,6 +330,7 @@ export function OpportunityDetailScreen() {
                   </option>
                 ))}
               </select>
+              {attachError('harvest_report_id', 'attach-harvest')}
             </div>
 
             <div className="space-y-1">
@@ -308,6 +345,7 @@ export function OpportunityDetailScreen() {
                 onChange={(e) => setKg(e.target.value)}
                 className="w-full rounded border border-deep/20 bg-white px-3 py-2"
               />
+              {attachError('contributed_kg', 'attach-kg')}
             </div>
 
             {attach.isError && (
@@ -319,14 +357,10 @@ export function OpportunityDetailScreen() {
             <button
               type="button"
               data-testid="attach-submit"
-              disabled={attach.isPending || !selected || kg === ''}
-              onClick={() =>
-                attach.mutate({
-                  harvestReportId: selected!.harvest_report_id!,
-                  cropCycleId: selected!.crop_cycle_id!,
-                  contributedKg: Number(kg),
-                })
-              }
+              // Enabled while incomplete, deliberately: a dead button gives
+              // no reason, and the reason is the point.
+              disabled={attach.isPending}
+              onClick={attachSupply}
               className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
             >
               {attach.isPending ? t('opportunity.attaching') : t('opportunity.attach')}

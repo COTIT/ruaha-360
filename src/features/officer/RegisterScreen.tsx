@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, getRouteApi, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 
 import { activeMemberships, writableVillageIds } from '@/app/membership'
@@ -10,6 +11,11 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { UnsavedDraftBadge } from '@/components/UnsavedDraftBadge'
 import { buildRegisterPayload, type RegisterForm } from '@/features/officer/registerPayload'
+import {
+  registerSchema,
+  roundedTo,
+  type CropMeasure,
+} from '@/features/officer/registerSchema'
 import { useCrops } from '@/features/officer/useCrops'
 import { draftKey, useDraft } from '@/lib/drafts'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
@@ -90,8 +96,25 @@ export function RegisterScreen() {
   const clientRef = draftIdFromUrl ?? ''
   const draft = useDraft<RegisterForm>(draftKey('register', clientRef))
 
-  const { register, handleSubmit, watch, reset, formState } = useForm<RegisterForm>({
+  // The mandatory measure field depends on the CROP CHOSEN, so the schema has
+  // to be built at validation time rather than captured once at mount. A ref
+  // holds the current measure and the resolver reads it on each submit; a
+  // resolver passed directly would freeze the crop that was selected when the
+  // form first rendered.
+  const measureRef = useRef<CropMeasure | undefined>(undefined)
+  const resolver = useMemo<Resolver<RegisterForm, unknown, RegisterForm>>(
+    () => (values, context, options) =>
+      zodResolver(registerSchema(measureRef.current))(values, context, options),
+    [],
+  )
+
+  const { register, handleSubmit, watch, reset, formState } = useForm<
+    RegisterForm,
+    unknown,
+    RegisterForm
+  >({
     defaultValues: EMPTY,
+    resolver,
   })
 
   // Restore once the stored draft arrives. Without this the form would render
@@ -134,6 +157,13 @@ export function RegisterScreen() {
     () => cropsQuery.crops.find((c) => c.id === cropId)?.measured_by,
     [cropsQuery.crops, cropId],
   )
+  measureRef.current = measure
+
+  // The two hectares fields and the harvest figure, watched only so the form
+  // can say what a column's scale will do to what was typed (QA #27).
+  const plotArea = watch('plot_area_ha')
+  const cycleArea = watch('cycle_area_ha')
+  const harvestKg = watch('harvest_quantity_kg')
 
   const submit = useMutation({
     mutationFn: async (form: RegisterForm) => {
@@ -219,12 +249,33 @@ export function RegisterScreen() {
     )
   }
 
-  const err = (name: keyof RegisterForm) =>
-    formState.errors[name] ? (
+  /**
+   * One message per reason, not one message per form.
+   *
+   * The schema puts an i18n KEY in `message`, the way `LoginScreen` does, so
+   * this resolves it at render. `register.required` is the fallback for an
+   * error react-hook-form raised itself, which carries no message.
+   */
+  const err = (name: keyof RegisterForm) => {
+    const message = formState.errors[name]?.message
+    if (!formState.errors[name]) return null
+    return (
       <p data-testid={`register-${fieldId(name)}-error`} className="text-sm text-destructive">
-        {t('register.required')}
+        {t(message ?? 'register.required')}
       </p>
-    ) : null
+    )
+  }
+
+  /** What a column's scale will store, when that is not what was typed. */
+  const rounded = (testId: string, value: string | undefined, dp: number) => {
+    const stored = roundedTo(value ?? '', dp)
+    if (!stored) return null
+    return (
+      <p data-testid={`${testId}-rounded`} className="text-xs text-deep/60">
+        {t('register.roundedNote', { value: stored })}
+      </p>
+    )
+  }
 
   return (
     <section className="max-w-xl space-y-5">
@@ -247,7 +298,7 @@ export function RegisterScreen() {
               id="register-given-name"
               data-testid="register-given-name"
               className={inputClass}
-              {...register('given_name', { required: true })}
+              {...register('given_name')}
             />
           </Field>
           {err('given_name')}
@@ -256,7 +307,7 @@ export function RegisterScreen() {
               id="register-family-name"
               data-testid="register-family-name"
               className={inputClass}
-              {...register('family_name', { required: true })}
+              {...register('family_name')}
             />
           </Field>
           {err('family_name')}
@@ -268,6 +319,11 @@ export function RegisterScreen() {
               {...register('phone')}
             />
           </Field>
+          {/* `person.phone` is free text by design — the seed uses +255… and
+              there is no rule to enforce, so a hint is the whole fix. #28. */}
+          <p data-testid="register-phone-hint" className="text-xs text-deep/60">
+            {t('register.phoneHint')}
+          </p>
         </Fieldset>
 
         <Fieldset legend={t('register.sections.household')}>
@@ -291,7 +347,7 @@ export function RegisterScreen() {
               id="register-farm-label"
               data-testid="register-farm-label"
               className={inputClass}
-              {...register('farm_label', { required: true })}
+              {...register('farm_label')}
             />
           </Field>
           {err('farm_label')}
@@ -303,6 +359,7 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('farm_latitude')}
               />
+              {err('farm_latitude')}
             </Field>
             <Field label={t('register.longitude')} id="register-farm-longitude">
               <input
@@ -311,6 +368,7 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('farm_longitude')}
               />
+              {err('farm_longitude')}
             </Field>
           </div>
         </Fieldset>
@@ -321,7 +379,7 @@ export function RegisterScreen() {
               id="register-plot-label"
               data-testid="register-plot-label"
               className={inputClass}
-              {...register('plot_label', { required: true })}
+              {...register('plot_label')}
             />
           </Field>
           {err('plot_label')}
@@ -334,6 +392,8 @@ export function RegisterScreen() {
               {...register('plot_area_ha')}
             />
           </Field>
+          {err('plot_area_ha')}
+          {rounded('register-plot-area', plotArea, 4)}
         </Fieldset>
 
         <Fieldset legend={t('register.sections.cycle')}>
@@ -342,7 +402,7 @@ export function RegisterScreen() {
               id="register-crop"
               data-testid="register-crop"
               className={inputClass}
-              {...register('crop_id', { required: true })}
+              {...register('crop_id')}
             >
               <option value="">{t('register.chooseCrop')}</option>
               {cropsQuery.crops.map((c) => (
@@ -365,6 +425,8 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('cycle_area_ha')}
               />
+              {err('cycle_area_ha')}
+              {rounded('register-cycle-area', cycleArea, 4)}
             </Field>
           )}
           {measure === 'tree_count' && (
@@ -376,6 +438,7 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('cycle_tree_count')}
               />
+              {err('cycle_tree_count')}
             </Field>
           )}
           {measure === 'unit_count' && (
@@ -387,6 +450,7 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('cycle_unit_count')}
               />
+              {err('cycle_unit_count')}
             </Field>
           )}
 
@@ -399,6 +463,7 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('harvest_start')}
               />
+              {err('harvest_start')}
             </Field>
             <Field label={t('register.harvestEnd')} id="register-harvest-end">
               <input
@@ -408,6 +473,7 @@ export function RegisterScreen() {
                 className={inputClass}
                 {...register('harvest_end')}
               />
+              {err('harvest_end')}
             </Field>
           </div>
         </Fieldset>
@@ -422,6 +488,8 @@ export function RegisterScreen() {
               {...register('harvest_quantity_kg')}
             />
           </Field>
+          {err('harvest_quantity_kg')}
+          {rounded('register-harvest-kg', harvestKg, 2)}
           <Field label={t('register.confidence')} id="register-confidence">
             <select
               id="register-confidence"

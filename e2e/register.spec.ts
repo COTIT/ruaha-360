@@ -155,6 +155,113 @@ test.describe('/officer/register', () => {
     await expect(page.getByTestId('language-switch')).toBeEnabled()
   })
 
+  /**
+   * QA #16, #19, #21, #27, #28 — the batch M6 closed.
+   *
+   * Every check below is a property of the form's own inputs: a name that is
+   * not three spaces, an end date that follows a start date, a number that
+   * fits its column. None of them is a copy of a business rule — the RPC still
+   * owns the measure match, the provenance stamp and idempotency, and its
+   * messages still come back verbatim.
+   */
+  test('whitespace-only names are refused, and never reach the RPC', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await fillRegistration(page, markedName())
+    await page.getByTestId('register-given-name').fill('   ')
+    await page.getByTestId('register-family-name').fill('   ')
+    await page.getByTestId('register-farm-label').fill('   ')
+    await page.getByTestId('register-submit').click()
+
+    await expect(page.getByTestId('register-given-name-error')).toBeVisible()
+    await expect(page.getByTestId('register-family-name-error')).toBeVisible()
+    await expect(page.getByTestId('register-farm-label-error')).toBeVisible()
+    // Still on the form, and nothing was created.
+    await expect(page.getByTestId('register-success')).toHaveCount(0)
+  })
+
+  test('a backwards harvest window is caught inline, not as a constraint name', async ({
+    page,
+  }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await fillRegistration(page, markedName())
+    await page.getByTestId('register-harvest-start').fill('2026-09-30')
+    await page.getByTestId('register-harvest-end').fill('2026-09-01')
+    await page.getByTestId('register-submit').click()
+
+    const error = page.getByTestId('register-harvest-end-error')
+    await expect(error).toBeVisible()
+    await expect(error).not.toContainText('cycle_window_sane')
+    await expect(page.getByTestId('register-error')).toHaveCount(0)
+  })
+
+  test('a number too large for its column is refused before the overflow', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await fillRegistration(page, markedName())
+    await page.getByTestId('register-harvest-kg').fill('999999999999')
+    await page.getByTestId('register-submit').click()
+
+    await expect(page.getByTestId('register-harvest-quantity-kg-error')).toBeVisible()
+    // The old path returned "numeric field overflow", naming no field at all.
+    await expect(page.getByTestId('register-error')).toHaveCount(0)
+  })
+
+  test('the measure field is required by the crop that uses it', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await fillRegistration(page, markedName())
+    await page.getByTestId('register-cycle-area').fill('')
+    await page.getByTestId('register-submit').click()
+
+    await expect(page.getByTestId('register-cycle-area-ha-error')).toBeVisible()
+    // The RPC's own "this crop is measured by area" prose is no longer how a
+    // farmer's officer learns this.
+    await expect(page.getByTestId('register-error')).toHaveCount(0)
+  })
+
+  // QA #27: `hectares` is numeric(10,4), so this is stored as 1.2346.
+  test('says what a column scale will do to what was typed', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await page.getByTestId('register-plot-area').fill('1.23456789')
+    await expect(page.getByTestId('register-plot-area-rounded')).toContainText('1.2346')
+
+    await page.getByTestId('register-plot-area').fill('1.5')
+    await expect(page.getByTestId('register-plot-area-rounded')).toHaveCount(0)
+  })
+
+  // QA #28: person.phone is free text by design, so a hint is the whole fix.
+  test('the phone field hints at the format without enforcing one', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await expect(page.getByTestId('register-phone-hint')).toContainText('+255')
+  })
+
+  // The trim has to reach the database, not just the validator: " Test "
+  // stored as-is is a name nobody can search for.
+  test('a name typed with surrounding spaces is stored trimmed', async ({ page }) => {
+    const family = markedName()
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+
+    await fillRegistration(page, family)
+    await page.getByTestId('register-given-name').fill('  Padded  ')
+    await page.getByTestId('register-submit').click()
+
+    await expect(page.getByTestId('register-success')).toBeVisible()
+    await page.goto('/officer/people')
+    await page.getByTestId('people-search').fill(family)
+    await expect(page.getByTestId('people-table')).toContainText(`Padded ${family}`)
+  })
+
   test('a farmer cannot reach the register screen', async ({ page }) => {
     await page.goto('/login')
     await page.getByTestId('login-email').fill('neema@demo.ruaha360.test')

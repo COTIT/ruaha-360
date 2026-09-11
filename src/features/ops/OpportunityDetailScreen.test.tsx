@@ -21,6 +21,7 @@ const { OpportunityDetailScreen } = await import('@/features/ops/OpportunityDeta
 await import('@/i18n')
 
 const statusMutate = vi.fn()
+const attachMutate = vi.fn()
 
 beforeEach(() => {
   useOpportunity.mockReset()
@@ -28,9 +29,16 @@ beforeEach(() => {
   useAttachSupply.mockReset()
   useOpportunityStatus.mockReset()
   statusMutate.mockReset()
+  attachMutate.mockReset()
 
   useAvailableHarvest.mockReturnValue({ isLoading: false, data: [] })
-  useAttachSupply.mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false, reset: vi.fn() })
+  useAttachSupply.mockReturnValue({
+    mutate: attachMutate,
+    isPending: false,
+    isError: false,
+    error: null,
+    reset: vi.fn(),
+  })
   useOpportunityStatus.mockReturnValue({
     mutate: statusMutate,
     isPending: false,
@@ -367,5 +375,117 @@ describe('the harvest options name their figures', () => {
     expect(
       within(screen.getByTestId('attach-harvest')).getAllByRole('option'),
     ).toHaveLength(2)
+  })
+})
+
+/**
+ * QA #21's tail. `opportunity_supply.contributed_kg` is
+ * `check (contributed_kg > 0)`, so 0 or a negative came back as a raw
+ * constraint name — the same family as the harvest window and the request
+ * hours.
+ */
+describe('the contribution has to be a contribution', () => {
+  const withHarvest = () => {
+    loaded({ status: 'proposed' })
+    useAvailableHarvest.mockReturnValue({
+      isLoading: false,
+      data: [
+        {
+          harvest_report_id: 'h9',
+          crop_cycle_id: 'cy9',
+          quantity_kg: 4100,
+          available_kg: 4100,
+          harvest_start: '2026-09-01',
+        },
+      ],
+    })
+  }
+
+  const attach = (kg: string, harvest = 'h9') => {
+    render(<OpportunityDetailScreen />)
+    if (harvest) fireEvent.change(screen.getByTestId('attach-harvest'), { target: { value: harvest } })
+    fireEvent.change(screen.getByTestId('attach-kg'), { target: { value: kg } })
+    fireEvent.click(screen.getByTestId('attach-submit'))
+  }
+
+  test('zero kilograms is refused inline, not by the database', () => {
+    withHarvest()
+    attach('0')
+
+    expect(screen.getByTestId('attach-kg-error')).toHaveTextContent(/more than zero/i)
+    expect(attachMutate).not.toHaveBeenCalled()
+  })
+
+  test('a negative contribution is refused', () => {
+    withHarvest()
+    attach('-5')
+
+    expect(screen.getByTestId('attach-kg-error')).toBeInTheDocument()
+    expect(attachMutate).not.toHaveBeenCalled()
+  })
+
+  test('text is refused, and says what is wrong', () => {
+    withHarvest()
+    attach('abc')
+
+    expect(screen.getByTestId('attach-kg-error')).toHaveTextContent(/enter a number/i)
+  })
+
+  test('a blank says which answer is missing rather than nothing happening', () => {
+    withHarvest()
+    attach('')
+
+    expect(screen.getByTestId('attach-kg-error')).toBeInTheDocument()
+    expect(attachMutate).not.toHaveBeenCalled()
+  })
+
+  test('choosing no harvest figure says so', () => {
+    withHarvest()
+    attach('100', '')
+
+    expect(screen.getByTestId('attach-harvest-error')).toBeInTheDocument()
+    expect(attachMutate).not.toHaveBeenCalled()
+  })
+
+  test('a valid contribution goes through', () => {
+    withHarvest()
+    attach('1600')
+
+    expect(attachMutate).toHaveBeenCalledWith({
+      harvestReportId: 'h9',
+      cropCycleId: 'cy9',
+      contributedKg: 1600,
+    })
+  })
+
+  /**
+   * The important one. A figure past what is available must still be SENT, so
+   * that `opportunity_supply_guard` refuses it and its message — which names
+   * the real kilograms — is what the user reads. A client-side copy of that
+   * check would drift and would be wrong the moment another opportunity
+   * committed the same harvest.
+   */
+  test('a quantity beyond what is available is still sent to the guard', () => {
+    withHarvest()
+    attach('99999')
+
+    expect(attachMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ contributedKg: 99999 }),
+    )
+  })
+
+  test('the error clears once the figure is fixed', () => {
+    withHarvest()
+    render(<OpportunityDetailScreen />)
+    fireEvent.change(screen.getByTestId('attach-harvest'), { target: { value: 'h9' } })
+    fireEvent.change(screen.getByTestId('attach-kg'), { target: { value: '0' } })
+    fireEvent.click(screen.getByTestId('attach-submit'))
+    expect(screen.getByTestId('attach-kg-error')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('attach-kg'), { target: { value: '1600' } })
+    fireEvent.click(screen.getByTestId('attach-submit'))
+
+    expect(screen.queryByTestId('attach-kg-error')).not.toBeInTheDocument()
+    expect(attachMutate).toHaveBeenCalledTimes(1)
   })
 })
