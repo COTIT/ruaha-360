@@ -51,6 +51,8 @@ export const queryKeys = {
   buyers: () => ['buyers'] as const,
   /** Spec 7.9's village list with its current capacity row. */
   villageCapacity: () => ['villageCapacity'] as const,
+  /** Spec 6.6's farmer-facing opportunities, keyed by language for crop names. */
+  farmerOpportunities: (language: string) => ['farmerOpportunities', language] as const,
 
   farm: (farmId: string) => ['farm', farmId] as const,
   farms: (villageId: string) => ['farms', villageId] as const,

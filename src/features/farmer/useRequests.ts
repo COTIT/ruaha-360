@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
+import { FARMER_ACTION_TARGET, type FarmerAction } from '@/features/ops/transitions'
 import { supabase } from '@/lib/supabase'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
@@ -135,6 +136,44 @@ export function useSubmitRequest() {
     onSuccess: async (_data, input) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.requests({}) })
       await queryClient.invalidateQueries({ predicate: isTowerQueryForVillage(input.villageId) })
+    },
+  })
+}
+
+/**
+ * The applicant's own transitions — submit a draft, or withdraw.
+ *
+ * Sends ONLY `status`. `submitted_at`, `decided_at` and `decided_by` are
+ * stamped by `pue_request_guard`, and business-rules §2 is explicit that the
+ * client must never send them — if it does, the trigger overwrites them
+ * anyway, so sending them would only invite a disagreement.
+ *
+ * Which actions are offered is decided by `farmerActions`, mirroring the
+ * guard's machine. The guard remains the enforcement: a refusal is shown as
+ * written rather than pre-empted.
+ */
+export function useFarmerTransition(requestId: string, villageId: string | undefined) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (action: FarmerAction) => {
+      const { error } = await supabase
+        .from('pue_request')
+        .update({ status: FARMER_ACTION_TARGET[action] })
+        .eq('id', requestId)
+
+      if (error) throw new Error(error.message)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.request(requestId) })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.requests({}) })
+      // Submitting moves the village's PROSPECTIVE peak, and withdrawing
+      // moves it back — both change v_village_energy.
+      if (villageId) {
+        await queryClient.invalidateQueries({ predicate: isTowerQueryForVillage(villageId) })
+      }
+      // The ops pipeline and its home counter both list this request.
+      await queryClient.invalidateQueries({ queryKey: ['opsHome'] })
     },
   })
 }

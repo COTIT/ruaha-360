@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { Placeholder } from '@/app/Placeholder'
+import { FarmerOpportunitiesScreen } from '@/features/farmer/FarmerOpportunitiesScreen'
 
 export const Route = createFileRoute('/_farmer/farm/opportunities')({
-  component: () => <Placeholder route="/farm/opportunities" tier="tier 5" />,
+  component: FarmerOpportunitiesScreen,
 })

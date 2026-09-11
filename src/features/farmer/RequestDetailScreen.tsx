@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { StatusPill } from '@/components/StatusPill'
-import { useRequest } from '@/features/farmer/useRequests'
+import { useFarmerTransition, useRequest } from '@/features/farmer/useRequests'
+import { farmerActions } from '@/features/ops/transitions'
 import { formatKw, formatKwh, formatTimestamp } from '@/lib/format'
 
 const route = getRouteApi('/_farmer/farm/requests/$requestId')
@@ -25,6 +26,7 @@ export function RequestDetailScreen() {
   const { requestId } = route.useParams()
   const { t } = useTranslation()
   const query = useRequest(requestId)
+  const transition = useFarmerTransition(requestId, query.request?.village_id ?? undefined)
 
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
@@ -44,6 +46,7 @@ export function RequestDetailScreen() {
   const request = query.request
   const estimate = request.estimate
   const frozen = request.status !== 'draft'
+  const actions = farmerActions(request.status)
 
   return (
     <section className="max-w-lg space-y-4" data-testid="request-detail">
@@ -109,6 +112,47 @@ export function RequestDetailScreen() {
         <p className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70">
           {t('requests.frozen')}
         </p>
+      )}
+
+      {/* What the applicant may do from here — business-rules §2's role
+          matrix, mirrored by farmerActions. A draft can be submitted or
+          withdrawn; a submitted request withdrawn; anything under review or
+          decided offers nothing, because it is no longer theirs to move. */}
+      {actions.length > 0 && (
+        <section className="space-y-2">
+          {transition.error && (
+            <p
+              data-testid="request-action-error"
+              role="alert"
+              className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-deep/80"
+            >
+              {transition.error.message}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {actions.map((action) => (
+              <button
+                key={action}
+                type="button"
+                data-testid={`request-action-${action}`}
+                disabled={transition.isPending}
+                onClick={() => transition.mutate(action)}
+                className={
+                  action === 'submit'
+                    ? 'rounded bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60'
+                    : 'rounded border border-deep/20 bg-white px-4 py-2 text-sm font-medium text-deep/80 disabled:opacity-60'
+                }
+              >
+                {t(`requests.action.${action}`)}
+              </button>
+            ))}
+          </div>
+
+          {request.status === 'draft' && (
+            <p className="text-xs text-deep/60">{t('requests.draftNote')}</p>
+          )}
+        </section>
       )}
     </section>
   )

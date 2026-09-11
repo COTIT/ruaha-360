@@ -251,7 +251,12 @@
     "notFoundTitle": "Request not found",
     "notFoundDetail": "It may not exist, or you may not have access to it.",
     "noEstimate": "No estimate stored for this request",
-    "noEstimateDetail": "This equipment has no rated power recorded, so no estimate could be calculated."
+    "noEstimateDetail": "This equipment has no rated power recorded, so no estimate could be calculated.",
+    "action": {
+      "submit": "Send this request",
+      "withdraw": "Withdraw"
+    },
+    "draftNote": "This request has not been sent yet. Nobody is reviewing it until you send it."
   },
   "table": {
     "emptyTitle": "Nothing to show",
@@ -570,5 +575,32 @@
     "colEffectiveFrom": "Effective from",
     "noneTitle": "No villages",
     "noneDetail": "No villages are visible for this project."
+  },
+  "farmerOpportunities": {
+    "title": "Opportunities",
+    "notASale": "An opportunity is not a sale, a delivery or a payment. It records that your harvest has been put forward to a buyer. Nothing has moved and nothing is owed.",
+    "yourShare": "Your share",
+    "opportunityTotal": "Opportunity total",
+    "noneTitle": "No opportunities yet",
+    "noneDetail": "None of your harvest has been put forward to a buyer yet.",
+    "buyerWithOps": "Your field officer holds the buyer details."
+  },
+  "farmHome": {
+    "title": "My farm",
+    "farms": "Farms",
+    "plots": "Plots",
+    "cycles": "Crops growing",
+    "openMyFarm": "See my records",
+    "latestRequest": "Latest equipment request",
+    "noRequests": "You have not asked for any equipment yet.",
+    "browseEquipment": "Browse equipment",
+    "opportunities": "Opportunities",
+    "noOpportunities": "None of your harvest has been put forward to a buyer yet.",
+    "opportunityCount_one": "Your harvest is in 1 opportunity.",
+    "opportunityCount_other": "Your harvest is in {{count}} opportunities.",
+    "notASale": "An opportunity is not a sale, a delivery or a payment.",
+    "openOpportunities": "See opportunities",
+    "noFarmTitle": "No farm recorded yet",
+    "noFarmDetail": "Your field officer has not registered your farm yet. Ask them to add it."
   }
 }

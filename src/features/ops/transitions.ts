@@ -55,3 +55,34 @@ export function reviewerActions(status: RequestStatus): ReviewerAction[] {
 export function requiresDecisionNote(action: ReviewerAction): boolean {
   return action === 'approve' || action === 'reject'
 }
+
+/**
+ * What the APPLICANT may do to their own request — business-rules §2's role
+ * matrix, farmer column.
+ *
+ * Lives beside `reviewerActions` because they are two halves of one machine
+ * and must not drift: a status is either the applicant's to act on or the
+ * reviewer's, never both. `draft` belongs to the applicant alone, and
+ * `under_review` to ops alone.
+ *
+ * Editing a draft is also permitted by the matrix, but is deferred with the
+ * other officer and farmer write surfaces — this covers the two transitions.
+ */
+export type FarmerAction = 'submit' | 'withdraw'
+
+export const FARMER_ACTION_TARGET: Record<FarmerAction, RequestStatus> = {
+  submit: 'submitted',
+  withdraw: 'withdrawn',
+}
+
+export function farmerActions(status: RequestStatus): FarmerAction[] {
+  switch (status) {
+    case 'draft':
+      return ['submit', 'withdraw']
+    case 'submitted':
+      // Withdraw only. Starting a review is the reviewer's move.
+      return ['withdraw']
+    default:
+      return []
+  }
+}

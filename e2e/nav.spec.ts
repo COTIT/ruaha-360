@@ -17,19 +17,12 @@ import { expect, test, type Page } from '@playwright/test'
  * shell.spec leaves out: the landing screens, and that the officer's tabs
  * resolve.
  *
- * ── How the `built` flag works ────────────────────────────────
- * Nine of the eleven screens are T2 in spec §5–§7 and land across M2–M4. A
- * spec that stayed red until then would mask real regressions on every run, so
- * each route declares whether its screen exists yet:
- *
- *   built: true   → assert the screen rendered, and NO placeholder
- *   built: false  → assert the placeholder is still there, naming the
- *                   milestone that flips it
- *
- * The pending rows are characterisation tests: they pin the current, known
- * state so the suite stays green and any *other* breakage still surfaces.
- * **Flip the flag in the same commit that builds the screen.** When every flag
- * reads true, the flag mechanism and this paragraph can both go.
+ * All eleven placeholders were replaced across M1–M4, so every destination is
+ * now asserted the same way: the real screen renders, and no placeholder text
+ * appears anywhere in it. While the screens were being built this file carried
+ * a per-route `built` flag, pinning the not-yet-built ones as characterisation
+ * tests so the suite stayed green and other breakage still surfaced. That
+ * scaffolding is gone now that it reads true everywhere.
  */
 const PASSWORD = 'demo1234'
 const PLACEHOLDER = /Session 1 placeholder/
@@ -39,10 +32,6 @@ interface Destination {
   path: string
   /** `data-testid` that proves the real screen rendered. */
   ready: string
-  /** False while the route still renders `Placeholder`. */
-  built: boolean
-  /** Which milestone builds it. Only meaningful while `built` is false. */
-  milestone?: string
 }
 
 interface Surface {
@@ -60,46 +49,46 @@ const SURFACES: Surface[] = [
     role: 'farmer',
     email: 'neema@demo.ruaha360.test',
     navTestId: 'nav-tabs',
-    // §6.1 — T2
-    home: { path: '/farm', ready: 'farm-home', built: false, milestone: 'M4' },
+    // §6.1 — T2.
+    home: { path: '/farm', ready: 'farm-home' },
     nav: [
-      { path: '/farm/my-farm', ready: 'my-farm', built: true },
-      { path: '/farm/equipment', ready: 'equipment-list', built: true },
-      { path: '/farm/requests', ready: 'requests-list', built: true },
-      // §6.6 — T2
-      { path: '/farm/opportunities', ready: 'farmer-opportunities', built: false, milestone: 'M4' },
+      { path: '/farm/my-farm', ready: 'my-farm' },
+      { path: '/farm/equipment', ready: 'equipment-list' },
+      { path: '/farm/requests', ready: 'requests-list' },
+      // §6.6 — T2. Every placeholder is now gone.
+      { path: '/farm/opportunities', ready: 'farmer-opportunities' },
     ],
   },
   {
     role: 'field_officer',
     email: 'officer.ilundo@demo.ruaha360.test',
     navTestId: 'nav-tabs',
-    // §5.1 — T1. Built in M1.
-    home: { path: '/officer', ready: 'officer-home', built: true },
+    // §5.1 — T1.
+    home: { path: '/officer', ready: 'officer-home' },
     nav: [
-      { path: '/officer/register', ready: 'register-submit', built: true },
-      // §5.3 — T2. Built in M2.
-      { path: '/officer/people', ready: 'people-table', built: true },
-      // §5.7 — T2. Built in M2.
-      { path: '/officer/verify', ready: 'verify-queue', built: true },
+      { path: '/officer/register', ready: 'register-submit' },
+      // §5.3 — T2.
+      { path: '/officer/people', ready: 'people-table' },
+      // §5.7 — T2.
+      { path: '/officer/verify', ready: 'verify-queue' },
     ],
   },
   {
     role: 'ops',
     email: 'ops@demo.ruaha360.test',
     navTestId: 'nav-sidebar',
-    // §7.1 — T2. Built in M3.
-    home: { path: '/ops', ready: 'ops-home', built: true },
+    // §7.1 — T2.
+    home: { path: '/ops', ready: 'ops-home' },
     nav: [
-      { path: '/ops/requests', ready: 'requests-table', built: true },
-      { path: '/ops/demand', ready: 'demand-table', built: true },
-      // §7.4 — T1 read. Built in M1; editing stays T2.
-      { path: '/ops/catalogue', ready: 'catalogue-table', built: true },
-      // §7.5 — T2. Built in M3.
-      { path: '/ops/buyers', ready: 'buyers-table', built: true },
-      // §7.9 — T2. Built in M3.
-      { path: '/ops/villages', ready: 'villages-table', built: true },
-      { path: '/ops/tower', ready: 'tower', built: true },
+      { path: '/ops/requests', ready: 'requests-table' },
+      { path: '/ops/demand', ready: 'demand-table' },
+      // §7.4 — T1 read; editing stays T2
+      { path: '/ops/catalogue', ready: 'catalogue-table' },
+      // §7.5 — T2.
+      { path: '/ops/buyers', ready: 'buyers-table' },
+      // §7.9 — T2.
+      { path: '/ops/villages', ready: 'villages-table' },
+      { path: '/ops/tower', ready: 'tower' },
     ],
   },
 ]
@@ -117,17 +106,11 @@ async function signIn(page: Page, email: string, home: RegExp) {
   await expect(page).toHaveURL(home)
 }
 
-/** Asserts a destination is either really built, or still honestly pending. */
+/** A destination renders its real screen, cleanly, with no scaffolding left. */
 async function assertDestination(page: Page, dest: Destination) {
-  if (dest.built) {
-    await expect(page.getByTestId(dest.ready)).toBeVisible()
-    await expect(page.getByTestId('error-state')).toHaveCount(0)
-    await expect(page.locator('main')).not.toContainText(PLACEHOLDER)
-  } else {
-    // Characterisation: pinned so the suite stays green and other breakage
-    // still surfaces. Flip `built` when the screen lands.
-    await expect(page.locator('main')).toContainText(PLACEHOLDER)
-  }
+  await expect(page.getByTestId(dest.ready)).toBeVisible()
+  await expect(page.getByTestId('error-state')).toHaveCount(0)
+  await expect(page.locator('main')).not.toContainText(PLACEHOLDER)
 }
 
 for (const surface of SURFACES) {
@@ -140,8 +123,7 @@ for (const surface of SURFACES) {
     // One test per destination, so a failure names the screen rather than
     // "the officer surface".
     for (const dest of surface.nav) {
-      const label = dest.built ? dest.path : `${dest.path} (pending ${dest.milestone})`
-      test(`nav destination ${label}`, async ({ page }) => {
+      test(`nav destination ${dest.path}`, async ({ page }) => {
         await signIn(page, surface.email, new RegExp(`${surface.home.path}$`))
         await page.goto(dest.path)
         await assertDestination(page, dest)

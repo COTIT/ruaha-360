@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'vitest'
 
 import {
+  FARMER_ACTION_TARGET,
   LEGAL_TRANSITIONS,
+  farmerActions,
   isLegalTransition,
   requiresDecisionNote,
   reviewerActions,
+  type RequestStatus,
 } from '@/features/ops/transitions'
 
 /**
@@ -89,5 +92,64 @@ describe('requiresDecisionNote', () => {
 
   test('starting a review is not a decision and needs no note', () => {
     expect(requiresDecisionNote('start_review')).toBe(false)
+  })
+})
+
+/**
+ * The farmer half of business-rules §2's role matrix, which the ops half
+ * above already mirrors:
+ *
+ *   draft        farmer may edit, submit, withdraw
+ *   submitted    withdraw only
+ *   under_review nothing — it is with ops
+ *   terminal     nothing
+ *
+ * QA-FINDINGS #5: the draft detail screen offered no control at all, so
+ * `draft -> submitted` was a transition the database permits and the UI could
+ * not reach. The seeded cold-room draft was inert.
+ */
+describe('farmerActions', () => {
+  test('a draft can be submitted or withdrawn', () => {
+    expect(farmerActions('draft')).toEqual(['submit', 'withdraw'])
+  })
+
+  test('a submitted request can only be withdrawn', () => {
+    expect(farmerActions('submitted')).toEqual(['withdraw'])
+  })
+
+  // Under review belongs to ops. A farmer withdrawing mid-review would pull
+  // the request out from under a reviewer, and the guard refuses it.
+  test('a request under review offers the farmer nothing', () => {
+    expect(farmerActions('under_review')).toEqual([])
+  })
+
+  test('terminal states offer nothing', () => {
+    expect(farmerActions('approved')).toEqual([])
+    expect(farmerActions('rejected')).toEqual([])
+    expect(farmerActions('withdrawn')).toEqual([])
+  })
+
+  // The UI must only ever offer transitions the trigger will accept: an
+  // "illegal transition" error reaching a farmer means this table is wrong.
+  test('every action it offers is a legal transition', () => {
+    const statuses: RequestStatus[] = [
+      'draft',
+      'submitted',
+      'under_review',
+      'approved',
+      'rejected',
+      'withdrawn',
+    ]
+    for (const status of statuses) {
+      for (const action of farmerActions(status)) {
+        expect(isLegalTransition(status, FARMER_ACTION_TARGET[action])).toBe(true)
+      }
+    }
+  })
+
+  test('the farmer and ops action sets never overlap', () => {
+    // draft is the applicant's alone; under_review is the reviewer's alone.
+    expect(reviewerActions('draft')).toEqual([])
+    expect(farmerActions('under_review')).toEqual([])
   })
 })
