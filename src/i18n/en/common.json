@@ -74,7 +74,9 @@
     "home": "Go to your home screen"
   },
   "common": {
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "yes": "Yes",
+    "no": "No"
   },
   "draft": {
     "notSubmitted": "Not yet submitted"
@@ -527,5 +529,46 @@
   "harvestKind": {
     "expected": "Expected",
     "actual": "Actual"
+  },
+  "opsHome": {
+    "title": "Today",
+    "awaitingReview": "Requests awaiting review",
+    "awaitingReviewDetail": "Submitted or under review",
+    "openDemands": "Open buyer demands",
+    "openDemandsDetail": "Still looking for supply",
+    "outstandingRecords": "Records to verify",
+    "outstandingRecordsDetail": "Captured but not yet checked"
+  },
+  "buyers": {
+    "title": "Buyers",
+    "channelNote": "Channel is a label describing how the buyer was reached. 'AFM' records that origin only — there is no integration and no partnership implied.",
+    "colName": "Buyer",
+    "colChannel": "Channel",
+    "colContact": "Contact note",
+    "colActive": "Active",
+    "channel": {
+      "direct": "Direct",
+      "afm": "AFM",
+      "other": "Other"
+    },
+    "createTitle": "Add a buyer",
+    "create": "Add buyer",
+    "creating": "Adding…",
+    "nameRequired": "A buyer needs a name.",
+    "noneTitle": "No buyers yet",
+    "noneDetail": "Add the first buyer to record demand against them."
+  },
+  "villages": {
+    "title": "Villages",
+    "plannedNote": "Capacity is planned, never measured. Every figure is shown with the basis it was planned on.",
+    "simultaneityNote": "The simultaneity factor is applied to village peaks. Village peak is not the sum of rated power.",
+    "colName": "Village",
+    "colCode": "Code",
+    "colCapacity": "Planned capacity",
+    "colBasis": "Basis",
+    "colSimultaneity": "Simultaneity factor",
+    "colEffectiveFrom": "Effective from",
+    "noneTitle": "No villages",
+    "noneDetail": "No villages are visible for this project."
   }
 }

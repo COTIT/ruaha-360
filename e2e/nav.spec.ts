@@ -88,17 +88,17 @@ const SURFACES: Surface[] = [
     role: 'ops',
     email: 'ops@demo.ruaha360.test',
     navTestId: 'nav-sidebar',
-    // §7.1 — T2
-    home: { path: '/ops', ready: 'ops-home', built: false, milestone: 'M3' },
+    // §7.1 — T2. Built in M3.
+    home: { path: '/ops', ready: 'ops-home', built: true },
     nav: [
       { path: '/ops/requests', ready: 'requests-table', built: true },
       { path: '/ops/demand', ready: 'demand-table', built: true },
       // §7.4 — T1 read. Built in M1; editing stays T2.
       { path: '/ops/catalogue', ready: 'catalogue-table', built: true },
-      // §7.5 — T2
-      { path: '/ops/buyers', ready: 'buyers-table', built: false, milestone: 'M3' },
-      // §7.9 — T2
-      { path: '/ops/villages', ready: 'villages-table', built: false, milestone: 'M3' },
+      // §7.5 — T2. Built in M3.
+      { path: '/ops/buyers', ready: 'buyers-table', built: true },
+      // §7.9 — T2. Built in M3.
+      { path: '/ops/villages', ready: 'villages-table', built: true },
       { path: '/ops/tower', ready: 'tower', built: true },
     ],
   },

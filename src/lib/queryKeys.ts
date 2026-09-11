@@ -45,6 +45,13 @@ export const queryKeys = {
    */
   verifyQueue: (language: string) => ['verifyQueue', language] as const,
 
+  /** Spec 7.1's ops home queue counts. */
+  opsHome: () => ['opsHome'] as const,
+  /** Spec 7.5's buyer list. */
+  buyers: () => ['buyers'] as const,
+  /** Spec 7.9's village list with its current capacity row. */
+  villageCapacity: () => ['villageCapacity'] as const,
+
   farm: (farmId: string) => ['farm', farmId] as const,
   farms: (villageId: string) => ['farms', villageId] as const,
 
