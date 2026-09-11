@@ -5,8 +5,10 @@ import { DrillLink } from '@/components/DrillLink'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { StatusPill } from '@/components/StatusPill'
+import { partitionEnergyRows, type EnergyRow } from '@/features/tower/energyRows'
 import { validateVillageSearch } from '@/features/tower/towerSearch'
 import {
+  useTowerEnergy,
   useTowerEnergyRows,
   useTowerMarket,
   useTowerProduction,
@@ -118,52 +120,158 @@ export function TowerProductionScreen() {
   )
 }
 
+/**
+ * One energy figure and the rows behind it.
+ *
+ * `rawKw` and `peakKw` both come from `v_village_energy` — the sum is NOT
+ * computed from the rows. Business-rules §11 puts village aggregates in the
+ * database, and showing a client-side total here would be a second source of
+ * truth that could disagree with the tile the user just clicked.
+ */
+function EnergyGroup({
+  testId,
+  title,
+  note,
+  rows,
+  rawKw,
+  factor,
+  peakKw,
+  peakTestId,
+}: {
+  testId: string
+  title: string
+  note: string
+  rows: EnergyRow[]
+  rawKw: number | null
+  factor: number | null
+  peakKw: number | null
+  peakTestId: string
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <tbody data-testid={testId} className="border-b-2 border-deep/15">
+      <tr className="bg-deep/5">
+        <th colSpan={4} className="px-2 py-2 text-left">
+          <span className="font-semibold text-deep">{title}</span>
+          <span className="ml-2 font-normal text-xs text-deep/60">{note}</span>
+        </th>
+      </tr>
+
+      {rows.length === 0 ? (
+        <tr>
+          <td colSpan={4} className="px-2 py-3 text-sm text-deep/60">
+            {t('tower.noneInFigure')}
+          </td>
+        </tr>
+      ) : (
+        rows.map((row) => (
+          <tr key={row.id} data-testid="energy-row" className="border-b border-deep/10">
+            <td className="px-2 py-2">{row.applicant}</td>
+            <td className="px-2 py-2">{row.equipment_name}</td>
+            <td className="px-2 py-2">
+              <StatusPill kind="request" status={row.status} />
+            </td>
+            <td className="tabular px-2 py-2">
+              {/* Ends in the request itself. */}
+              <DrillLink kind="request" id={row.id}>
+                {formatKw(row.est_power_kw)}
+              </DrillLink>
+            </td>
+          </tr>
+        ))
+      )}
+
+      {/* The arithmetic stated on screen, so the rows above visibly reconcile
+          with the headline the user clicked to get here. */}
+      <tr className="text-sm">
+        <td colSpan={3} className="px-2 py-2 text-right text-deep/70">
+          {t('tower.sumOfPeaks')} <span className="tabular">{formatKw(rawKw)}</span>
+          {factor !== null && (
+            <> {t('tower.timesFactor', { factor })} </>
+          )}
+        </td>
+        <td data-testid={peakTestId} className="tabular px-2 py-2 font-semibold">
+          {formatKw(peakKw)}
+        </td>
+      </tr>
+    </tbody>
+  )
+}
+
 export function TowerEnergyScreen() {
   const { t } = useTranslation()
   const { village } = validateVillageSearch(energyRoute.useSearch())
-  const query = useTowerEnergyRows(village)
+  const rows = useTowerEnergyRows(village)
+  const totals = useTowerEnergy(village)
 
-  if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+  const error = rows.error ?? totals.error
+  if (error) return <ErrorState error={error} onRetry={() => void rows.refetch()} />
+
+  const { prospective, approved, excluded } = partitionEnergyRows(rows.data ?? [])
+  const energy = totals.data
+  const isLoading = rows.isLoading || totals.isLoading
 
   return (
     <section className="space-y-3">
       <BackToTower village={village} />
       <h1 className="text-lg font-semibold">{t('tower.energyDrill')}</h1>
 
-      {query.isLoading ? (
+      {isLoading ? (
         <p className="text-sm text-deep/60">{t('common.loading')}</p>
-      ) : (query.data ?? []).length === 0 ? (
+      ) : (rows.data ?? []).length === 0 ? (
         <EmptyState title={t('tower.noDataTitle')} detail={t('tower.noDataDetail')} />
       ) : (
-        <div className="overflow-x-auto">
-          <table data-testid="energy-table" className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-deep/15 text-left">
-                <Th>{t('tower.colApplicant')}</Th>
-                <Th>{t('tower.colEquipment')}</Th>
-                <Th>{t('tower.colStatus')}</Th>
-                <Th>{t('tower.colPeak')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {(query.data ?? []).map((row) => (
-                <tr key={row.id} data-testid="energy-row" className="border-b border-deep/10">
-                  <td className="px-2 py-2">{row.applicant}</td>
-                  <td className="px-2 py-2">{row.equipment_name}</td>
-                  <td className="px-2 py-2">
-                    <StatusPill kind="request" status={row.status} />
-                  </td>
-                  <td className="tabular px-2 py-2">
-                    {/* Ends in the request itself. */}
-                    <DrillLink kind="request" id={row.id}>
-                      {formatKw(row.est_power_kw)}
-                    </DrillLink>
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table data-testid="energy-table" className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-deep/15 text-left">
+                  <Th>{t('tower.colApplicant')}</Th>
+                  <Th>{t('tower.colEquipment')}</Th>
+                  <Th>{t('tower.colStatus')}</Th>
+                  <Th>{t('tower.colPeak')}</Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              {/* Grouped by the figure each row feeds. Ungrouped, the column
+                  added to a number that appeared nowhere on the Tower. */}
+              <EnergyGroup
+                testId="energy-group-prospective"
+                title={t('tower.prospectivePeak')}
+                note={t('tower.prospectiveNote')}
+                rows={prospective}
+                rawKw={energy?.prospective_kw_raw ?? null}
+                factor={energy?.simultaneity_factor ?? null}
+                peakKw={energy?.prospective_peak_kw ?? null}
+                peakTestId="energy-prospective-peak"
+              />
+
+              <EnergyGroup
+                testId="energy-group-approved"
+                title={t('tower.approvedPeak')}
+                note={t('tower.approvedNote')}
+                rows={approved}
+                rawKw={energy?.approved_kw_raw ?? null}
+                factor={energy?.simultaneity_factor ?? null}
+                peakKw={energy?.approved_peak_kw ?? null}
+                peakTestId="energy-approved-peak"
+              />
+            </table>
+          </div>
+
+          {/* Prospective and approved are never added together. */}
+          <p className="text-xs font-medium text-deep/70">{t('tower.neverSummed')}</p>
+
+          {/* Draft, rejected and withdrawn requests feed neither figure. Said
+              out loud rather than silently omitted, so the pipeline does not
+              look smaller here than on the tile that counts every status. */}
+          {excluded.length > 0 && (
+            <p data-testid="energy-excluded" className="text-xs text-deep/60">
+              {t('tower.excludedFromFigures', { count: excluded.length })}
+            </p>
+          )}
+        </>
       )}
       <p className="text-xs text-deep/50">{t('estimate.isEstimate')}</p>
     </section>

@@ -207,6 +207,53 @@ test.describe('/ops/tower drill-downs', () => {
     await expect(page.getByTestId('person-detail')).toContainText('Neema Mwakalinga')
   })
 
+  // QA-FINDINGS.md #7. The drill listed all six statuses under "requests
+  // behind the energy figures" while the headlines counted three of them, so
+  // the column added to 42.5 kW against a screen showing 7.200 and 10.800.
+  test('the energy drill reconciles with the headlines it came from', async ({ page }) => {
+    await openIlundoTower(page)
+    await page.getByTestId('tile-energy').getByTestId('tile-drill').click()
+    await expect(page.getByTestId('energy-table')).toBeVisible()
+
+    // Each group states its own arithmetic and lands on the tile's figure.
+    await expect(page.getByTestId('energy-prospective-peak')).toHaveText('7.200 kW')
+    await expect(page.getByTestId('energy-approved-peak')).toHaveText('10.800 kW')
+
+    // Seeded Ilundo: the grain dryer alone is under review (12.000 kW raw),
+    // and the mill plus the pump are approved (15.000 + 3.000 = 18.000 raw).
+    const prospective = page.getByTestId('energy-group-prospective')
+    await expect(prospective).toContainText('12.000 kW')
+    await expect(prospective.getByTestId('energy-row')).toHaveCount(1)
+
+    const approved = page.getByTestId('energy-group-approved')
+    await expect(approved).toContainText('18.000 kW')
+    await expect(approved.getByTestId('energy-row')).toHaveCount(2)
+
+    // The factor is shown with the peak it was applied to, not elsewhere.
+    await expect(prospective).toContainText('0.6')
+  })
+
+  test('the energy drill excludes rows that feed neither figure, and says so', async ({ page }) => {
+    await openIlundoTower(page)
+    await page.getByTestId('tile-energy').getByTestId('tile-drill').click()
+    await expect(page.getByTestId('energy-table')).toBeVisible()
+
+    // Seeded Ilundo also holds a draft cold room and a rejected oil press.
+    // Neither contributes, so neither is listed as a record behind a figure —
+    // but the screen accounts for them rather than quietly dropping them.
+    await expect(page.getByTestId('energy-row')).toHaveCount(3)
+    await expect(page.getByTestId('energy-excluded')).toContainText('2')
+
+    const table = page.getByTestId('energy-table')
+    await expect(table).not.toContainText('Draft')
+    await expect(table).not.toContainText('Rejected')
+
+    // 12.000 + 18.000 = 30.000 raw, and 7.200 + 10.800 = 18.000 corrected.
+    // Neither combined figure may appear: an application is not a load.
+    await expect(table).not.toContainText('30.000 kW')
+    await expect(page.locator('body')).toContainText(/never added together|separate figures/i)
+  })
+
   test('an energy headline reaches the request behind it', async ({ page }) => {
     await openIlundoTower(page)
 

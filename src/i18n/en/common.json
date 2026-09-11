@@ -430,7 +430,12 @@
     "productionDrill": "Production by crop and window",
     "energyDrill": "Requests behind the energy figures",
     "marketDrill": "Demand against available supply",
-    "backToTower": "Back to the Tower"
+    "backToTower": "Back to the Tower",
+    "sumOfPeaks": "Sum of estimated peaks",
+    "timesFactor": "× {{factor}} simultaneity =",
+    "noneInFigure": "No requests in this figure.",
+    "excludedFromFigures_one": "1 more request in this village is draft, rejected or withdrawn. It feeds neither figure — the equipment pipeline tile counts every status.",
+    "excludedFromFigures_other": "{{count}} more requests in this village are draft, rejected or withdrawn. They feed neither figure — the equipment pipeline tile counts every status."
   },
   "officerHome": {
     "title": "Your villages",
