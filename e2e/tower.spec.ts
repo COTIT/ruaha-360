@@ -166,6 +166,26 @@ test.describe('/ops/tower drill-downs', () => {
     ).toBeVisible()
   })
 
+  // QA-FINDINGS #1: /officer/cycles/$cycleId was a placeholder, so spec §8.2's
+  // "reach a single farmer's record" dead-ended here. M2 built the screen.
+  test('the production drill reaches a real crop cycle, not a placeholder', async ({ page }) => {
+    await openIlundoTower(page)
+    await page.getByTestId('tile-production').getByTestId('tile-drill').click()
+    await expect(page.getByTestId('production-table')).toBeVisible()
+
+    await page
+      .getByTestId('production-row')
+      .first()
+      .getByTestId('production-cycle')
+      .getByTestId('drill-link')
+      .click()
+
+    await expect(page.getByTestId('cycle-detail')).toBeVisible()
+    await expect(page.locator('main')).not.toContainText('Session 1 placeholder')
+    // A harvest figure is a series: the current row and anything it replaced.
+    expect(await page.getByTestId('cycle-harvest').count()).toBeGreaterThan(0)
+  })
+
   test('energy drills to rows that end in a request', async ({ page }) => {
     await openIlundoTower(page)
     await page.getByTestId('tile-energy').getByTestId('tile-drill').click()

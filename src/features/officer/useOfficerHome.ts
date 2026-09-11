@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useScopeNames } from '@/app/scope'
 import { useSession } from '@/app/session'
 import { writableVillageIds } from '@/app/membership'
+import { OUTSTANDING } from '@/features/officer/useVerifyQueue'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 
@@ -17,9 +18,10 @@ export interface OfficerVillage {
 
 /**
  * The five tables `app_verify` accepts (business-rules §5). The officer home's
- * "records still needing verification" figure spans all of them, because the
- * verify queue does too — a count that only covered `person` would send an
- * officer to a queue longer than the number they were shown.
+ * "records still needing verification" figure spans all of them, and counts
+ * the same statuses (OUTSTANDING) the verify queue lists — a count that
+ * disagreed with the queue it links to would change the number under the user
+ * as they clicked it.
  */
 const VERIFIABLE = ['person', 'farm', 'plot', 'crop_cycle', 'harvest_report'] as const
 type VerifiableTable = (typeof VERIFIABLE)[number]
@@ -34,7 +36,7 @@ type VerifiableTable = (typeof VERIFIABLE)[number]
 async function countVerifiable(
   table: VerifiableTable,
   villageId: string,
-  unverifiedOnly: boolean,
+  outstandingOnly: boolean,
 ): Promise<number> {
   const base = supabase
     .from(table)
@@ -42,8 +44,13 @@ async function countVerifiable(
     .eq('village_id', villageId)
     .is('deleted_at', null)
 
-  const { count, error } = await (unverifiedOnly
-    ? base.eq('verification', 'unverified')
+  // OUTSTANDING is imported from the queue rather than restated, because this
+  // figure is a link TO that queue. Counting only 'unverified' here while the
+  // queue listed 'unverified' and 'pending' meant the home promised 10 records
+  // and the queue then showed 14 — the number changed under the user as they
+  // clicked it.
+  const { count, error } = await (outstandingOnly
+    ? base.in('verification', OUTSTANDING)
     : base)
 
   // A failed count is not zero. Reporting "0 records need verifying" because a
@@ -74,7 +81,7 @@ export async function fetchOfficerHome(
 ): Promise<Array<Omit<OfficerVillage, 'villageName'>>> {
   return Promise.all(
     villageIds.map(async (villageId) => {
-      const [persons, farms, requests, ...unverifiedPerTable] = await Promise.all([
+      const [persons, farms, requests, ...outstandingPerTable] = await Promise.all([
         countVerifiable('person', villageId, false),
         countVerifiable('farm', villageId, false),
         countRequests(villageId),
@@ -89,7 +96,7 @@ export async function fetchOfficerHome(
         // A total of exact counts the database returned, not a re-derivation
         // of a view figure. `v_village_data_quality` reports verified shares
         // per table but has no cross-table outstanding total.
-        unverified: unverifiedPerTable.reduce((sum, n) => sum + n, 0),
+        unverified: outstandingPerTable.reduce((sum, n) => sum + n, 0),
       }
     }),
   )

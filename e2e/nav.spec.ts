@@ -78,10 +78,10 @@ const SURFACES: Surface[] = [
     home: { path: '/officer', ready: 'officer-home', built: true },
     nav: [
       { path: '/officer/register', ready: 'register-submit', built: true },
-      // §5.3 — T2
-      { path: '/officer/people', ready: 'people-table', built: false, milestone: 'M2' },
-      // §5.7 — T2
-      { path: '/officer/verify', ready: 'verify-queue', built: false, milestone: 'M2' },
+      // §5.3 — T2. Built in M2.
+      { path: '/officer/people', ready: 'people-table', built: true },
+      // §5.7 — T2. Built in M2.
+      { path: '/officer/verify', ready: 'verify-queue', built: true },
     ],
   },
   {

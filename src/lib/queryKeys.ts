@@ -38,6 +38,13 @@ export const queryKeys = {
   officerHome: (villageIds: readonly string[]) =>
     ['officerHome', [...villageIds].sort()] as const,
 
+  /**
+   * Spec 5.7's verify queue, also beyond §10's list. Keyed by language because
+   * crop names come from the database per locale, so the same rows render
+   * differently and must not share a cache entry.
+   */
+  verifyQueue: (language: string) => ['verifyQueue', language] as const,
+
   farm: (farmId: string) => ['farm', farmId] as const,
   farms: (villageId: string) => ['farms', villageId] as const,
 

@@ -461,5 +461,71 @@
     "colHours": "Typical h/day",
     "colDays": "Typical days/week",
     "colPrice": "Indicative price"
+  },
+  "people": {
+    "title": "People",
+    "search": "Search by name",
+    "searchPlaceholder": "Given or family name",
+    "filterVerification": "Verification",
+    "allVerifications": "All",
+    "colName": "Name",
+    "colPhone": "Phone",
+    "colVillage": "Village",
+    "colProvenance": "Provenance",
+    "noneTitle": "No people match",
+    "noneDetail": "Try a different name or clear the verification filter."
+  },
+  "verifyQueue": {
+    "title": "Verify",
+    "intro": "Records captured in your villages that nobody has checked yet. Verifying attaches your name to the record.",
+    "outstanding_one": "1 record waiting",
+    "outstanding_other": "{{count}} records waiting",
+    "noneTitle": "Nothing waiting to be verified",
+    "noneDetail": "Every record in your villages has been checked.",
+    "table": {
+      "person": "Person",
+      "household": "Household",
+      "farm": "Farm",
+      "plot": "Plot",
+      "crop_cycle": "Crop cycle",
+      "harvest_report": "Harvest figure"
+    }
+  },
+  "farmDetail": {
+    "gps": "GPS point",
+    "noGps": "Not captured",
+    "plotCount": "Plots",
+    "plots": "Plots",
+    "noPlotsTitle": "No plots recorded",
+    "noPlotsDetail": "This farm has no plots yet.",
+    "notFoundTitle": "Farm not found",
+    "notFoundDetail": "It may not exist, or it may be outside your villages."
+  },
+  "cycleDetail": {
+    "measure": "Planted",
+    "status": "Status",
+    "window": "Harvest window",
+    "season": "Season",
+    "harvests": "Harvest figures",
+    "seriesNote": "A harvest figure is a series. A revised estimate does not erase the one it replaced.",
+    "superseded": "superseded",
+    "trees_one": "1 tree",
+    "trees_other": "{{count}} trees",
+    "units_one": "1 unit",
+    "units_other": "{{count}} units",
+    "noHarvestsTitle": "No harvest figure yet",
+    "noHarvestsDetail": "Nobody has recorded an expected or actual figure for this cycle.",
+    "notFoundTitle": "Crop cycle not found",
+    "notFoundDetail": "It may not exist, or it may be outside your villages."
+  },
+  "cycleStatus": {
+    "planned": "Planned",
+    "growing": "Growing",
+    "harvested": "Harvested",
+    "abandoned": "Abandoned"
+  },
+  "harvestKind": {
+    "expected": "Expected",
+    "actual": "Actual"
   }
 }

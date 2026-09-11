@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
-import { Placeholder } from '@/app/Placeholder'
+import { VerifyQueueScreen } from '@/features/officer/VerifyQueueScreen'
 
 export const Route = createFileRoute('/_officer/officer/verify')({
-  component: () => <Placeholder route="/officer/verify" tier="tier 2" />,
+  component: VerifyQueueScreen,
 })
