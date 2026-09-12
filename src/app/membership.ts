@@ -74,6 +74,21 @@ const SURFACE_ROLES: Record<Surface, AppRole[]> = {
  * reaches a surface anyway gets the page shell and zero rows, which is correct
  * behaviour rather than a hole.
  */
+/**
+ * Does this user have a role choice to make at all? — QA #10.
+ *
+ * `/select-role` claimed "You hold more than one role" above a single option
+ * for the Ilundo officer. Nothing routes there for a single-role user —
+ * `resolveLanding` sends them straight home — so only a typed URL arrives, and
+ * the screen should send them home rather than assert something untrue.
+ *
+ * Counted by DISTINCT ROLE, not by membership row: an officer assigned to two
+ * villages holds one role and has nothing to choose between.
+ */
+export function needsRoleChoice(rows: ActiveMembership[]): boolean {
+  return new Set(activeMemberships(rows).map((m) => m.role)).size > 1
+}
+
 export function canAccessSurface(rows: ActiveMembership[], surface: Surface): boolean {
   const allowed = SURFACE_ROLES[surface]
   return activeMemberships(rows).some((m) => allowed.includes(m.role))

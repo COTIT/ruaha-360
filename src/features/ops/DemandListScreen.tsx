@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
@@ -31,6 +31,12 @@ export function DemandListScreen() {
   const [pricePerKg, setPricePerKg] = useState('')
   const [qualityNote, setQualityNote] = useState('')
   const [touched, setTouched] = useState(false)
+  /**
+   * QA #23. `isPending` only becomes true on the NEXT render, so Enter and a
+   * click arriving in one tick both passed the disabled check. A ref latches
+   * synchronously and is released when the write settles.
+   */
+  const inFlight = useRef(false)
 
   const columns = useMemo(() => {
     const col = createColumnHelper<Demand>()
@@ -80,21 +86,26 @@ export function DemandListScreen() {
   }
 
   const submit = () => {
+    if (inFlight.current || create.isPending) return
     setTouched(true)
     if (buyerId === '' || cropId === '' || quantity === '' || Number(quantity) <= 0) return
     if (!projectId) return
 
-    create.mutate({
-      projectId,
-      buyerId,
-      cropId,
-      quantityKg: Number(quantity),
-      windowStart,
-      windowEnd,
-      deliveryPoint,
-      pricePerKg,
-      qualityNote,
-    })
+    inFlight.current = true
+    create.mutate(
+      {
+        projectId,
+        buyerId,
+        cropId,
+        quantityKg: Number(quantity),
+        windowStart,
+        windowEnd,
+        deliveryPoint,
+        pricePerKg,
+        qualityNote,
+      },
+      { onSettled: () => (inFlight.current = false) },
+    )
   }
 
   return (
@@ -104,6 +115,17 @@ export function DemandListScreen() {
       <section className="max-w-2xl space-y-3 rounded border border-deep/10 bg-white/60 p-4">
         <h2 className="text-sm font-semibold">{t('demand.createTitle')}</h2>
 
+        {/* A real form: eight fields typed then submitted, so Enter has to
+            work and a keyboard user must not have to tab past all of them to
+            reach the control. QA #11. */}
+        <form
+          className="space-y-3"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            submit()
+          }}
+        >
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t('demand.buyer')} id="demand-buyer" error={missing.buyer ? t('demand.required') : undefined} errorTestId="demand-buyer-error">
             <select id="demand-buyer" data-testid="demand-buyer" value={buyerId} onChange={(e) => setBuyerId(e.target.value)} className={input}>
@@ -155,14 +177,14 @@ export function DemandListScreen() {
         )}
 
         <button
-          type="button"
+          type="submit"
           data-testid="demand-create-submit"
           disabled={create.isPending}
-          onClick={submit}
           className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
         >
           {create.isPending ? t('demand.creating') : t('demand.create')}
         </button>
+        </form>
       </section>
 
       {query.isLoading ? (

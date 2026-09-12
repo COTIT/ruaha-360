@@ -82,6 +82,7 @@ export function TowerScreen() {
             note={t('tower.productionNote')}
             drillTo="/ops/tower/production"
             drillSearch={search}
+            loading={production.isLoading}
           >
             {production.isLoading ? (
               <Loading />
@@ -118,6 +119,7 @@ export function TowerScreen() {
             note={t('tower.pueNote')}
             drillTo="/ops/requests"
             drillSearch={{}}
+            loading={pipeline.isLoading}
           >
             {pipeline.isLoading ? (
               <Loading />
@@ -144,6 +146,7 @@ export function TowerScreen() {
             title={t('tower.energy')}
             drillTo="/ops/tower/energy"
             drillSearch={search}
+            loading={energy.isLoading}
           >
             {energy.isLoading ? (
               <Loading />
@@ -199,6 +202,7 @@ export function TowerScreen() {
             note={t('tower.marketNote')}
             drillTo="/ops/tower/market"
             drillSearch={search}
+            loading={market.isLoading}
           >
             {market.isLoading ? (
               <Loading />

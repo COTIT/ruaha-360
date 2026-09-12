@@ -106,8 +106,32 @@ export interface Draft<T> {
   status: DraftStatus
 }
 
-export function useDraft<T>(key: string, store: DraftStore = indexedDbDraftStore): Draft<T> {
+/**
+ * @param isValid Optional shape guard for what comes back out of storage.
+ *
+ * QA #22: a draft of the wrong shape was restored verbatim — First name
+ * rendering as the literal `[object Object]`, the "not yet submitted" badge
+ * up, and the form ready to submit it. The realistic cause is not tampering
+ * but **a draft written by an older deployment of the form**: rename or retype
+ * one field and every draft in the field becomes this, on exactly the phones
+ * the feature exists to protect.
+ *
+ * A draft that no longer matches is discarded AND removed from storage —
+ * otherwise it is re-read and discarded again on every reload.
+ */
+export function useDraft<T>(
+  key: string,
+  store: DraftStore = indexedDbDraftStore,
+  isValid?: (value: unknown) => value is T,
+): Draft<T> {
   const storeRef = useRef(store)
+  // Initialised from the first render's guard, then kept current in an effect
+  // — writing a ref during render is what `react-hooks/refs` forbids, and the
+  // initial value is already right on mount, which is when the restore runs.
+  const validRef = useRef(isValid)
+  useEffect(() => {
+    validRef.current = isValid
+  }, [isValid])
 
   // Key, draft and status move together so a key change cannot leave a draft
   // from the previous form on screen.
@@ -128,6 +152,17 @@ export function useDraft<T>(key: string, store: DraftStore = indexedDbDraftStore
     let cancelled = false
     void safeGet(storeRef.current, key).then((value) => {
       if (cancelled) return
+
+      const check = validRef.current
+      if (value !== undefined && check && !check(value)) {
+        // Not ours any more. Drop it from storage too, or it is re-read and
+        // discarded again on every reload while the badge promises a draft
+        // that will never come back.
+        void storeRef.current.clear(key).catch(() => {})
+        setState({ key, draft: undefined, status: 'empty' })
+        return
+      }
+
       setState({ key, draft: value as T | undefined, status: value === undefined ? 'empty' : 'dirty' })
     })
     return () => {

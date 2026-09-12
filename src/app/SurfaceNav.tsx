@@ -13,6 +13,14 @@ const linkClass =
 /**
  * Spec 4.1: farmer and officer get a bottom tab bar (mobile-first), ops gets a
  * sidebar (desktop-first).
+ *
+ * Desktop-first is the spec's choice for ops and stays the choice. But below
+ * `lg` the fixed 13rem sidebar squeezed the content column until figures were
+ * cut mid-number — "12,000" rendering as "12,0" — without the page scrolling
+ * sideways to reveal them (QA #8). Silently truncated data is not the same
+ * thing as desktop-first, so the sidebar becomes a horizontal strip there
+ * instead of disappearing: collapsing is not hiding, and every destination
+ * stays reachable.
  */
 export function SurfaceNav({ layout, items }: { layout: NavLayout; items: NavItem[] }) {
   const { t } = useTranslation()
@@ -23,11 +31,11 @@ export function SurfaceNav({ layout, items }: { layout: NavLayout; items: NavIte
       <nav
         aria-label={t('a11y.primaryNav')}
         data-testid="nav-sidebar"
-        className="w-52 shrink-0 border-r border-deep/10 bg-white p-3"
+        className="w-full shrink-0 border-b border-deep/10 bg-white p-3 lg:w-52 lg:border-b-0 lg:border-r"
       >
-        <ul className="space-y-1">
+        <ul className="flex gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-visible">
           {items.map((item) => (
-            <li key={item.to}>
+            <li key={item.to} className="shrink-0">
               <Link
                 to={item.to as LinkTo}
                 className={`block rounded px-2 py-1.5 text-sm ${linkClass}`}

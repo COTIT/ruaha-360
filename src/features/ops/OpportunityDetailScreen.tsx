@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -64,6 +64,12 @@ export function OpportunityDetailScreen() {
   const [kg, setKg] = useState('')
   /** Field errors from `supplySchema`, as i18n keys. */
   const [attachErrors, setAttachErrors] = useState<Record<string, string>>({})
+  /**
+   * QA #23. `isPending` only becomes true on the NEXT render, so Enter and a
+   * click in one tick both passed the disabled check. A ref latches
+   * synchronously and is released when the write settles.
+   */
+  const attachInFlight = useRef(false)
   /** The releasing action awaiting confirmation, if any. */
   const [confirming, setConfirming] = useState<OpportunityAction | null>(null)
 
@@ -95,6 +101,8 @@ export function OpportunityDetailScreen() {
    * it as written. So a figure past `available_kg` is sent on purpose.
    */
   function attachSupply() {
+    if (attachInFlight.current || attach.isPending) return
+
     const parsed = supplySchema.safeParse({ harvest_report_id: harvestId, contributed_kg: kg })
     if (!parsed.success) {
       setAttachErrors(
@@ -107,11 +115,15 @@ export function OpportunityDetailScreen() {
 
     setAttachErrors({})
     const row = rows.find((r) => r.harvest_report_id === parsed.data.harvest_report_id)
-    attach.mutate({
-      harvestReportId: parsed.data.harvest_report_id,
-      cropCycleId: row?.crop_cycle_id ?? '',
-      contributedKg: Number(parsed.data.contributed_kg),
-    })
+    attachInFlight.current = true
+    attach.mutate(
+      {
+        harvestReportId: parsed.data.harvest_report_id,
+        cropCycleId: row?.crop_cycle_id ?? '',
+        contributedKg: Number(parsed.data.contributed_kg),
+      },
+      { onSettled: () => (attachInFlight.current = false) },
+    )
   }
 
   const attachError = (field: 'harvest_report_id' | 'contributed_kg', testId: string) =>
@@ -302,7 +314,15 @@ export function OpportunityDetailScreen() {
             detail={t('opportunity.noneAvailableDetail')}
           />
         ) : (
-          <>
+          // A field-then-submit form, so Enter has to work — QA #11.
+          <form
+            className="space-y-3"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault()
+              attachSupply()
+            }}
+          >
             <div className="space-y-1">
               <label className="block text-sm font-medium" htmlFor="attach-harvest">
                 {t('opportunity.attachHarvest')}
@@ -355,17 +375,16 @@ export function OpportunityDetailScreen() {
             )}
 
             <button
-              type="button"
+              type="submit"
               data-testid="attach-submit"
               // Enabled while incomplete, deliberately: a dead button gives
               // no reason, and the reason is the point.
               disabled={attach.isPending}
-              onClick={attachSupply}
               className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
             >
               {attach.isPending ? t('opportunity.attaching') : t('opportunity.attach')}
             </button>
-          </>
+          </form>
         )}
       </section>
     </section>

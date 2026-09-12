@@ -14,6 +14,7 @@ import { assertsSeededFigures } from './support/seeded'
  * in at most three clicks. If a number cannot be traced, it does not belong on
  * the screen."
  */
+
 const PASSWORD = 'demo1234'
 
 // This spec asserts seeded figures, so it starts from seeded state.
@@ -31,6 +32,21 @@ async function openIlundoTower(page: Page) {
   await signInAsOps(page)
   await page.goto(`/ops/tower?village=${VILLAGE.ILUNDO}`)
   await expect(page.getByTestId('tower')).toBeVisible()
+}
+
+/**
+ * Opens a tile's drill-down, after its figure has actually arrived.
+ *
+ * QA #29: the drill is deliberately NOT a link while the tile is still
+ * loading — clicking one before the headline resolved landed on a drill-down
+ * whose own query had not started, from a figure nobody had seen. So the wait
+ * here is the behaviour under test, not a workaround for it.
+ */
+async function openDrill(page: Page, tile: string) {
+  const section = page.getByTestId(tile)
+  await expect(section).toBeVisible()
+  await expect(section).not.toHaveAttribute('aria-busy', 'true')
+  await section.getByTestId('tile-drill').click()
 }
 
 test.describe('/ops/tower overview', () => {
@@ -153,7 +169,7 @@ test.describe('/ops/tower overview', () => {
 test.describe('/ops/tower drill-downs', () => {
   test('production drills to rows that end in a crop cycle', async ({ page }) => {
     await openIlundoTower(page)
-    await page.getByTestId('tile-production').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-production')
 
     await expect(page).toHaveURL(/\/ops\/tower\/production/)
     await expect(page.getByTestId('production-table')).toBeVisible()
@@ -170,7 +186,7 @@ test.describe('/ops/tower drill-downs', () => {
   // "reach a single farmer's record" dead-ended here. M2 built the screen.
   test('the production drill reaches a real crop cycle, not a placeholder', async ({ page }) => {
     await openIlundoTower(page)
-    await page.getByTestId('tile-production').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-production')
     await expect(page.getByTestId('production-table')).toBeVisible()
 
     await page
@@ -188,7 +204,7 @@ test.describe('/ops/tower drill-downs', () => {
 
   test('energy drills to rows that end in a request', async ({ page }) => {
     await openIlundoTower(page)
-    await page.getByTestId('tile-energy').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-energy')
 
     await expect(page).toHaveURL(/\/ops\/tower\/energy/)
     await expect(page.getByTestId('energy-table')).toBeVisible()
@@ -197,7 +213,7 @@ test.describe('/ops/tower drill-downs', () => {
 
   test('market drills to rows that end in an opportunity', async ({ page }) => {
     await openIlundoTower(page)
-    await page.getByTestId('tile-market').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-market')
 
     await expect(page).toHaveURL(/\/ops\/tower\/market/)
     await expect(page.getByTestId('market-table')).toBeVisible()
@@ -209,7 +225,7 @@ test.describe('/ops/tower drill-downs', () => {
     await openIlundoTower(page)
 
     // 1
-    await page.getByTestId('tile-market').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-market')
     await expect(page.getByTestId('market-table')).toBeVisible()
 
     // 2 — the opportunity, not the buyer: the row drills both ways.
@@ -232,7 +248,7 @@ test.describe('/ops/tower drill-downs', () => {
   // the column added to 42.5 kW against a screen showing 7.200 and 10.800.
   test('the energy drill reconciles with the headlines it came from', async ({ page }) => {
     await openIlundoTower(page)
-    await page.getByTestId('tile-energy').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-energy')
     await expect(page.getByTestId('energy-table')).toBeVisible()
 
     // Each group states its own arithmetic and lands on the tile's figure.
@@ -255,7 +271,7 @@ test.describe('/ops/tower drill-downs', () => {
 
   test('the energy drill excludes rows that feed neither figure, and says so', async ({ page }) => {
     await openIlundoTower(page)
-    await page.getByTestId('tile-energy').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-energy')
     await expect(page.getByTestId('energy-table')).toBeVisible()
 
     // Seeded Ilundo also holds a draft cold room and a rejected oil press.
@@ -277,7 +293,7 @@ test.describe('/ops/tower drill-downs', () => {
   test('an energy headline reaches the request behind it', async ({ page }) => {
     await openIlundoTower(page)
 
-    await page.getByTestId('tile-energy').getByTestId('tile-drill').click()
+    await openDrill(page, 'tile-energy')
     await page.getByTestId('energy-row').first().getByTestId('drill-link').click()
 
     await expect(page.getByTestId('request-review')).toBeVisible()

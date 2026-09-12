@@ -94,3 +94,56 @@ test.describe('login and membership routing', () => {
     await expect(page).toHaveURL(/\/farm$/)
   })
 })
+
+/**
+ * QA #26 and #10. `/login` rendered the sign-in form AND the header's "Sign
+ * out" button for someone already signed in — one route showing two mutually
+ * exclusive states. `/select-role` told a single-role officer "You hold more
+ * than one role. Pick the one you want to work in", above a single option.
+ *
+ * Neither is reachable by navigation; both are reachable by typing a URL, and
+ * `resolveLanding` already knows where each user belongs.
+ */
+test.describe('routes a signed-in user should not be shown', () => {
+  test('/login sends a signed-in user to their own surface', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByTestId('login-email').fill('ops@demo.ruaha360.test')
+    await page.getByTestId('login-password').fill('demo1234')
+    await page.getByTestId('login-submit').click()
+    await expect(page).toHaveURL(/\/ops$/)
+
+    await page.goto('/login')
+
+    await expect(page).toHaveURL(/\/ops$/)
+    await expect(page.getByTestId('login-email')).toHaveCount(0)
+  })
+
+  test('/select-role does not claim a choice a single-role user does not have', async ({
+    page,
+  }) => {
+    await page.goto('/login')
+    await page.getByTestId('login-email').fill('officer.ilundo@demo.ruaha360.test')
+    await page.getByTestId('login-password').fill('demo1234')
+    await page.getByTestId('login-submit').click()
+    await expect(page).toHaveURL(/\/officer$/)
+
+    await page.goto('/select-role')
+
+    await expect(page).toHaveURL(/\/officer$/)
+    await expect(page.locator('main')).not.toContainText(/more than one role/i)
+  })
+
+  // Signing out still has to reach the form, or there is no way back in.
+  test('signing out still lands on a usable sign-in form', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByTestId('login-email').fill('ops@demo.ruaha360.test')
+    await page.getByTestId('login-password').fill('demo1234')
+    await page.getByTestId('login-submit').click()
+    await expect(page).toHaveURL(/\/ops$/)
+
+    await page.getByTestId('sign-out').click()
+
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByTestId('login-email')).toBeVisible()
+  })
+})

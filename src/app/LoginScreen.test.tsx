@@ -4,14 +4,17 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const signInWithPassword = vi.fn()
-const ensureSession = vi.fn()
+const sessionFetch = vi.fn()
 const navigate = vi.fn()
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { auth: { signInWithPassword: (a: unknown) => signInWithPassword(a) } },
   isDemoData: true,
 }))
-vi.mock('@/app/session', () => ({ ensureSession: (c: unknown) => ensureSession(c) }))
+vi.mock('@/app/session', () => ({
+  // The real registry entry, so the cache behaves as it does in the app.
+  sessionQuery: { queryKey: ['session'], queryFn: () => sessionFetch(), staleTime: 0 },
+}))
 vi.mock('@tanstack/react-router', () => ({
   getRouteApi: () => ({ useSearch: () => ({}) }),
   useNavigate: () => navigate,
@@ -20,18 +23,23 @@ vi.mock('@tanstack/react-router', () => ({
 const { LoginScreen } = await import('@/app/LoginScreen')
 await import('@/i18n')
 
-function renderLogin() {
+function renderLogin(seed?: { cachedSession: unknown }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // What the route guards leave behind: every `beforeLoad` calls
+  // `ensureSession`, so by the time the form is submitted the cache already
+  // holds an answer from when the visitor was signed OUT.
+  if (seed) queryClient.setQueryData(['session'], seed.cachedSession)
   render(
     <QueryClientProvider client={queryClient}>
       <LoginScreen />
     </QueryClientProvider>,
   )
+  return queryClient
 }
 
 beforeEach(() => {
   signInWithPassword.mockReset()
-  ensureSession.mockReset()
+  sessionFetch.mockReset()
   navigate.mockReset()
 })
 
@@ -42,7 +50,7 @@ beforeEach(() => {
  */
 test('a session read that fails after a correct password is reported, not swallowed', async () => {
   signInWithPassword.mockResolvedValue({ error: null })
-  ensureSession.mockRejectedValue(new Error('could not connect to the database'))
+  sessionFetch.mockImplementation(() => Promise.reject(new Error('could not connect to the database')))
 
   renderLogin()
   const user = userEvent.setup()
@@ -58,7 +66,7 @@ test('a session read that fails after a correct password is reported, not swallo
 
 test('the submit button is usable again after a failure', async () => {
   signInWithPassword.mockResolvedValue({ error: null })
-  ensureSession.mockRejectedValue(new Error('boom'))
+  sessionFetch.mockImplementation(() => Promise.reject(new Error('boom')))
 
   renderLogin()
   const user = userEvent.setup()
@@ -72,7 +80,7 @@ test('the submit button is usable again after a failure', async () => {
 
 test('a successful sign-in navigates to the resolved landing route', async () => {
   signInWithPassword.mockResolvedValue({ error: null })
-  ensureSession.mockResolvedValue({
+  sessionFetch.mockResolvedValue({
     memberships: [{ id: 'm', role: 'ops', project_id: 'p', village_id: null, revoked_at: null }],
   })
 
@@ -190,7 +198,7 @@ describe('sign-in failure states', () => {
 
   test('a stale error clears when the next attempt starts', async () => {
     signInWithPassword.mockResolvedValueOnce({ error: { status: 400, message: 'nope' } })
-    ensureSession.mockResolvedValue({ memberships: [] })
+    sessionFetch.mockResolvedValue({ memberships: [] })
 
     renderLogin()
     const user = userEvent.setup()
@@ -225,5 +233,73 @@ describe('submitting state', () => {
 
     release({ error: { status: 400, message: 'nope' } })
     await waitFor(() => expect(screen.getByTestId('login-submit')).toBeEnabled())
+  })
+})
+
+/**
+ * QA #30. Signing in intermittently landed on `/no-access` instead of the
+ * user's own surface — always on the first sign-in of a cold session, always
+ * green on a retry.
+ *
+ * The cause is not a race in the database. Every route guard calls
+ * `ensureSession`, so by the time the form is submitted the session query
+ * already holds `null` — the correct answer for a visitor who was signed out.
+ * `invalidateQueries` marks that stale and STARTS a refetch, but does not wait
+ * for it, and `ensureQueryData` returns cached data when there is any. `null`
+ * is data. So `resolveLanding([])` ran on the signed-out answer and sent a
+ * legitimate ops user to "You do not have access".
+ */
+describe('the session read after a correct password', () => {
+  const OPS = {
+    userId: 'u1',
+    appUser: { id: 'u1', person_id: null },
+    memberships: [
+      {
+        id: 'm1',
+        role: 'ops',
+        project_id: '20000000-0000-4000-8000-000000000001',
+        village_id: null,
+        revoked_at: null,
+      },
+    ],
+  }
+
+  test('ignores the signed-out answer left in the cache', async () => {
+    signInWithPassword.mockResolvedValue({ error: null })
+    sessionFetch.mockResolvedValue(OPS)
+    renderLogin({ cachedSession: null })
+
+    await userEvent.type(screen.getByTestId('login-email'), 'ops@demo.ruaha360.test')
+    await userEvent.type(screen.getByTestId('login-password'), 'demo1234')
+    await userEvent.click(screen.getByTestId('login-submit'))
+
+    await waitFor(() => expect(navigate).toHaveBeenCalled())
+    expect(navigate).toHaveBeenCalledWith({ to: '/ops', replace: true })
+  })
+
+  test('and actually re-reads it rather than trusting the cache', async () => {
+    signInWithPassword.mockResolvedValue({ error: null })
+    sessionFetch.mockResolvedValue(OPS)
+    renderLogin({ cachedSession: null })
+
+    await userEvent.type(screen.getByTestId('login-email'), 'ops@demo.ruaha360.test')
+    await userEvent.type(screen.getByTestId('login-password'), 'demo1234')
+    await userEvent.click(screen.getByTestId('login-submit'))
+
+    await waitFor(() => expect(sessionFetch).toHaveBeenCalled())
+  })
+
+  // A user who genuinely holds no membership still belongs on /no-access.
+  test('a user with no memberships still goes to no-access', async () => {
+    signInWithPassword.mockResolvedValue({ error: null })
+    sessionFetch.mockResolvedValue({ ...OPS, memberships: [] })
+    renderLogin({ cachedSession: null })
+
+    await userEvent.type(screen.getByTestId('login-email'), 'nobody@demo.ruaha360.test')
+    await userEvent.type(screen.getByTestId('login-password'), 'demo1234')
+    await userEvent.click(screen.getByTestId('login-submit'))
+
+    await waitFor(() => expect(navigate).toHaveBeenCalled())
+    expect(navigate).toHaveBeenCalledWith({ to: '/no-access', replace: true })
   })
 })

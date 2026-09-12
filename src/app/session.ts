@@ -90,7 +90,20 @@ export function ensureSession(queryClient: QueryClient) {
   return queryClient.ensureQueryData(sessionQuery)
 }
 
+/**
+ * Sign out, without leaving requests behind that fire against a dead token.
+ *
+ * QA #13: 24 × 400 in the console, clustered around sign-out and role
+ * switching. In-flight reads and a queued token refresh completed AFTER the
+ * token was invalidated. Cosmetic — a clean load has zero failures — but a
+ * noisy console during a demo is where a real error goes unnoticed.
+ *
+ * Order matters. Cancel first, so nothing is in flight when the token dies;
+ * then clear, so nothing cached from that session is refetched by the next
+ * render with no token at all.
+ */
 export async function signOut(queryClient: QueryClient) {
+  await queryClient.cancelQueries()
   await supabase.auth.signOut()
-  await queryClient.invalidateQueries({ queryKey: queryKeys.session() })
+  queryClient.clear()
 }

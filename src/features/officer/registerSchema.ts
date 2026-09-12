@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import type { RegisterForm } from '@/features/officer/registerPayload'
 import type { Database } from '@/lib/db.types'
 
 export type CropMeasure = Database['public']['Enums']['crop_measure']
@@ -178,4 +179,53 @@ export function roundedTo(value: string, dp: number): string | null {
 
   const rounded = n.toFixed(dp)
   return Number(rounded) === n ? null : rounded
+}
+
+/** Every field a `RegisterForm` holds, with the type it must hold. */
+const DRAFT_FIELDS = {
+  given_name: 'string',
+  family_name: 'string',
+  phone: 'string',
+  household_label: 'string',
+  is_head: 'boolean',
+  farm_label: 'string',
+  farm_latitude: 'string',
+  farm_longitude: 'string',
+  plot_label: 'string',
+  plot_area_ha: 'string',
+  crop_id: 'string',
+  season_label: 'string',
+  cycle_area_ha: 'string',
+  cycle_tree_count: 'string',
+  cycle_unit_count: 'string',
+  planted_on: 'string',
+  harvest_start: 'string',
+  harvest_end: 'string',
+  harvest_quantity_kg: 'string',
+  confidence: 'string',
+} as const
+
+const CONFIDENCE = ['low', 'medium', 'high']
+
+/**
+ * Is this stored object still a draft of THIS form? — QA #22.
+ *
+ * Shape only, deliberately. A half-filled draft is the whole point of the
+ * feature, so an empty required field restores; what must not restore is an
+ * object whose fields are the wrong TYPE, which rendered as the literal
+ * `[object Object]` in the first name and would have been submitted.
+ *
+ * The realistic producer is a draft written by an older deployment of the
+ * form, on a phone that was mid-registration when the app updated. An extra
+ * key is therefore tolerated — a field this version dropped costs nothing —
+ * while a missing or retyped one is not.
+ */
+export function isRegisterDraft(value: unknown): value is RegisterForm {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+
+  const draft = value as Record<string, unknown>
+  for (const [field, type] of Object.entries(DRAFT_FIELDS)) {
+    if (typeof draft[field] !== type) return false
+  }
+  return CONFIDENCE.includes(draft.confidence as string)
 }

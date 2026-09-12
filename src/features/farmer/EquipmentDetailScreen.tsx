@@ -47,7 +47,7 @@ export function EquipmentDetailScreen() {
     handleSubmit,
     control,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<RequestForm, unknown, RequestForm>({
     defaultValues: EMPTY,
     resolver: zodResolver(requestSchema),
@@ -116,6 +116,24 @@ export function EquipmentDetailScreen() {
 
   const canRequest = Boolean(villageId && personId)
 
+  /**
+   * QA #23. `isSubmitting` is react-hook-form's own in-flight flag and it is
+   * set synchronously when the handler starts, which `submit.isPending` is
+   * not — validation is asynchronous, so the mutation has not begun on the
+   * tick a second submit arrives. The button below is disabled on both.
+   */
+  const onSubmit = handleSubmit((form) =>
+    submit.mutate({
+      villageId: villageId!,
+      personId: personId!,
+      equipmentId: item.id,
+      quantity: Number(form.quantity),
+      hoursPerDay: Number(form.hours_per_day),
+      daysPerWeek: Number(form.days_per_week),
+      purpose: form.purpose,
+    }),
+  )
+
   /** One message per reason. The schema's `message` holds an i18n key. */
   const err = (name: keyof RequestForm) => {
     const error = errors[name]
@@ -142,21 +160,7 @@ export function EquipmentDetailScreen() {
 
       <h2 className="text-sm font-semibold">{t('equipment.requestThis')}</h2>
 
-      <form
-        className="space-y-4"
-        noValidate
-        onSubmit={handleSubmit((form) =>
-          submit.mutate({
-            villageId: villageId!,
-            personId: personId!,
-            equipmentId: item.id,
-            quantity: Number(form.quantity),
-            hoursPerDay: Number(form.hours_per_day),
-            daysPerWeek: Number(form.days_per_week),
-            purpose: form.purpose,
-          }),
-        )}
-      >
+      <form className="space-y-4" noValidate onSubmit={onSubmit}>
         <div className="space-y-3">
           <NumberField label={t('equipment.quantity')} testId="request-quantity">
             <input
@@ -233,10 +237,12 @@ export function EquipmentDetailScreen() {
         <button
           type="submit"
           data-testid="request-submit"
-          disabled={submit.isPending || !canRequest}
+          disabled={submit.isPending || isSubmitting || !canRequest}
           className="w-full rounded bg-primary px-3 py-2.5 font-medium text-primary-foreground disabled:opacity-60"
         >
-          {submit.isPending ? t('equipment.submitting') : t('equipment.submit')}
+          {submit.isPending || isSubmitting
+            ? t('equipment.submitting')
+            : t('equipment.submit')}
         </button>
       </form>
     </section>

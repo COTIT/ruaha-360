@@ -12,12 +12,13 @@ import { ErrorState } from '@/components/ErrorState'
 import { UnsavedDraftBadge } from '@/components/UnsavedDraftBadge'
 import { buildRegisterPayload, type RegisterForm } from '@/features/officer/registerPayload'
 import {
+  isRegisterDraft,
   registerSchema,
   roundedTo,
   type CropMeasure,
 } from '@/features/officer/registerSchema'
 import { useCrops } from '@/features/officer/useCrops'
-import { draftKey, useDraft } from '@/lib/drafts'
+import { draftKey, indexedDbDraftStore, useDraft } from '@/lib/drafts'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/lib/db.types'
@@ -94,7 +95,16 @@ export function RegisterScreen() {
   }, [draftIdFromUrl, navigate])
 
   const clientRef = draftIdFromUrl ?? ''
-  const draft = useDraft<RegisterForm>(draftKey('register', clientRef))
+  /**
+   * The shape guard is what stops QA #22: a draft written by an OLDER
+   * deployment of this form restored verbatim, rendering `[object Object]` as
+   * a farmer's first name and standing ready to submit it.
+   */
+  const draft = useDraft<RegisterForm>(
+    draftKey('register', clientRef),
+    indexedDbDraftStore,
+    isRegisterDraft,
+  )
 
   // The mandatory measure field depends on the CROP CHOSEN, so the schema has
   // to be built at validation time rather than captured once at mount. A ref
@@ -290,6 +300,10 @@ export function RegisterScreen() {
       <form
         className="space-y-6"
         noValidate
+        // QA #23. `formState.isSubmitting` is set synchronously when the
+        // handler starts; `submit.isPending` is not, because validation is
+        // asynchronous and the mutation has not begun on the tick the officer
+        // clicks again. The control below is disabled on both.
         onSubmit={handleSubmit((form) => submit.mutate(form))}
       >
         <Fieldset legend={t('register.sections.person')}>
@@ -513,10 +527,12 @@ export function RegisterScreen() {
         <button
           type="submit"
           data-testid="register-submit"
-          disabled={submit.isPending}
+          disabled={submit.isPending || formState.isSubmitting}
           className="w-full rounded bg-primary px-3 py-2.5 font-medium text-primary-foreground disabled:opacity-60"
         >
-          {submit.isPending ? t('register.submitting') : t('register.submit')}
+          {submit.isPending || formState.isSubmitting
+            ? t('register.submitting')
+            : t('register.submit')}
         </button>
       </form>
     </section>

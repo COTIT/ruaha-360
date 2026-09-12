@@ -49,7 +49,9 @@ export function RootLayout() {
         </div>
       </header>
 
-      <div className="flex flex-1">
+      {/* Column below `lg`, so the ops sidebar becomes a strip above the
+          content rather than squeezing it — QA #8. */}
+      <div className="flex flex-1 flex-col lg:flex-row">
         {layout === 'sidebar' && <SurfaceNav layout={layout} items={items} />}
 
         {/* Bottom padding keeps the tab bar clear of the last row of content. */}

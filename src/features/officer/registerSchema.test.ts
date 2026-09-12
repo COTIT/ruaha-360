@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { registerSchema, roundedTo } from '@/features/officer/registerSchema'
+import { isRegisterDraft, registerSchema, roundedTo } from '@/features/officer/registerSchema'
 import type { RegisterForm } from '@/features/officer/registerPayload'
 
 const VALID: RegisterForm = {
@@ -277,5 +277,57 @@ describe('roundedTo', () => {
   // be noise on a correct entry.
   test('trailing zeros are not a rounding', () => {
     expect(roundedTo('1.80000', 4)).toBeNull()
+  })
+})
+
+/**
+ * QA #22. A stored draft of the wrong shape was restored verbatim: First name
+ * rendered as the literal `[object Object]`, Family name as `array`.
+ *
+ * This checks SHAPE, not validity. A half-filled draft is the entire point of
+ * the feature, so an empty required field must still restore.
+ */
+describe('isRegisterDraft', () => {
+  test('accepts a complete draft', () => {
+    expect(isRegisterDraft(VALID)).toBe(true)
+  })
+
+  // The common case: the officer got two fields in before the phone died.
+  test('accepts a half-filled one', () => {
+    expect(isRegisterDraft({ ...VALID, family_name: '', crop_id: '', harvest_start: '' })).toBe(
+      true,
+    )
+  })
+
+  test('rejects the shapes #22 actually produced', () => {
+    expect(isRegisterDraft({ ...VALID, given_name: { nested: true } })).toBe(false)
+    expect(isRegisterDraft({ ...VALID, family_name: ['array'] })).toBe(false)
+  })
+
+  // The realistic cause: a field renamed or retyped by a newer deployment,
+  // against a draft written by the old one.
+  test('rejects a draft missing a field the form now has', () => {
+    const { cycle_area_ha: _dropped, ...missing } = VALID
+    expect(isRegisterDraft(missing)).toBe(false)
+  })
+
+  test('rejects a field whose type changed', () => {
+    expect(isRegisterDraft({ ...VALID, is_head: 'yes' })).toBe(false)
+    expect(isRegisterDraft({ ...VALID, harvest_quantity_kg: 4100 })).toBe(false)
+  })
+
+  test('rejects a confidence outside the enum', () => {
+    expect(isRegisterDraft({ ...VALID, confidence: 'certain' })).toBe(false)
+  })
+
+  test.each([null, undefined, 'a string', 42, []])('rejects %s', (value) => {
+    expect(isRegisterDraft(value)).toBe(false)
+  })
+
+  // Extra keys are the shape of a draft written by an OLDER deployment that
+  // had a field this one dropped. Everything the form needs is present, so it
+  // restores rather than being thrown away.
+  test('tolerates a key the form no longer uses', () => {
+    expect(isRegisterDraft({ ...VALID, removed_field: 'x' })).toBe(true)
   })
 })

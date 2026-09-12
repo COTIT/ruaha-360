@@ -2,16 +2,17 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const getSession = vi.fn()
 const from = vi.fn()
+const authSignOut = vi.fn()
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    auth: { getSession: () => getSession() },
+    auth: { getSession: () => getSession(), signOut: () => authSignOut() },
     from: (table: string) => from(table),
   },
   isDemoData: true,
 }))
 
-const { fetchSession } = await import('@/app/session')
+const { fetchSession, signOut } = await import('@/app/session')
 
 const USER = '80000000-0000-4000-8000-000000000003'
 
@@ -130,5 +131,88 @@ describe('fetchSession guards against a not-yet-effective token', () => {
 
     const session = await fetchSession()
     expect(session?.memberships).toHaveLength(1)
+  })
+})
+
+/**
+ * QA #13. 24 × 400 appeared in the console across the sweep, clustered around
+ * sign-out and role switching: queries and an in-flight token refresh firing
+ * against an already invalidated token.
+ *
+ * Cosmetic — a clean Tower load has 15 Supabase requests and zero failures —
+ * but it makes the console noisy enough to hide a real error during a demo,
+ * which is the one moment it matters.
+ */
+describe('signOut', () => {
+  const makeClient = () => ({
+    cancelQueries: vi.fn().mockResolvedValue(undefined),
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    clear: vi.fn(),
+  })
+
+  beforeEach(() => {
+    // Two statements, and `mockImplementation` rather than chaining
+    // `mockResolvedValue` onto `mockReset()` — the chained form leaves a
+    // promise vitest reports as an unhandled rejection in the test that
+    // overrides it.
+    authSignOut.mockReset()
+    authSignOut.mockImplementation(async () => ({ error: null }))
+  })
+
+  // In-flight reads are what fire again with a dead token. Cancelling first is
+  // the whole fix.
+  test('cancels in-flight queries before invalidating the token', async () => {
+    const client = makeClient()
+    const order: string[] = []
+    client.cancelQueries.mockImplementation(async () => void order.push('cancel'))
+    authSignOut.mockImplementation(async () => {
+      order.push('signOut')
+      return { error: null }
+    })
+
+    await signOut(client as never)
+
+    expect(order).toEqual(['cancel', 'signOut'])
+  })
+
+  // Nothing cached belonged to the session that just ended. Leaving it means
+  // the next render refetches it — with no token at all.
+  test('drops the cache rather than refetching it signed out', async () => {
+    const client = makeClient()
+    await signOut(client as never)
+
+    expect(client.clear).toHaveBeenCalledTimes(1)
+  })
+
+  test('the cache is dropped after the token is gone, not before', async () => {
+    const client = makeClient()
+    const order: string[] = []
+    authSignOut.mockImplementation(async () => {
+      order.push('signOut')
+      return { error: null }
+    })
+    client.clear.mockImplementation(() => void order.push('clear'))
+
+    await signOut(client as never)
+
+    expect(order).toEqual(['signOut', 'clear'])
+  })
+
+  // A failed sign out must still surface: SignOutButton reports it, and a
+  // button that silently did nothing is worse than an error.
+  test('a failure still reaches the caller', async () => {
+    const client = makeClient()
+    authSignOut.mockImplementation(() => Promise.reject(new Error('network')))
+
+    let caught: unknown
+    try {
+      await signOut(client as never)
+    } catch (cause) {
+      caught = cause
+    }
+
+    expect((caught as Error).message).toBe('network')
+    // And the cache is NOT dropped: the user is still signed in.
+    expect(client.clear).not.toHaveBeenCalled()
   })
 })

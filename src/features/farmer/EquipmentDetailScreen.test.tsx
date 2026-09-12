@@ -13,8 +13,13 @@ vi.mock('@/app/session', () => ({ useSession: () => useSession() }))
 vi.mock('@/features/farmer/useEquipment', () => ({
   useEquipmentItem: () => useEquipmentItem(),
 }))
+const useSubmitRequestState = {
+  isPending: false,
+  isError: false,
+  isSuccess: false,
+}
 vi.mock('@/features/farmer/useRequests', () => ({
-  useSubmitRequest: () => ({ mutate, isPending: false, isError: false, isSuccess: false, reset: vi.fn() }),
+  useSubmitRequest: () => ({ mutate, reset: vi.fn(), ...useSubmitRequestState }),
 }))
 
 const { EquipmentDetailScreen } = await import('@/features/farmer/EquipmentDetailScreen')
@@ -24,6 +29,9 @@ const VILLAGE = '30000000-0000-4000-8000-000000000001'
 
 beforeEach(() => {
   mutate.mockReset()
+  useSubmitRequestState.isPending = false
+  useSubmitRequestState.isError = false
+  useSubmitRequestState.isSuccess = false
   useSession.mockReturnValue({
     isLoading: false,
     error: null,
@@ -74,16 +82,14 @@ describe('the request form as it arrives', () => {
     submit()
 
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1))
-    expect(mutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        villageId: VILLAGE,
-        personId: 'p1',
-        equipmentId: 'eq1',
-        quantity: 1,
-        hoursPerDay: 6,
-        daysPerWeek: 5,
-      }),
-    )
+    expect(mutate.mock.calls[0][0]).toMatchObject({
+      villageId: VILLAGE,
+      personId: 'p1',
+      equipmentId: 'eq1',
+      quantity: 1,
+      hoursPerDay: 6,
+      daysPerWeek: 5,
+    })
   })
 
   test('a purpose of spaces is not stored as a space', async () => {
@@ -208,5 +214,25 @@ describe('the estimate does not compute from impossible inputs', () => {
     const blocked = screen.getByTestId('estimate-blocked')
     expect(blocked).toHaveTextContent(/hours per day/i)
     expect(blocked).not.toHaveTextContent(/0\.000/)
+  })
+})
+
+/** QA #23, on the farmer's side of the same pattern. */
+describe('the request form in flight', () => {
+  test('a second submit in the same tick does not send a second request', async () => {
+    render(<EquipmentDetailScreen />)
+
+    submit()
+    submit()
+
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1))
+    expect(mutate).toHaveBeenCalledTimes(1)
+  })
+
+  test('the control is disabled while the write is in flight', () => {
+    useSubmitRequestState.isPending = true
+    render(<EquipmentDetailScreen />)
+
+    expect(screen.getByTestId('request-submit')).toBeDisabled()
   })
 })

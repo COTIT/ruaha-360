@@ -456,7 +456,9 @@ describe('the contribution has to be a contribution', () => {
     withHarvest()
     attach('1600')
 
-    expect(attachMutate).toHaveBeenCalledWith({
+    // The second argument is the per-call `onSettled` that releases the
+    // in-flight latch, so the payload is asserted on its own.
+    expect(attachMutate.mock.calls[0][0]).toEqual({
       harvestReportId: 'h9',
       cropCycleId: 'cy9',
       contributedKg: 1600,
@@ -474,9 +476,7 @@ describe('the contribution has to be a contribution', () => {
     withHarvest()
     attach('99999')
 
-    expect(attachMutate).toHaveBeenCalledWith(
-      expect.objectContaining({ contributedKg: 99999 }),
-    )
+    expect(attachMutate.mock.calls[0][0]).toMatchObject({ contributedKg: 99999 })
   })
 
   test('the error clears once the figure is fixed', () => {
@@ -491,6 +491,80 @@ describe('the contribution has to be a contribution', () => {
     fireEvent.click(screen.getByTestId('attach-submit'))
 
     expect(screen.queryByTestId('attach-kg-error')).not.toBeInTheDocument()
+    expect(attachMutate).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * QA #11. Every action outside RegisterScreen was a bare
+ * `<button type="button">` with an onClick, so pressing Enter in a text field
+ * did nothing and a keyboard user had to tab to the button. On a
+ * field-then-submit form that is an accessibility gap, not a style preference.
+ */
+describe('attaching supply is a real form', () => {
+  const withHarvest = () => {
+    loaded({ status: 'proposed' })
+    useAvailableHarvest.mockReturnValue({
+      isLoading: false,
+      data: [
+        {
+          harvest_report_id: 'h9',
+          crop_cycle_id: 'cy9',
+          quantity_kg: 4100,
+          available_kg: 4100,
+          harvest_start: '2026-09-01',
+        },
+      ],
+    })
+  }
+
+  test('the control submits the form rather than handling a click', () => {
+    withHarvest()
+    render(<OpportunityDetailScreen />)
+
+    const button = screen.getByTestId('attach-submit')
+    expect(button).toHaveAttribute('type', 'submit')
+    expect(button.closest('form')).not.toBeNull()
+  })
+
+  test('so submitting the form attaches, without touching the button', () => {
+    withHarvest()
+    render(<OpportunityDetailScreen />)
+
+    fireEvent.change(screen.getByTestId('attach-harvest'), { target: { value: 'h9' } })
+    fireEvent.change(screen.getByTestId('attach-kg'), { target: { value: '1600' } })
+    fireEvent.submit(screen.getByTestId('attach-submit').closest('form')!)
+
+    expect(attachMutate.mock.calls[0][0]).toMatchObject({ contributedKg: 1600 })
+  })
+
+  // QA #23. A second submit while the first is in flight is a duplicate write,
+  // and the officer's only feedback on a slow connection is that nothing has
+  // happened yet.
+  test('a submit in flight disables the control', () => {
+    withHarvest()
+    useAttachSupply.mockReturnValue({
+      mutate: attachMutate,
+      isPending: true,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    })
+    render(<OpportunityDetailScreen />)
+
+    expect(screen.getByTestId('attach-submit')).toBeDisabled()
+  })
+
+  test('and a second submit in the same tick does not fire twice', () => {
+    withHarvest()
+    render(<OpportunityDetailScreen />)
+
+    fireEvent.change(screen.getByTestId('attach-harvest'), { target: { value: 'h9' } })
+    fireEvent.change(screen.getByTestId('attach-kg'), { target: { value: '1600' } })
+    const form = screen.getByTestId('attach-submit').closest('form')!
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+
     expect(attachMutate).toHaveBeenCalledTimes(1)
   })
 })

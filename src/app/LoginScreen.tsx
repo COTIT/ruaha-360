@@ -7,9 +7,8 @@ import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 
 import { resolveLanding, safeRedirect } from '@/app/membership'
-import { ensureSession } from '@/app/session'
+import { sessionQuery } from '@/app/session'
 import { supabase } from '@/lib/supabase'
-import { queryKeys } from '@/lib/queryKeys'
 
 // By route id rather than by importing the route, which would be circular.
 const route = getRouteApi('/(auth)/login')
@@ -56,11 +55,25 @@ export function LoginScreen() {
         return
       }
 
-      // The password can be accepted and the follow-up session read still
-      // fail. Swallowing that leaves the user staring at the login form with
-      // no explanation, having just typed a correct password.
-      await queryClient.invalidateQueries({ queryKey: queryKeys.session() })
-      const session = await ensureSession(queryClient)
+      /**
+       * A forced read, not `invalidateQueries` + `ensureQueryData` — QA #30.
+       *
+       * Every route guard calls `ensureSession`, so by the time this form is
+       * submitted the session query already holds `null`: the correct answer
+       * for a visitor who was signed out. `invalidateQueries` marks that stale
+       * and STARTS a refetch without waiting for it, and `ensureQueryData`
+       * returns cached data whenever there is any — and `null` is data. So
+       * `resolveLanding([])` ran on the signed-out answer and sent a
+       * legitimate ops user to "You do not have access", intermittently,
+       * depending on which promise settled first.
+       *
+       * `fetchQuery` ignores what is cached and returns the fresh answer.
+       *
+       * The password can also be accepted and this read still fail; that is
+       * reported rather than swallowed, or the user is left staring at the
+       * login form having just typed a correct password.
+       */
+      const session = await queryClient.fetchQuery(sessionQuery)
 
       // A guard that bounced someone here attached where they were going. Go
       // back there if the value is trustworthy; the surface guard will correct

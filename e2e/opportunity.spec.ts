@@ -241,10 +241,15 @@ test.describe('declining releases the committed supply', () => {
     await page.getByTestId('release-confirm-yes').click()
     await expect(page.getByTestId('status-pill')).toHaveAttribute('data-status', 'declined')
 
+    // Switching accounts now means signing out first: a signed-in visitor is
+    // sent away from /login rather than shown a form beside their own "Sign
+    // out" button (QA #26).
+    await page.getByTestId('sign-out').click()
+    await expect(page).toHaveURL(/\/login$/)
+
     // c0000000-…04 hangs off plot a0000000-…03, which is Joseph's farm
     // (90000000-…02), NOT Neema's. `opportunity_read_contributor` is what puts
     // this row in front of him and keeps it away from every other farmer.
-    await page.goto('/login')
     await page.getByTestId('login-email').fill('joseph@demo.ruaha360.test')
     await page.getByTestId('login-password').fill(PASSWORD)
     await page.getByTestId('login-submit').click()

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   activeMemberships,
   canAccessSurface,
+  needsRoleChoice,
   resolveLanding,
   roleHome,
   safeRedirect,
@@ -233,5 +234,38 @@ describe('ownVillageId', () => {
 
   test('no memberships at all yields nothing', () => {
     expect(ownVillageId([])).toBeUndefined()
+  })
+})
+
+/**
+ * QA #10. `/select-role` told the Ilundo officer — who holds exactly one
+ * membership — "You hold more than one role. Pick the one you want to work
+ * in", above a single option. The copy asserts something untrue, and
+ * `resolveLanding` already knows better: nothing ROUTES there for a
+ * single-role user, only a typed URL reaches it.
+ */
+describe('needsRoleChoice', () => {
+  test('nobody with one role has a choice to make', () => {
+    expect(needsRoleChoice([m('field_officer')])).toBe(false)
+  })
+
+  test('two roles is a real choice', () => {
+    expect(needsRoleChoice([m('field_officer'), m('ops')])).toBe(true)
+  })
+
+  test('no memberships is not a choice either', () => {
+    expect(needsRoleChoice([])).toBe(false)
+  })
+
+  // Revoked rows are not roles. Two memberships, one revoked, is one role.
+  test('a revoked membership does not create a choice', () => {
+    expect(
+      needsRoleChoice([m('field_officer'), { ...m('ops'), revoked_at: '2026-01-01T00:00:00Z' }]),
+    ).toBe(false)
+  })
+
+  // Two villages on the SAME role is not a role choice — it is one role.
+  test('the same role twice is still one role', () => {
+    expect(needsRoleChoice([m('field_officer'), m('field_officer')])).toBe(false)
   })
 })

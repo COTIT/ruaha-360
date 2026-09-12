@@ -36,4 +36,23 @@ void i18next.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
+/**
+ * `<html lang>` follows the active language — QA #18.
+ *
+ * `index.html` shipped `lang="sw"` and nothing ever changed it, so every ops
+ * and admin screen — English by design — was announced to a screen reader with
+ * Swahili pronunciation rules, which is close to unusable. Switching language
+ * changed every rendered string and left the attribute alone.
+ *
+ * The static attribute in `index.html` matches `lng` below, so the first paint
+ * is right before any of this runs.
+ */
+function applyDocumentLanguage(language: string) {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = language
+}
+
+i18next.on('languageChanged', applyDocumentLanguage)
+applyDocumentLanguage(i18next.resolvedLanguage ?? 'en')
+
 export default i18next
