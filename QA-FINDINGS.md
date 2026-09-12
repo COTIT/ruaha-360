@@ -1124,3 +1124,148 @@ on their first sign-in of the day.
 **Where it belongs:** `P2-E` or its own ticket. Effort unknown until the cause
 is found; the fix may be one line or may be a retry that masks it, and the
 difference matters.
+
+---
+---
+
+# Third sweep — what the remediation actually closed
+
+Written 13 September 2026, after M1–M9. The two sweeps above found 29 items;
+#30 was added during M5. This records what changed, what did not, and the
+handful of places where the fix differed from what the finding asked for.
+
+**State:** 689 unit tests · 173 e2e · `rls_test` 24/24 · typecheck and lint
+clean · seeded baseline intact, zero `E2E-` leftovers.
+
+---
+
+## Closed — 29 of 30
+
+| # | Finding | Milestone | What was actually done |
+|---|---|---|---|
+| 1 | Eleven placeholder routes | M1–M4 | All eleven replaced. `e2e/nav.spec.ts` is the gate; its `built` scaffolding is gone because it reads true everywhere. |
+| 3 | Malformed id shows a Postgres error | M7 | `isUuid` at the fetch boundary on all eight `$id` routes. A bad id reaches the same "not found" state as an absent one. |
+| 4 | Raw check-constraint name | M7 | `humanizeDbError` maps constraint identifiers to sentences. |
+| 5 | Draft request is a dead end | M4 | Submit and withdraw wired to the machine the trigger already permitted. |
+| 6 | Ops loses its nav on officer screens | M1 | `navSurfaceFor` keeps the sidebar. Deliberately not symmetrical for the farmer surface. |
+| 7 | Energy drill does not reconcile | M1 | Rows grouped by the figure they feed; both sums read from `v_village_energy`, nothing summed client-side. |
+| 8 | Ops surface breaks below ~800px | M8 | Sidebar becomes a horizontal strip below `lg`. Desktop-first stays the choice; silent truncation does not. |
+| 9 | No sanity limits on the request form | M6 | `requestSchema`, and the estimate is no longer computed from impossible inputs. |
+| 10 | `/select-role` misfires | M8 | Guarded on `needsRoleChoice`, counted by distinct role. |
+| 11 | Enter does not submit | M8 | Real forms where text fields feed one action — see the scope note below. |
+| 12 | Opportunity cannot move status | M5 | Full machine. Declining releases supply; see the note below on detach. |
+| 13 | Failing token refresh after sign-out | M8 | Cancel in-flight queries, then invalidate, then clear the cache. |
+| 15 | Why the suite missed most of this | M1 | `nav.spec.ts` visits the page a human lands on. |
+| 16 | Whitespace passes required checks | M6 | Trimmed at the schema, so the stored value is the trimmed one. |
+| 17 | Register form has no Zod schema | M6 | Three schemas — register, request, supply. |
+| 18 | `<html lang>` hardcoded to Swahili | M8 | Follows the active language; `index.html` no longer declares English screens as Swahili. |
+| 19 | Conditional measure field not required | M6 | The schema is built per crop, so the resolver reads the crop chosen rather than the one selected at mount. |
+| 20 | `numeric field overflow` names no field | M6, M7 | Bounded at the form; mapped at the error layer for anything that still reaches the server. |
+| 21 | Backwards window shows a constraint name | M6, M7 | Caught inline; mapped where it still arrives. Its tail — `contributed_kg > 0` — closed by `supplySchema`. |
+| 22 | Corrupt or stale draft restored | M8 | `useDraft` takes a shape guard, discards and clears. |
+| 23 | Submit never disabled in flight | M8 | `formState.isSubmitting`, not `isPending` — see the note below. |
+| 24 | Error banner survives navigation | M7 | Cleared on route change. |
+| 25 | Raw JS exceptions as user copy | M7 | Mapped. The honest wording — changed on screen, not stored — stays. |
+| 26 | `/login` renders while signed in | M8 | Signed-in visitors are sent to their own surface. |
+| 27 | High-precision decimals silently rounded | M6 | The form says what the column will store. |
+| 28 | Phone accepts anything | M6 | A hint, no enforcement — the column is free text by design. |
+| 29 | Drill links live while loading | M8 | A tile's drill is not a link until its figure arrives. |
+| 30 | Sign-in lands on `/no-access` | M8 | Not a race. See below. |
+
+---
+
+## Where the fix differed from the finding
+
+### #12 — there is no detach, and there should not be
+
+The finding asked for a way to remove a wrongly attached supply line, and
+flagged the right question: the schema has no DELETE policies by design.
+
+The answer was in `docs/business-rules.md` §7 all along. `committed_kg` sums
+supply on opportunities in `proposed`, `shared` or `accepted`, so declining or
+lapsing returns every committed kilogram to `available_kg`. **The status change
+IS the release.** No detach, no delete, no migration — the supply line is the
+traceability record, and erasing it would erase the history of what was
+offered.
+
+Declined and lapsed are terminal, and that is load-bearing rather than tidy:
+`opportunity_supply_guard` fires on supply writes only, never on a status
+change, so re-opening a released opportunity would re-commit its lines with
+nothing checking them against whatever was committed meanwhile.
+
+### #11 — six files, two real cases
+
+The finding lists six action screens. "Enter does nothing in a text field"
+only exists where text fields feed one action: the demand create form and
+attach-supply. The review screen's only field is a textarea, where Enter is
+correctly a newline; the other two are single buttons in table cells. Both real
+cases became `<form onSubmit>`; the other four were left alone rather than
+converted for symmetry.
+
+### #23 — the cause was not the one measured
+
+`disabled={submit.isPending}` was already there. It read `false` after three
+clicks because react-hook-form validates asynchronously: the mutation has not
+started on the tick the officer clicks again. `formState.isSubmitting` is set
+synchronously and is what the fix uses.
+
+### #30 — not a race, a cached `null`
+
+Five sightings across M5–M8, always the first test of a cold worker, always
+green on retry, never in a full run. It looked like a database race.
+
+Every route guard calls `ensureSession`, so by the time the login form is
+submitted the session query already holds `null` — the correct answer for a
+signed-out visitor. `invalidateQueries` marks it stale and STARTS a refetch
+without waiting; `ensureQueryData` returns cached data whenever there is any,
+and `null` is data. `resolveLanding([])` therefore ran on the signed-out
+answer. `fetchQuery` ignores the cache. It now reproduces deterministically in
+a unit test, and the `/no-access` signature has not recurred since.
+
+One unrelated flake remains and is worth separating from it: the FIRST test of
+a run can fail `toHaveURL` while still on `/login`. Vite serves `index.html`
+immediately and compiles the module graph on the first request, so that one
+sign-in pays for the app's first build on top of a round trip to a remote
+database. The expect timeout is now 10s rather than 5s. That is a cold-start
+cost, not a logic defect — and it is a different symptom from #30, which
+always reached `/no-access` rather than staying put.
+
+---
+
+## Open
+
+### #2 · Swahili — the only calendar risk
+
+**Not an engineering task.** 559 strings, of which 2 carry Swahili — the
+language switch's own labels, which are attested terms rather than invented
+copy. The other 557 render English through i18next's fallback, cleanly: no key
+renders as its own path, and `src/i18n/bundles.test.ts` asserts that.
+
+The string list is frozen and exported to `docs/i18n-handover.md`, which marks
+the **323 strings on the farmer and officer surfaces** that CLAUDE.md specifies
+must ship Swahili, and carries the labelling rules a translator needs.
+
+This waits on a native reviewer. 30 September does not move, and this is the
+only item on the board bounded by a person's availability rather than by how
+fast code gets written.
+
+### #14 · Vite HMR 404s — dev-only
+
+Three route paths the TanStack plugin generates without physical files. No
+effect on the built bundle or any screen. Left alone.
+
+---
+
+## What the remediation added to the suite
+
+- `e2e/nav.spec.ts` — every role's landing page and nav destination
+- `e2e/opportunity.spec.ts` — the status machine, and supply released and returned
+- `e2e/bad-id.spec.ts` — all eight `$id` routes, malformed and absent
+- `e2e/responsive.spec.ts` — the ops surface at 375px
+- `e2e/draft-request.spec.ts` — the farmer's half of the request machine
+
+The last one closes a gap recorded during M4: a farmer has no route to a
+draft, so the only draft in the system was seeded and one-way. Each test now
+inserts its own marked draft through `sql()`, which `cleanup.sql` already
+matches on. The rule that produced the gap is worth restating: **the marker
+discipline covers rows, not columns on seeded rows.**
