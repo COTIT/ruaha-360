@@ -140,3 +140,19 @@ describe('CoverageBar tells its three quantities apart', () => {
     expect(screen.getByTestId('coverage-uncovered')).toHaveTextContent('—')
   })
 })
+
+describe('where committed supply is not a figure this level has', () => {
+  // The Tower's market tile reports on a village. A row reading "—" there would
+  // look like a fault rather than a scope, so the row is simply not drawn.
+  test('the committed row is omitted rather than shown empty', () => {
+    render(<CoverageBar demandKg={9000} availableKg={5600} coveragePct={62.2} />)
+
+    expect(screen.queryByTestId('coverage-committed')).not.toBeInTheDocument()
+    expect(screen.getByTestId('coverage-legend').querySelectorAll('[data-swatch]')).toHaveLength(2)
+  })
+
+  test('but the note still says what committed supply means', () => {
+    render(<CoverageBar demandKg={9000} availableKg={5600} coveragePct={62.2} />)
+    expect(screen.getByText(/promised to a live opportunity/i)).toBeInTheDocument()
+  })
+})

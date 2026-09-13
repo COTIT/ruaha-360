@@ -7,9 +7,18 @@ import { formatKg, formatPercent } from '@/lib/format'
 export interface CoverageBarProps {
   demandKg: number | null
   availableKg: number | null
-  committedKg: number | null
+  /**
+   * Omit entirely where the figure is not available at this level — the Tower's
+   * market tile reports on a village and has no committed total to show, and a
+   * row reading "—" there would look like a fault rather than a scope.
+   */
+  committedKg?: number | null
   coveragePct: number | null
-  /** What this bar is about — a village name, usually. Defaults to "Coverage". */
+  /**
+   * What this bar is about — a village name on a demand detail. Defaults to
+   * naming the demand the coverage is measured against, which is the only
+   * honest reading of a percentage on its own.
+   */
   label?: string
 }
 
@@ -53,7 +62,7 @@ export function CoverageBar({
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-2.5">
         <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: 600 }}>
-          {label ?? t('coverage.label')}
+          {label ?? t('coverage.coverageOf', { total: formatKg(demandKg) })}
         </span>
         <span data-testid="coverage-pct" className="tabular type-figure">
           {formatPercent(coveragePct)}
@@ -108,15 +117,17 @@ export function CoverageBar({
           testId="coverage-uncovered"
           value={formatKg(uncoveredKg)}
         />
-        <LegendRow
-          swatch="committed"
-          icon={<Lock aria-hidden size={15} strokeWidth={2.25} style={{ flex: 'none' }} />}
-          label={t('coverage.committed')}
-          testId="coverage-committed"
-          value={formatKg(committedKg)}
-          // Below the rule: it is not part of what the bar measures.
-          ruled
-        />
+        {committedKg !== undefined && (
+          <LegendRow
+            swatch="committed"
+            icon={<Lock aria-hidden size={15} strokeWidth={2.25} style={{ flex: 'none' }} />}
+            label={t('coverage.committed')}
+            testId="coverage-committed"
+            value={formatKg(committedKg)}
+            // Below the rule: it is not part of what the bar measures.
+            ruled
+          />
+        )}
       </div>
 
       <p className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
