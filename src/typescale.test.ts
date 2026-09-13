@@ -23,9 +23,10 @@ const STYLE_OBJECT_FONT_SIZE = /fontSize:\s*(?:'|")?(?:[0-9]|1[01])(?:\.[0-9]+)?
  * Two exemptions, both deliberate, both recorded here rather than left to
  * whoever reads the diff.
  *
- * `ProvenanceBadge` — the `disputed` mark is a filled disc carrying a bang, and
- * the bang is a glyph inside a 13px disc. It is iconography sized to the mark,
- * not a string anybody reads.
+ * `components/marks.tsx` — the mark vocabulary. The `disputed` mark is a filled
+ * disc carrying a bang, and the bang is a glyph inside a 13px disc. It is
+ * iconography sized to the mark, not a string anybody reads. Every mark in the
+ * build lives in that one file, so this exemption cannot spread.
  *
  * Note what is NOT exempted: the sub-12px sizes the design file asks for on
  * column headers and tag pills live in exactly two utilities in globals.css,
@@ -35,7 +36,7 @@ const STYLE_OBJECT_FONT_SIZE = /fontSize:\s*(?:'|")?(?:[0-9]|1[01])(?:\.[0-9]+)?
  * confirms the 12px floor was meant to apply there too.
  */
 const NOT_TEXT = new Set([
-  'src/components/ProvenanceBadge.tsx',
+  'src/components/marks.tsx',
   // The type scale itself. `styles/tokens.test.ts` owns this file and pins the
   // two sub-12px steps to their exact names, which is a tighter rule than this
   // one — checking it twice here would only mean two places to edit.

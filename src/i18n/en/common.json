@@ -96,7 +96,8 @@
   "common": {
     "loading": "Loading…",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "optional": "optional"
   },
   "draft": {
     "notSubmitted": "Not yet submitted"
@@ -104,6 +105,7 @@
   "register": {
     "title": "Register a farmer",
     "intro": "One page, one submit. Everything below is created together.",
+    "groupsComplete": "{{done}} of {{total}} groups complete · saved on this phone only",
     "sections": {
       "person": "Person",
       "household": "Household",
@@ -114,20 +116,22 @@
     },
     "givenName": "First name",
     "familyName": "Family name",
-    "phone": "Phone (optional)",
-    "householdLabel": "Household name (optional)",
+    "phone": "Phone",
+    "householdLabel": "Household name",
     "isHead": "This person heads the household",
     "farmLabel": "Farm name",
-    "latitude": "Latitude (optional)",
-    "longitude": "Longitude (optional)",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "gpsNote": "Leaving GPS blank is allowed, and shows up honestly in the Tower's data-quality tile as a farm without a point.",
     "plotLabel": "Plot name",
     "plotArea": "Plot area (ha)",
     "crop": "Crop",
+    "measuredBy": "{{crop}} is measured this way",
     "chooseCrop": "Choose a crop",
     "cycleArea": "Planted area (ha)",
     "treeCount": "Number of trees",
     "unitCount": "Number of units",
-    "plantedOn": "Planted on (optional)",
+    "plantedOn": "Planted on",
     "harvestStart": "Harvest window starts",
     "harvestEnd": "Harvest window ends",
     "harvestKg": "Expected harvest (kg)",

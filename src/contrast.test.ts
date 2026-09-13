@@ -33,7 +33,6 @@ const PENDING = new Set([
   'src/features/officer/OfficerRecordScreens.tsx',
   'src/features/officer/PeopleScreen.tsx',
   'src/features/officer/PersonDetailScreen.tsx',
-  'src/features/officer/RegisterScreen.tsx',
   'src/features/officer/VerifyButton.tsx',
   'src/features/officer/VerifyQueueScreen.tsx',
   'src/features/ops/BuyersScreen.tsx',

@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { ConfidenceMeter, VerificationMark } from '@/components/marks'
+
 import { formatTimestamp } from '@/lib/format'
 import type { Database } from '@/lib/db.types'
 
@@ -138,128 +140,6 @@ export function ProvenanceBadge({
     </span>
   )
 }
-
-/**
- * Shape first, colour second. Each state is legible without colour, which is
- * the whole reason the marks exist rather than four coloured dots.
- */
-function VerificationMark({
-  verification,
-  size,
-}: {
-  verification: VerificationStatus
-  size: number
-}) {
-  const base: CSSProperties = {
-    width: size,
-    height: size,
-    borderRadius: 'var(--radius-pill)',
-    boxSizing: 'border-box',
-    flex: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    lineHeight: 1,
-  }
-  const scale = size / 13
-
-  if (verification === 'verified') {
-    return (
-      <span data-mark="verified" aria-hidden style={{ ...base, background: 'var(--green-ink)' }}>
-        <span
-          style={{
-            display: 'block',
-            width: 5 * scale,
-            height: 2.5 * scale,
-            borderLeft: `${2 * scale}px solid #fff`,
-            borderBottom: `${2 * scale}px solid #fff`,
-            transform: `rotate(-45deg) translate(${0.5 * scale}px, ${-1 * scale}px)`,
-          }}
-        />
-      </span>
-    )
-  }
-
-  if (verification === 'pending') {
-    return (
-      <span
-        data-mark="pending"
-        aria-hidden
-        style={{
-          ...base,
-          border: `${2 * scale}px solid var(--primary-ink)`,
-          background: 'linear-gradient(90deg, var(--primary-ink) 50%, transparent 50%)',
-        }}
-      />
-    )
-  }
-
-  if (verification === 'disputed') {
-    return (
-      <span
-        data-mark="disputed"
-        aria-hidden
-        style={{
-          ...base,
-          background: 'var(--flag-ink)',
-          color: '#fff',
-          fontSize: Math.max(9, Math.round(9 * scale)),
-          fontWeight: 700,
-        }}
-      >
-        !
-      </span>
-    )
-  }
-
-  return (
-    <span
-      data-mark="unverified"
-      aria-hidden
-      style={{ ...base, border: `${1.5 * scale}px dashed var(--ink-3)` }}
-    />
-  )
-}
-
-/**
- * Three bars, 5/8/11px tall. A meter reads as a quantity at a glance where a
- * fourth word read as more text to skip.
- */
-function ConfidenceMeter({
-  confidence,
-  label,
-}: {
-  confidence: ConfidenceLevel
-  label: string
-}) {
-  const filled = CONFIDENCE_BARS[confidence]
-
-  return (
-    <>
-      <span
-        aria-hidden
-        className="inline-flex items-end gap-[2px]"
-        style={{ height: 11, flex: 'none' }}
-      >
-        {[5, 8, 11].map((height, index) => (
-          <span
-            key={height}
-            data-bar={index < filled ? 'filled' : 'empty'}
-            style={{
-              width: 3,
-              height,
-              borderRadius: 1,
-              background: index < filled ? 'var(--ink-2)' : 'var(--rule-2)',
-            }}
-          />
-        ))}
-      </span>
-      <span className="sr-only">{label}</span>
-    </>
-  )
-}
-
-const CONFIDENCE_BARS: Record<ConfidenceLevel, number> = { low: 1, medium: 2, high: 3 }
 
 /**
  * Five sources, five treatments: blue solid, plain, sunken sand, green,
