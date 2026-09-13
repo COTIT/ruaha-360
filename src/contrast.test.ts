@@ -45,7 +45,6 @@ const PENDING = new Set([
   'src/features/ops/OpsRequestReviewScreen.tsx',
   'src/features/ops/OpsRequestsScreen.tsx',
   'src/features/ops/VillagesScreen.tsx',
-  'src/features/tower/TowerDrillScreens.tsx',
 ])
 
 const files = sourceFiles('src', ['.ts', '.tsx'])

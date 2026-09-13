@@ -1,10 +1,14 @@
+import type { ReactNode } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { useScopeNames } from '@/app/scope'
 import { DrillLink } from '@/components/DrillLink'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { StatusPill } from '@/components/StatusPill'
+import { TileSkeleton } from '@/features/tower/TowerTile'
 import { partitionEnergyRows, type EnergyRow } from '@/features/tower/energyRows'
 import { validateVillageSearch } from '@/features/tower/towerSearch'
 import {
@@ -27,16 +31,61 @@ const productionRoute = getRouteApi('/_ops/ops/tower/production')
 const energyRoute = getRouteApi('/_ops/ops/tower/energy')
 const marketRoute = getRouteApi('/_ops/ops/tower/market')
 
-function BackToTower({ village }: { village: string | undefined }) {
+function DrillHeader({
+  village,
+  kind,
+  title,
+}: {
+  village: string | undefined
+  kind: string
+  title: string
+}) {
   const { t } = useTranslation()
+  const scope = useScopeNames()
+  const villageName = village ? (scope.data?.villages?.[village] ?? '') : ''
+
   return (
-    <Link
-      to="/ops/tower"
-      search={{ village } as never}
-      className="text-sm font-medium text-primary underline underline-offset-4"
+    <>
+      <Link
+        to="/ops/tower"
+        search={{ village } as never}
+        className="inline-flex w-fit items-center gap-1.5 font-semibold"
+        style={{ fontSize: 14, color: 'var(--primary-ink)' }}
+      >
+        <ArrowLeft aria-hidden size={16} strokeWidth={2.25} style={{ flex: 'none' }} />
+        {t('tower.backToTower')}
+      </Link>
+      <div className="flex flex-col gap-1">
+        <p className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {[villageName, kind].filter(Boolean).join(' · ')}
+        </p>
+        <h1 className="type-screen-title">{title}</h1>
+      </div>
+    </>
+  )
+}
+
+/** A table in a card of its own, scrolling inside itself at a phone width. */
+function TableCard({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="overflow-hidden"
+      style={{ border: '1px solid var(--rule)', borderRadius: 'var(--radius-card)' }}
     >
-      {t('tower.backToTower')}
-    </Link>
+      <div className="overflow-x-auto">{children}</div>
+    </div>
+  )
+}
+
+function Th({ children, numeric = false }: { children: ReactNode; numeric?: boolean }) {
+  return (
+    <th
+      scope="col"
+      className={numeric ? 'type-column-label px-3.5 py-2.5 text-right' : 'type-column-label px-3.5 py-2.5 text-left'}
+      style={{ color: 'var(--ink-3)' }}
+    >
+      {children}
+    </th>
   )
 }
 
@@ -49,79 +98,129 @@ export function TowerProductionScreen() {
   const error = totals.error ?? cycles.error
   if (error) return <ErrorState error={error} onRetry={() => void cycles.refetch()} />
 
+  const grouped = totals.data ?? []
+  // The tile's own headline, restated at the foot of the rows that make it up.
+  const leading = grouped.reduce<(typeof grouped)[number] | undefined>(
+    (best, row) => ((row.expected_kg ?? 0) > (best?.expected_kg ?? -1) ? row : best),
+    undefined,
+  )
+
   return (
-    <section className="space-y-4">
-      <BackToTower village={village} />
-      <h1 className="text-lg font-semibold">{t('tower.productionDrill')}</h1>
+    <section className="flex max-w-5xl flex-col gap-4">
+      <DrillHeader village={village} kind={t('tower.production')} title={t('tower.productionDrill')} />
 
       {/* The grouped figures the tile shows, so the drill-down and the
           headline are visibly the same numbers. */}
-      {!totals.isLoading && (totals.data ?? []).length > 0 && (
-        <ul className="flex flex-wrap gap-3 text-xs">
-          {(totals.data ?? []).map((row) => (
+      {!totals.isLoading && grouped.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {grouped.map((row) => (
             <li
               key={`${row.crop_id}-${row.window_month}`}
-              className="rounded border border-deep/10 bg-white/60 px-2 py-1"
+              className="inline-flex items-center gap-2 px-3 py-1.5"
+              style={{
+                border: '1px solid var(--rule-2)',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--paper)',
+                fontSize: 13,
+                color: 'var(--ink-2)',
+              }}
             >
-              {row.crop_name} · {formatPlainDate(row.window_month)} ·{' '}
-              <span className="tabular font-medium">{formatKg(row.expected_kg)}</span>
+              {row.crop_name} · {formatPlainDate(row.window_month)}
+              <b className="tabular font-semibold" style={{ color: 'var(--ink)' }}>
+                {formatKg(row.expected_kg)}
+              </b>
             </li>
           ))}
         </ul>
       )}
 
       {cycles.isLoading ? (
-        <p className="text-sm text-deep/60">{t('common.loading')}</p>
+        <TileSkeleton rows={4} />
       ) : (cycles.data ?? []).length === 0 ? (
         <EmptyState title={t('tower.noDataTitle')} detail={t('tower.noDataDetail')} />
       ) : (
-        <div className="overflow-x-auto">
-          <table data-testid="production-table" className="w-full border-collapse text-sm">
+        <TableCard>
+          <table
+            data-testid="production-table"
+            className="w-full border-collapse"
+            style={{ fontSize: 15 }}
+          >
             <thead>
-              <tr className="border-b border-deep/15 text-left">
-                <Th>{t('tower.colCrop')}</Th>
-                <Th>{t('opportunity.colFarmer')}</Th>
-                <Th>{t('opportunity.colPlot')}</Th>
+              <tr style={{ background: 'var(--sand-2)' }}>
+                <Th>{t('tower.colCropFarmerPlot')}</Th>
                 <Th>{t('tower.colWindow')}</Th>
-                <Th>{t('tower.plantedArea')}</Th>
-                <Th>{t('tower.colExpected')}</Th>
-                <Th>{t('tower.colActual')}</Th>
+                <Th numeric>{t('tower.colPlanted')}</Th>
+                <Th numeric>{t('tower.colExpected')}</Th>
+                <Th numeric>{t('tower.colActual')}</Th>
               </tr>
             </thead>
             <tbody>
               {(cycles.data ?? []).map((row) => (
-                <tr key={row.id} data-testid="production-row" className="border-b border-deep/10">
-                  <td data-testid="production-cycle" className="px-2 py-2">
-                    {/* Ends in a link to an actual row: this crop cycle. */}
-                    <DrillLink kind="cycle" id={row.id}>
-                      {row.crop_name}
-                    </DrillLink>
+                <tr
+                  key={row.id}
+                  data-testid="production-row"
+                  style={{ borderTop: '1px solid var(--rule)' }}
+                >
+                  <td data-testid="production-cycle" className="px-3.5 py-3">
+                    <span className="flex flex-col gap-0.5">
+                      {/* Ends in a link to an actual row: this crop cycle. */}
+                      <DrillLink kind="cycle" id={row.id}>
+                        {row.crop_name}
+                      </DrillLink>
+                      <span className="type-note" style={{ color: 'var(--ink-2)' }}>
+                        <DrillLink kind="person" id={row.person_id}>
+                          {row.farmer ?? '—'}
+                        </DrillLink>{' '}
+                        · {row.plot_label ?? '—'}
+                      </span>
+                    </span>
                   </td>
-                  <td className="px-2 py-2">
-                    <DrillLink kind="person" id={row.person_id}>
-                      {row.farmer ?? '—'}
-                    </DrillLink>
-                  </td>
-                  <td className="px-2 py-2">{row.plot_label ?? '—'}</td>
-                  <td className="px-2 py-2">
+                  <td className="tabular px-3.5 py-3" style={{ color: 'var(--ink-2)' }}>
                     {formatPlainDate(row.harvest_start)} – {formatPlainDate(row.harvest_end)}
                   </td>
-                  <td className="tabular px-2 py-2">{formatArea(row.area_ha, 'hectare')}</td>
-                  <td className="tabular px-2 py-2">{formatKg(row.expected_kg)}</td>
-                  <td className="tabular px-2 py-2">{formatKg(row.actual_kg)}</td>
+                  <td className="tabular px-3.5 py-3 text-right">
+                    {formatArea(row.area_ha, 'hectare')}
+                  </td>
+                  <td className="tabular px-3.5 py-3 text-right font-semibold">
+                    {formatKg(row.expected_kg)}
+                  </td>
+                  <td className="tabular px-3.5 py-3 text-right">{formatKg(row.actual_kg)}</td>
                 </tr>
               ))}
+
+              {leading && (
+                <tr
+                  style={{ borderTop: '1px solid var(--rule-2)', background: 'var(--sand-2)' }}
+                >
+                  <td colSpan={3} className="px-3.5 py-3" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                    {t('tower.figureOnTile', {
+                      crop: leading.crop_name,
+                      window: formatPlainDate(leading.window_month),
+                    })}
+                  </td>
+                  <td className="tabular px-3.5 py-3 text-right font-semibold">
+                    {formatKg(leading.expected_kg)}
+                  </td>
+                  <td className="tabular px-3.5 py-3 text-right">{formatKg(leading.actual_kg)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
-      <p className="text-xs text-deep/50">{t('tower.plantedAreaNote')}</p>
+      <p className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
+        {t('tower.plantedAreaNote')}
+      </p>
     </section>
   )
 }
 
 /**
- * One energy figure and the rows behind it.
+ * One energy figure and the rows behind it, in a card of its own.
+ *
+ * Two grouped `<tbody>` blocks in one table became two separate tables in two
+ * cards. Sharing a table meant sharing a column, and a column of figures invites
+ * being added up — which is the one thing these two totals must never be.
  *
  * `rawKw` and `peakKw` both come from `v_village_energy` — the sum is NOT
  * computed from the rows. Business-rules §11 puts village aggregates in the
@@ -130,6 +229,7 @@ export function TowerProductionScreen() {
  */
 function EnergyGroup({
   testId,
+  tableTestId,
   title,
   note,
   rows,
@@ -137,8 +237,10 @@ function EnergyGroup({
   factor,
   peakKw,
   peakTestId,
+  decided = false,
 }: {
   testId: string
+  tableTestId?: string
   title: string
   note: string
   rows: EnergyRow[]
@@ -146,56 +248,105 @@ function EnergyGroup({
   factor: number | null
   peakKw: number | null
   peakTestId: string
+  decided?: boolean
 }) {
   const { t } = useTranslation()
+  const ink = decided ? 'var(--primary-ink)' : 'var(--ink-2)'
 
   return (
-    <tbody data-testid={testId} className="border-b-2 border-deep/15">
-      <tr className="bg-deep/5">
-        <th colSpan={4} className="px-2 py-2 text-left">
-          <span className="font-semibold text-deep">{title}</span>
-          <span className="ml-2 font-normal text-xs text-deep/60">{note}</span>
-        </th>
-      </tr>
+    <section
+      data-testid={testId}
+      className="flex flex-col overflow-hidden"
+      style={{
+        flex: '1 1 340px',
+        minWidth: 0,
+        border: '1px solid var(--rule)',
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--paper)',
+      }}
+    >
+      <header
+        className="flex flex-col gap-1 px-[18px] py-3.5"
+        style={{
+          background: decided ? 'var(--primary-tint)' : 'var(--paper)',
+          borderBottom: '1px solid var(--rule)',
+        }}
+      >
+        <h2 style={{ fontSize: 15, fontWeight: 600, color: decided ? 'var(--primary-ink)' : undefined }}>
+          {title}
+        </h2>
+        <p className="type-note" style={{ color: ink, textWrap: 'pretty' }}>
+          {note}
+        </p>
+      </header>
 
-      {rows.length === 0 ? (
-        <tr>
-          <td colSpan={4} className="px-2 py-3 text-sm text-deep/60">
-            {t('tower.noneInFigure')}
-          </td>
-        </tr>
-      ) : (
-        rows.map((row) => (
-          <tr key={row.id} data-testid="energy-row" className="border-b border-deep/10">
-            <td className="px-2 py-2">{row.applicant}</td>
-            <td className="px-2 py-2">{row.equipment_name}</td>
-            <td className="px-2 py-2">
-              <StatusPill kind="request" status={row.status} />
-            </td>
-            <td className="tabular px-2 py-2">
-              {/* Ends in the request itself. */}
-              <DrillLink kind="request" id={row.id}>
-                {formatKw(row.est_power_kw)}
-              </DrillLink>
-            </td>
-          </tr>
-        ))
-      )}
+      <div className="overflow-x-auto">
+        <table data-testid={tableTestId} className="w-full border-collapse" style={{ fontSize: 14 }}>
+          <thead>
+            <tr style={{ background: 'var(--sand-2)' }}>
+              <Th>{t('tower.colApplicantEquipment')}</Th>
+              <Th numeric>{t('tower.colPeak')}</Th>
+            </tr>
+          </thead>
 
-      {/* The arithmetic stated on screen, so the rows above visibly reconcile
-          with the headline the user clicked to get here. */}
-      <tr className="text-sm">
-        <td colSpan={3} className="px-2 py-2 text-right text-deep/70">
-          {t('tower.sumOfPeaks')} <span className="tabular">{formatKw(rawKw)}</span>
-          {factor !== null && (
-            <> {t('tower.timesFactor', { factor })} </>
-          )}
-        </td>
-        <td data-testid={peakTestId} className="tabular px-2 py-2 font-semibold">
-          {formatKw(peakKw)}
-        </td>
-      </tr>
-    </tbody>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-[18px] py-3.5" style={{ color: 'var(--ink-2)' }}>
+                  {t('tower.noneInFigure')}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <tr key={row.id} data-testid="energy-row" style={{ borderTop: '1px solid var(--rule)' }}>
+                  <td className="px-[18px] py-3">
+                    <span className="flex flex-col items-start gap-1">
+                      <b style={{ fontSize: 15, fontWeight: 500 }}>{row.applicant}</b>
+                      <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                        {row.equipment_name}
+                      </span>
+                      <StatusPill kind="request" status={row.status} />
+                    </span>
+                  </td>
+                  <td className="px-[18px] py-3 text-right align-top">
+                    {/* Ends in the request itself. */}
+                    <DrillLink kind="request" id={row.id}>
+                      {formatKw(row.est_power_kw)}
+                    </DrillLink>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+
+          {/* The arithmetic stated on screen, so the rows above visibly
+              reconcile with the headline the user clicked to get here. */}
+          <tfoot>
+            <tr
+              style={{
+                borderTop: '1px solid var(--rule-2)',
+                background: decided ? 'var(--primary-tint)' : 'var(--sand-2)',
+              }}
+            >
+              <td className="px-[18px] py-3" style={{ fontSize: 13, color: ink }}>
+                {t('tower.sumOfPeaks')}{' '}
+                <b className="tabular font-semibold" style={{ color: decided ? undefined : 'var(--ink)' }}>
+                  {formatKw(rawKw)}
+                </b>
+                {factor !== null && <> {t('tower.timesFactor', { factor })}</>}
+              </td>
+              <td
+                data-testid={peakTestId}
+                className="tabular px-[18px] py-3 text-right font-semibold"
+                style={{ fontSize: 17, color: decided ? 'var(--primary-ink)' : undefined }}
+              >
+                {formatKw(peakKw)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
   )
 }
 
@@ -213,67 +364,72 @@ export function TowerEnergyScreen() {
   const isLoading = rows.isLoading || totals.isLoading
 
   return (
-    <section className="space-y-3">
-      <BackToTower village={village} />
-      <h1 className="text-lg font-semibold">{t('tower.energyDrill')}</h1>
+    <section className="flex flex-col gap-[18px]">
+      <DrillHeader village={village} kind={t('tower.energy')} title={t('tower.energyDrill')} />
 
       {isLoading ? (
-        <p className="text-sm text-deep/60">{t('common.loading')}</p>
+        <TileSkeleton rows={4} />
       ) : (rows.data ?? []).length === 0 ? (
         <EmptyState title={t('tower.noDataTitle')} detail={t('tower.noDataDetail')} />
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table data-testid="energy-table" className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-deep/15 text-left">
-                  <Th>{t('tower.colApplicant')}</Th>
-                  <Th>{t('tower.colEquipment')}</Th>
-                  <Th>{t('tower.colStatus')}</Th>
-                  <Th>{t('tower.colPeak')}</Th>
-                </tr>
-              </thead>
+          <div className="flex flex-wrap gap-4">
+            <EnergyGroup
+              testId="energy-group-prospective"
+              tableTestId="energy-table"
+              title={t('tower.prospectivePeak')}
+              note={t('tower.prospectiveNote')}
+              rows={prospective}
+              rawKw={energy?.prospective_kw_raw ?? null}
+              factor={energy?.simultaneity_factor ?? null}
+              peakKw={energy?.prospective_peak_kw ?? null}
+              peakTestId="energy-prospective-peak"
+            />
 
-              {/* Grouped by the figure each row feeds. Ungrouped, the column
-                  added to a number that appeared nowhere on the Tower. */}
-              <EnergyGroup
-                testId="energy-group-prospective"
-                title={t('tower.prospectivePeak')}
-                note={t('tower.prospectiveNote')}
-                rows={prospective}
-                rawKw={energy?.prospective_kw_raw ?? null}
-                factor={energy?.simultaneity_factor ?? null}
-                peakKw={energy?.prospective_peak_kw ?? null}
-                peakTestId="energy-prospective-peak"
-              />
-
-              <EnergyGroup
-                testId="energy-group-approved"
-                title={t('tower.approvedPeak')}
-                note={t('tower.approvedNote')}
-                rows={approved}
-                rawKw={energy?.approved_kw_raw ?? null}
-                factor={energy?.simultaneity_factor ?? null}
-                peakKw={energy?.approved_peak_kw ?? null}
-                peakTestId="energy-approved-peak"
-              />
-            </table>
+            <EnergyGroup
+              testId="energy-group-approved"
+              title={t('tower.approvedPeak')}
+              note={t('tower.approvedNote')}
+              rows={approved}
+              rawKw={energy?.approved_kw_raw ?? null}
+              factor={energy?.simultaneity_factor ?? null}
+              peakKw={energy?.approved_peak_kw ?? null}
+              peakTestId="energy-approved-peak"
+              decided
+            />
           </div>
 
-          {/* Prospective and approved are never added together. */}
-          <p className="text-xs font-medium text-deep/70">{t('tower.neverSummed')}</p>
-
-          {/* Draft, rejected and withdrawn requests feed neither figure. Said
-              out loud rather than silently omitted, so the pipeline does not
-              look smaller here than on the tile that counts every status. */}
-          {excluded.length > 0 && (
-            <p data-testid="energy-excluded" className="text-xs text-deep/60">
-              {t('tower.excludedFromFigures', { count: excluded.length })}
+          <div
+            className="flex flex-col gap-2 p-4"
+            style={{
+              border: '1px solid var(--rule)',
+              borderRadius: 'var(--radius-card)',
+              background: 'var(--paper)',
+            }}
+          >
+            {/* Prospective and approved are never added together. */}
+            <p style={{ fontSize: 15, lineHeight: 1.5, fontWeight: 500, textWrap: 'pretty' }}>
+              {t('tower.neverSummed')}
             </p>
-          )}
+
+            {/* Draft, rejected and withdrawn requests feed neither figure. Said
+                out loud rather than silently omitted, so the pipeline does not
+                look smaller here than on the tile that counts every status. */}
+            {excluded.length > 0 && (
+              <p
+                data-testid="energy-excluded"
+                style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--ink-2)', textWrap: 'pretty' }}
+              >
+                {t('tower.excludedFromFigures', { count: excluded.length })}
+              </p>
+            )}
+
+            <p className="type-note" style={{ color: 'var(--ink-3)' }}>
+              {t('estimate.isEstimate')}
+            </p>
+          </div>
         </>
       )}
-      <p className="text-xs text-deep/50">{t('estimate.isEstimate')}</p>
     </section>
   )
 }
@@ -288,24 +444,22 @@ export function TowerMarketScreen() {
   const matches = query.data?.matches ?? []
 
   return (
-    <section className="space-y-3">
-      <BackToTower village={village} />
-      <h1 className="text-lg font-semibold">{t('tower.marketDrill')}</h1>
+    <section className="flex max-w-5xl flex-col gap-4">
+      <DrillHeader village={village} kind={t('tower.market')} title={t('tower.marketDrill')} />
 
       {query.isLoading ? (
-        <p className="text-sm text-deep/60">{t('common.loading')}</p>
+        <TileSkeleton rows={3} />
       ) : matches.length === 0 ? (
         <EmptyState title={t('demand.noSupplyTitle')} detail={t('demand.noSupplyDetail')} />
       ) : (
-        <div className="overflow-x-auto">
-          <table data-testid="market-table" className="w-full border-collapse text-sm">
+        <TableCard>
+          <table data-testid="market-table" className="w-full border-collapse" style={{ fontSize: 15 }}>
             <thead>
-              <tr className="border-b border-deep/15 text-left">
-                <Th>{t('tower.colBuyer')}</Th>
-                <Th>{t('tower.colCrop')}</Th>
-                <Th>{t('tower.colDemand')}</Th>
-                <Th>{t('tower.colAvailable')}</Th>
-                <Th>{t('tower.colCoverage')}</Th>
+              <tr style={{ background: 'var(--sand-2)' }}>
+                <Th>{t('tower.colBuyerCrop')}</Th>
+                <Th numeric>{t('tower.colDemand')}</Th>
+                <Th numeric>{t('tower.colAvailable')}</Th>
+                <Th numeric>{t('tower.colCoverage')}</Th>
                 <Th>{t('tower.colOpportunity')}</Th>
               </tr>
             </thead>
@@ -314,18 +468,30 @@ export function TowerMarketScreen() {
                 <tr
                   key={`${row.buyer_demand_id}-${row.village_id}`}
                   data-testid="market-row"
-                  className="border-b border-deep/10"
+                  style={{ borderTop: '1px solid var(--rule)' }}
                 >
-                  <td className="px-2 py-2">
-                    <DrillLink kind="demand" id={row.buyer_demand_id}>
-                      {row.buyer_name}
-                    </DrillLink>
+                  <td className="px-3.5 py-3">
+                    <span className="flex flex-col gap-0.5">
+                      <DrillLink kind="demand" id={row.buyer_demand_id}>
+                        {row.buyer_name}
+                      </DrillLink>
+                      <span className="type-note" style={{ color: 'var(--ink-2)' }}>
+                        {row.crop_name} · {formatPlainDate(row.window_start)} –{' '}
+                        {formatPlainDate(row.window_end)}
+                      </span>
+                    </span>
                   </td>
-                  <td className="px-2 py-2">{row.crop_name}</td>
-                  <td className="tabular px-2 py-2">{formatKg(row.demand_kg)}</td>
-                  <td className="tabular px-2 py-2">{formatKg(row.available_kg)}</td>
-                  <td className="tabular px-2 py-2">{formatPercent(row.coverage_pct)}</td>
-                  <td data-testid="market-opportunity" className="px-2 py-2">
+                  <td className="tabular px-3.5 py-3 text-right">{formatKg(row.demand_kg)}</td>
+                  <td className="tabular px-3.5 py-3 text-right font-semibold">
+                    {formatKg(row.available_kg)}
+                  </td>
+                  <td className="px-3.5 py-3 text-right">
+                    <span className="inline-flex flex-col items-end gap-1">
+                      <b className="tabular font-semibold">{formatPercent(row.coverage_pct)}</b>
+                      <MiniCoverage pct={row.coverage_pct} />
+                    </span>
+                  </td>
+                  <td data-testid="market-opportunity" className="px-3.5 py-3">
                     {/* Ends in the opportunity's supply lines, which are the
                         records the coverage figure is built from. */}
                     <DrillLink kind="opportunity" id={row.opportunity_id}>
@@ -338,17 +504,36 @@ export function TowerMarketScreen() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
-      <p className="text-xs text-deep/50">{t('demand.notASale')}</p>
+      <p className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
+        {t('demand.notASale')}
+      </p>
     </section>
   )
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+/**
+ * A 72px bar beside the percentage. The seeded coffee demand has no supply at
+ * all, and its empty hatched track is the point: an honest zero, stated rather
+ * than left blank.
+ */
+function MiniCoverage({ pct }: { pct: number | null }) {
+  const covered = pct === null ? 0 : Math.min(Math.max(pct, 0), 100)
+
   return (
-    <th scope="col" className="px-2 py-2 font-semibold">
-      {children}
-    </th>
+    <span
+      aria-hidden
+      className="flex overflow-hidden"
+      style={{
+        width: 72,
+        height: 8,
+        borderRadius: 'var(--radius-pill)',
+        border: '1px solid var(--rule)',
+        background: 'var(--hatch), var(--sand-2)',
+      }}
+    >
+      <span style={{ width: `${covered}%`, background: 'var(--accent)', display: 'block' }} />
+    </span>
   )
 }
