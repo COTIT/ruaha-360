@@ -1,0 +1,29 @@
+# Ruaha 360 on Netlify.
+#
+# Without this file Netlify publishes the repository root, and the browser is
+# handed the dev `index.html` — which asks for `/src/main.tsx`, arrives as
+# `application/octet-stream`, and is refused as a module script. The page is
+# blank and the console says only that.
+#
+# Keys live in the Netlify UI (Site configuration -> Environment variables),
+# never here. Vite inlines `VITE_*` at BUILD time, so they have to be set
+# before the build runs, not at request time. The anon key is public by
+# design; a service-role key may not exist in this app at all.
+
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# An SPA with no SSR: the server has exactly one HTML file. Without this,
+# only `/` works — every deep link an officer bookmarks or reloads is a 404
+# from the host that never reaches the router.
+#
+# 200, not a redirect: the address has to stay the address the user typed, or
+# the router loads the wrong route and the bookmark is silently rewritten.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
