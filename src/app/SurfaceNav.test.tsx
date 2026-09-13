@@ -84,3 +84,36 @@ describe('SurfaceNav touch targets', () => {
     expect(style).not.toMatch(/(^|;)\s*height:/)
   })
 })
+
+/**
+ * The bar is `position: fixed`, so anything else pinned to the bottom of the
+ * viewport — the register screen's sticky submit bar — has to know how tall it
+ * is. `main`'s padding cannot help there: a sticky element is positioned
+ * against the viewport, not against its scrolling ancestor's padding box.
+ *
+ * The height is measured rather than written down. A tab is `min-height: 60px`
+ * and the real one renders at 63 with an icon above a label, and a Kiswahili
+ * label is allowed to wrap and make it taller still — so a constant would be a
+ * guess that drifts silently, which is exactly how this broke the first time.
+ */
+describe('SurfaceNav publishes the bar height', () => {
+  const read = () => document.documentElement.style.getPropertyValue('--tab-bar-height')
+
+  test('a field surface sets it in pixels', () => {
+    render(<SurfaceNav layout="tabs" items={FARMER} />)
+    expect(read()).toMatch(/^\d+(\.\d+)?px$/)
+  })
+
+  test('and clears it on unmount, so the ops surface is not padded for a bar it has not got', () => {
+    const view = render(<SurfaceNav layout="tabs" items={FARMER} />)
+    expect(read()).not.toBe('')
+    view.unmount()
+    expect(read()).toBe('')
+  })
+
+  test('the ops sidebar never sets it', () => {
+    document.documentElement.style.removeProperty('--tab-bar-height')
+    render(<SurfaceNav layout="sidebar" items={OPS} />)
+    expect(read()).toBe('')
+  })
+})

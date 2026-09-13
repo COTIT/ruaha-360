@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import { useLayoutEffect, useRef, type ComponentType } from 'react'
 import {
   BookOpen,
   Briefcase,
@@ -86,8 +86,47 @@ export function SurfaceNav({ layout, items }: { layout: NavLayout; items: NavIte
     )
   }
 
+  return <TabBar items={items} />
+}
+
+/**
+ * The bottom bar, and the one number anything else pinned to the bottom of the
+ * viewport needs.
+ *
+ * The bar is `position: fixed`, so `main`'s bottom padding keeps FLOWING
+ * content clear of it but does nothing for a `position: sticky` element — the
+ * register screen's submit bar — which is positioned against the viewport and
+ * sat straight behind this. So the bar publishes its own height as
+ * `--tab-bar-height` on the root, and the sticky bar offsets by it.
+ *
+ * Measured, not written down: a tab is `min-height: 60px` and renders at 63
+ * with an icon above a label, and a Kiswahili label is allowed to wrap and
+ * make it taller again. A constant would be a guess that drifts in silence,
+ * which is how this broke the first time.
+ */
+function TabBar({ items }: { items: NavItem[] }) {
+  const { t } = useTranslation()
+  const bar = useRef<HTMLElement>(null)
+
+  useLayoutEffect(() => {
+    const publish = () => {
+      if (!bar.current) return
+      const height = bar.current.getBoundingClientRect().height
+      document.documentElement.style.setProperty('--tab-bar-height', `${height}px`)
+    }
+
+    publish()
+    window.addEventListener('resize', publish)
+    return () => {
+      window.removeEventListener('resize', publish)
+      document.documentElement.style.removeProperty('--tab-bar-height')
+    }
+    // The labels are the height: a language change re-renders and re-measures.
+  }, [items, t])
+
   return (
     <nav
+      ref={bar}
       aria-label={t('a11y.primaryNav')}
       data-testid="nav-tabs"
       className="fixed inset-x-0 bottom-0 z-10 pb-[env(safe-area-inset-bottom)]"

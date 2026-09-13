@@ -682,10 +682,21 @@ export function RegisterScreen() {
           The submit follows you down. On a form this long the draft badge in
           the header is scrolled away exactly when it matters, so the state and
           the only button that ends it travel together.
+
+          It is sticky, so it pins to the VIEWPORT and `main`'s bottom padding
+          — which keeps flowing content clear of the fixed tab bar — does
+          nothing for it. Without the offset the 63px bar sits on top of the
+          only Register button in the product, on the one surface whose users
+          are all on phones. `SurfaceNav` measures itself and publishes the
+          height; ops has no bar, so the fallback is 0.
         */}
         <div
-          className="sticky bottom-0 -mx-4 flex flex-col gap-2.5 px-4 pt-3 pb-4"
-          style={{ background: 'var(--sand)', borderTop: '1px solid var(--rule)' }}
+          className="sticky -mx-4 flex flex-col gap-2.5 px-4 pt-3 pb-4"
+          style={{
+            bottom: 'var(--tab-bar-height, 0px)',
+            background: 'var(--sand)',
+            borderTop: '1px solid var(--rule)',
+          }}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2.5">
             <span className="type-note" style={{ color: 'var(--ink-3)' }}>

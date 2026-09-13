@@ -103,3 +103,62 @@ test.describe('the ops surface on a desktop', () => {
     expect(nav!.x + nav!.width).toBeLessThanOrEqual(main!.x + 1)
   })
 })
+
+/**
+ * The other half of the tab-bar problem, and the half no unit test can see.
+ *
+ * `RootLayout` pads `main` clear of the fixed bar, which is enough for content
+ * that flows. The register screen's submit bar does not flow — it is
+ * `position: sticky; bottom: 0`, so it pins to the VIEWPORT and the padding
+ * below it is irrelevant. The 64px bar sat directly on top of the only
+ * Register button in the product, on the surface whose users are all on
+ * phones. Nothing caught it: the unit test reads `main`'s class, and every e2e
+ * run is 1280 wide, where the same button clears the bar by hundreds of
+ * pixels.
+ *
+ * So the claim is the one that matters to a thumb — a tap at the middle of the
+ * control reaches the control — rather than anything about classes.
+ */
+test.describe('the officer surface on a phone', () => {
+  test.use({ viewport: { width: 375, height: 812 } })
+
+  async function signInAsOfficer(page: Page) {
+    await page.goto('/login')
+    await page.getByTestId('login-email').fill('officer.ilundo@demo.ruaha360.test')
+    await page.getByTestId('login-password').fill(PASSWORD)
+    await page.getByTestId('login-submit').click()
+    await expect(page).toHaveURL(/\/officer$/)
+  }
+
+  /** What is actually at the middle of this control: it, or something over it. */
+  async function tapReaches(page: Page, testId: string) {
+    return page.getByTestId(testId).evaluate((el) => {
+      el.scrollIntoView({ block: 'center' })
+      const box = el.getBoundingClientRect()
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      return hit === el || el.contains(hit)
+    })
+  }
+
+  test('the tab bar does not cover the register submit', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+    await expect(page.getByTestId('register-submit')).toBeVisible()
+
+    expect(
+      await tapReaches(page, 'register-submit'),
+      'the sticky submit bar is behind the fixed tab bar',
+    ).toBe(true)
+  })
+
+  test('and the register page does not scroll sideways', async ({ page }) => {
+    await signInAsOfficer(page)
+    await page.goto('/officer/register')
+    await expect(page.getByTestId('register-submit')).toBeVisible()
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
+    expect(overflow).toBeLessThanOrEqual(1)
+  })
+})
