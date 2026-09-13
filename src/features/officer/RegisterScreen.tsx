@@ -25,6 +25,7 @@ import {
 } from '@/features/officer/registerProgress'
 import { useCrops } from '@/features/officer/useCrops'
 import { draftKey, indexedDbDraftStore, useDraft } from '@/lib/drafts'
+import { newUuid } from '@/lib/ids'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 import type { Json } from '@/lib/db.types'
@@ -68,7 +69,7 @@ const route = getRouteApi('/_officer/officer/register')
 
 /** One draft id per form instance, so a retry cannot create a second farmer. */
 function newClientRef() {
-  return crypto.randomUUID()
+  return newUuid()
 }
 
 /**
