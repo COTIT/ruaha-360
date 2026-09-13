@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { DataTable } from '@/components/DataTable'
 import { ErrorState } from '@/components/ErrorState'
+import { Loading } from '@/components/controls'
 import { useVillageCapacity, type VillageCapacity } from '@/features/ops/useOpsReference'
 import { formatKw, formatPlainDate } from '@/lib/format'
 
@@ -27,25 +28,40 @@ export function VillagesScreen() {
     return [
       col.accessor('name', { header: t('villages.colName') }),
       col.accessor('code', { header: t('villages.colCode') }),
+      /*
+        Never presented as measured — and the basis lives INSIDE the capacity
+        cell rather than in a column of its own, so no sort can separate a
+        planned figure from the word that says it is planned.
+      */
       col.accessor('capacity_kw', {
         header: t('villages.colCapacity'),
+        meta: { numeric: true },
         cell: (c) => (
-          <span className="tabular">
-            {c.getValue() === null ? DASH : formatKw(c.getValue() as number)}
-          </span>
-        ),
-      }),
-      // Never presented as measured. The basis travels with the figure.
-      col.accessor('basis', {
-        header: t('villages.colBasis'),
-        cell: (c) => (
-          <span data-testid="village-basis">
-            {c.getValue() === null ? DASH : t(`capacityBasis.${c.getValue()}`)}
+          <span className="inline-flex flex-wrap items-baseline justify-end gap-2">
+            <span className="tabular font-semibold">
+              {c.getValue() === null ? DASH : formatKw(c.getValue() as number)}
+            </span>
+            <span
+              data-testid="village-basis"
+              className="type-column-label px-2 py-[3px]"
+              style={{
+                border: '1px solid var(--rule-2)',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--hatch), var(--paper)',
+                color: 'var(--ink-2)',
+                fontWeight: 700,
+              }}
+            >
+              {c.row.original.basis === null
+                ? DASH
+                : t(`capacityBasis.${c.row.original.basis}`)}
+            </span>
           </span>
         ),
       }),
       col.accessor('simultaneity_factor', {
         header: t('villages.colSimultaneity'),
+        meta: { numeric: true },
         cell: (c) => <span className="tabular">{c.getValue() ?? DASH}</span>,
       }),
       col.accessor('effective_from', {
@@ -58,18 +74,16 @@ export function VillagesScreen() {
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-lg font-semibold">{t('villages.title')}</h1>
-        <p data-testid="villages-note" className="text-xs text-deep/60">
+    <section className="flex flex-col gap-4">
+      <header className="flex flex-col gap-1.5">
+        <h1 className="type-screen-title">{t('villages.title')}</h1>
+        <p data-testid="villages-note" className="type-note" style={{ color: 'var(--ink-3)' }}>
           {t('villages.plannedNote')}
         </p>
       </header>
 
       {query.isLoading ? (
-        <p data-testid="villages-loading" className="text-sm text-deep/60">
-          {t('common.loading')}
-        </p>
+        <Loading testId="villages-loading" />
       ) : (
         <DataTable
           columns={columns}
@@ -80,7 +94,7 @@ export function VillagesScreen() {
         />
       )}
 
-      <p className="text-xs text-deep/60">{t('villages.simultaneityNote')}</p>
+      <p className="type-note" style={{ color: 'var(--ink-3)' }}>{t('villages.simultaneityNote')}</p>
     </section>
   )
 }

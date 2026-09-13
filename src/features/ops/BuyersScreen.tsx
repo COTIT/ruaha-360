@@ -6,6 +6,8 @@ import { useSession } from '@/app/session'
 import { activeMemberships } from '@/app/membership'
 import { DataTable } from '@/components/DataTable'
 import { ErrorState } from '@/components/ErrorState'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/controlStyles'
+import { Loading } from '@/components/controls'
 import {
   BUYER_CHANNELS,
   useBuyers,
@@ -83,18 +85,16 @@ export function BuyersScreen() {
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   return (
-    <section className="space-y-5">
-      <header className="space-y-1">
-        <h1 className="text-lg font-semibold">{t('buyers.title')}</h1>
-        <p data-testid="buyers-note" className="text-xs text-deep/60">
+    <section className="flex flex-col gap-4">
+      <header className="flex flex-col gap-1.5">
+        <h1 className="type-screen-title">{t('buyers.title')}</h1>
+        <p data-testid="buyers-note" className="type-note" style={{ color: 'var(--ink-3)' }}>
           {t('buyers.channelNote')}
         </p>
       </header>
 
       {query.isLoading ? (
-        <p data-testid="buyers-loading" className="text-sm text-deep/60">
-          {t('common.loading')}
-        </p>
+        <Loading testId="buyers-loading" />
       ) : (
         <DataTable
           columns={columns}
@@ -105,32 +105,39 @@ export function BuyersScreen() {
         />
       )}
 
-      <section className="space-y-3 rounded border border-deep/10 bg-white/70 p-4">
-        <h2 className="text-sm font-semibold">{t('buyers.createTitle')}</h2>
+      <section
+        className="flex max-w-3xl flex-col gap-3 p-[18px]"
+        style={{
+          border: '1px solid var(--rule)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--paper)',
+        }}
+      >
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>{t('buyers.createTitle')}</h2>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <label className="space-y-1 text-sm">
-            <span className="block text-xs text-deep/60">{t('buyers.colName')}</span>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex min-w-0 flex-col gap-1.5" style={{ flex: '1 1 200px', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>
+            <span className="block type-note" style={{ color: 'var(--ink-2)' }}>{t('buyers.colName')}</span>
             <input
               data-testid="buyer-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+              className="w-full" style={CONTROL}
             />
             {nameError && (
-              <span data-testid="buyer-name-error" className="block text-xs text-destructive">
+              <span data-testid="buyer-name-error" className="block type-note font-medium" style={{ color: 'var(--flag-ink)' }}>
                 {t('buyers.nameRequired')}
               </span>
             )}
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="block text-xs text-deep/60">{t('buyers.colChannel')}</span>
+          <label className="flex min-w-0 flex-col gap-1.5" style={{ flex: '1 1 200px', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>
+            <span className="block type-note" style={{ color: 'var(--ink-2)' }}>{t('buyers.colChannel')}</span>
             <select
               data-testid="buyer-channel"
               value={channel}
               onChange={(e) => setChannel(e.target.value as Buyer['channel'])}
-              className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+              className="w-full" style={CONTROL}
             >
               {BUYER_CHANNELS.map((c) => (
                 <option key={c} value={c}>
@@ -140,13 +147,13 @@ export function BuyersScreen() {
             </select>
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="block text-xs text-deep/60">{t('buyers.colContact')}</span>
+          <label className="flex min-w-0 flex-col gap-1.5" style={{ flex: '1 1 200px', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>
+            <span className="block type-note" style={{ color: 'var(--ink-2)' }}>{t('buyers.colContact')}</span>
             <input
               data-testid="buyer-contact-note"
               value={contactNote}
               onChange={(e) => setContactNote(e.target.value)}
-              className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+              className="w-full" style={CONTROL}
             />
           </label>
         </div>
@@ -160,7 +167,7 @@ export function BuyersScreen() {
           data-testid="buyer-create-submit"
           disabled={create.isPending}
           onClick={submit}
-          className="rounded bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="disabled:opacity-60" style={BUTTON_PRIMARY}
         >
           {create.isPending ? t('buyers.creating') : t('buyers.create')}
         </button>

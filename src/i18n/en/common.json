@@ -630,12 +630,16 @@
   },
   "opsHome": {
     "title": "Today",
+    "lead": "Three queues. Every figure is a link, because a count nobody can act on is a statistic.",
     "awaitingReview": "Requests awaiting review",
     "awaitingReviewDetail": "Submitted or under review",
     "openDemands": "Open buyer demands",
     "openDemandsDetail": "Still looking for supply",
     "outstandingRecords": "Records to verify",
-    "outstandingRecordsDetail": "Captured but not yet checked"
+    "outstandingRecordsDetail": "Captured but not yet checked",
+    "openPipeline": "Open the pipeline",
+    "openOrderBook": "Open the order book",
+    "openVerifyQueue": "Open the verify queue"
   },
   "buyers": {
     "title": "Buyers",

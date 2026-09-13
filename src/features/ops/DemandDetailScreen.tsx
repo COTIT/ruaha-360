@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -6,6 +7,8 @@ import { CoverageBar } from '@/components/CoverageBar'
 import { DrillLink } from '@/components/DrillLink'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { BUTTON_SECONDARY } from '@/components/controlStyles'
+import { IndicativePill, Loading, ProductNote, TableCard } from '@/components/controls'
 import { StatusPill } from '@/components/StatusPill'
 import {
   useCreateOpportunity,
@@ -42,9 +45,7 @@ export function DemandDetailScreen() {
 
   if (demandQuery.isLoading) {
     return (
-      <p data-testid="demand-detail-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="demand-detail-loading" />
     )
   }
 
@@ -65,22 +66,25 @@ export function DemandDetailScreen() {
       .reduce<number | null>((sum, s) => (sum ?? 0) + (s.committed_kg ?? 0), null)
 
   return (
-    <section className="max-w-3xl space-y-5" data-testid="demand-detail">
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold">{demand.buyer_name}</h1>
+    <section className="flex max-w-3xl flex-col gap-[18px]" data-testid="demand-detail">
+      <header className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="type-screen-title">{demand.buyer_name}</h1>
           <StatusPill kind="demand" status={demand.status} />
         </div>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <dl className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
           <Row label={t('demand.colCrop')} value={demand.crop_name} />
           <Row label={t('demand.colQuantity')} value={formatKg(demand.quantity_kg)} />
           <Row
             label={t('demand.window')}
             value={`${formatPlainDate(demand.window_start)} – ${formatPlainDate(demand.window_end)}`}
           />
+          {/* The tag travels with the number rather than trailing it in a
+              parenthesis nobody reads. */}
           <Row
             label={t('demand.colPrice')}
-            value={`${formatMoney(demand.indicative_price_per_kg, demand.currency)} (${t('equipment.indicative')})`}
+            value={formatMoney(demand.indicative_price_per_kg, demand.currency)}
+            pill={<IndicativePill />}
           />
           {demand.delivery_point && (
             <Row label={t('demand.deliveryPoint')} value={demand.delivery_point} />
@@ -89,11 +93,13 @@ export function DemandDetailScreen() {
         </dl>
       </header>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">{t('demand.matches')}</h2>
+      <section className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('demand.matches')}
+        </h2>
 
         {matchQuery.isLoading ? (
-          <p className="text-sm text-deep/60">{t('common.loading')}</p>
+          <Loading />
         ) : matches.length === 0 ? (
           // An honest zero, stated. The demand above stays on screen.
           <div data-testid="no-matching-supply">
@@ -101,15 +107,16 @@ export function DemandDetailScreen() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+            <TableCard>
+              <div className="overflow-x-auto">
+              <table className="w-full border-collapse" style={{ fontSize: 15 }}>
                 <thead>
-                  <tr className="border-b border-deep/15 text-left">
-                    <th scope="col" className="px-2 py-2 font-semibold">{t('demand.colVillage')}</th>
-                    <th scope="col" className="px-2 py-2 font-semibold">{t('demand.colAvailable')}</th>
-                    <th scope="col" className="px-2 py-2 font-semibold">{t('demand.colCoverable')}</th>
-                    <th scope="col" className="px-2 py-2 font-semibold">{t('demand.colCoverage')}</th>
-                    <th scope="col" className="px-2 py-2 font-semibold">{t('demand.colOpportunity')}</th>
+                  <tr style={{ background: 'var(--sand-2)' }}>
+                    <Th>{t('demand.colVillage')}</Th>
+                    <Th numeric>{t('demand.colAvailable')}</Th>
+                    <Th numeric>{t('demand.colCoverable')}</Th>
+                    <Th numeric>{t('demand.colCoverage')}</Th>
+                    <Th>{t('demand.colOpportunity')}</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -117,13 +124,21 @@ export function DemandDetailScreen() {
                     <tr
                       key={match.village_id}
                       data-testid={`match-row-${match.village_id}`}
-                      className="border-b border-deep/10"
+                      style={{ borderTop: '1px solid var(--rule)' }}
                     >
-                      <td className="px-2 py-2">{villageName(match.village_id)}</td>
-                      <td className="tabular px-2 py-2">{formatKg(match.available_kg)}</td>
-                      <td className="tabular px-2 py-2">{formatKg(match.coverable_kg)}</td>
-                      <td className="tabular px-2 py-2">{formatPercent(match.coverage_pct)}</td>
-                      <td className="px-2 py-2">
+                      <td className="px-3.5 py-3" style={{ fontWeight: 500 }}>
+                        {villageName(match.village_id)}
+                      </td>
+                      <td className="tabular px-3.5 py-3 text-right font-semibold">
+                        {formatKg(match.available_kg)}
+                      </td>
+                      <td className="tabular px-3.5 py-3 text-right font-semibold">
+                        {formatKg(match.coverable_kg)}
+                      </td>
+                      <td className="tabular px-3.5 py-3 text-right">
+                        {formatPercent(match.coverage_pct)}
+                      </td>
+                      <td className="px-3.5 py-3">
                         {match.opportunity_id ? (
                           <DrillLink kind="opportunity" id={match.opportunity_id}>
                             {t(`opportunityStatus.${match.opportunity_status ?? 'proposed'}`)}
@@ -140,7 +155,16 @@ export function DemandDetailScreen() {
                                 note: 'E2E-opportunity',
                               })
                             }
-                            className="rounded border border-primary/40 bg-primary/5 px-2 py-1 text-xs font-medium text-primary disabled:opacity-60"
+                            className="disabled:opacity-60"
+                            style={{
+                              ...BUTTON_SECONDARY,
+                              minHeight: 40,
+                              fontSize: 14,
+                              borderColor: 'var(--primary)',
+                              background: 'var(--primary-tint)',
+                              color: 'var(--primary-ink)',
+                              fontWeight: 600,
+                            }}
                           >
                             {createOpportunity.isPending
                               ? t('demand.creatingOpportunity')
@@ -152,7 +176,8 @@ export function DemandDetailScreen() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </TableCard>
 
             {/* One bar per village: coverage is a per-village figure, and a
                 single combined bar would be an aggregate the views never
@@ -161,10 +186,15 @@ export function DemandDetailScreen() {
               <div
                 key={`coverage-${match.village_id}`}
                 data-testid={`coverage-${match.village_id}`}
-                className="space-y-1 rounded border border-deep/10 bg-white/60 p-3"
+                className="p-4"
+                style={{
+                  border: '1px solid var(--rule)',
+                  borderRadius: 'var(--radius-card)',
+                  background: 'var(--paper)',
+                }}
               >
-                <p className="text-xs font-medium">{villageName(match.village_id)}</p>
                 <CoverageBar
+                  label={villageName(match.village_id)}
                   demandKg={demand.quantity_kg}
                   availableKg={match.available_kg}
                   committedKg={supplyQuery.isLoading ? null : committedFor(match.village_id)}
@@ -183,18 +213,40 @@ export function DemandDetailScreen() {
       </section>
 
       {/* An opportunity is not a sale. Stated on every opportunity surface. */}
-      <p className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70">
-        {t('demand.notASale')}
-      </p>
+      <ProductNote>{t('demand.notASale')}</ProductNote>
     </section>
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, pill }: { label: string; value: string; pill?: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-deep/60">{label}</dt>
-      <dd className="tabular font-medium">{value}</dd>
+    <div
+      className="grid items-baseline gap-3"
+      style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}
+    >
+      <dt style={{ fontSize: 13, color: 'var(--ink-2)' }}>{label}</dt>
+      <dd className="inline-flex flex-wrap items-baseline justify-end gap-2">
+        <span className="tabular font-semibold" style={{ fontSize: 15 }}>
+          {value}
+        </span>
+        {pill}
+      </dd>
     </div>
+  )
+}
+
+function Th({ children, numeric = false }: { children: ReactNode; numeric?: boolean }) {
+  return (
+    <th
+      scope="col"
+      className={
+        numeric
+          ? 'type-column-label px-3.5 py-2.5 text-right'
+          : 'type-column-label px-3.5 py-2.5 text-left'
+      }
+      style={{ color: 'var(--ink-3)' }}
+    >
+      {children}
+    </th>
   )
 }

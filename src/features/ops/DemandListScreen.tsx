@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next'
 
 import { DataTable } from '@/components/DataTable'
 import { ErrorState } from '@/components/ErrorState'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/controlStyles'
+import { IndicativePill, Loading } from '@/components/controls'
+import { BangMark } from '@/components/marks'
 import { StatusPill } from '@/components/StatusPill'
 import {
   useCreateDemand,
@@ -45,6 +48,7 @@ export function DemandListScreen() {
       col.accessor('crop_name', { header: t('demand.colCrop') }),
       col.accessor('quantity_kg', {
         header: t('demand.colQuantity'),
+        meta: { numeric: true },
         cell: (c) => formatKg(c.getValue()),
       }),
       col.accessor((r) => `${r.window_start}|${r.window_end}`, {
@@ -57,11 +61,15 @@ export function DemandListScreen() {
       }),
       col.accessor('indicative_price_per_kg', {
         header: t('demand.colPrice'),
-        // Prices are indicative, never quotations.
+        meta: { numeric: true },
+        // Prices are indicative, never quotations — and the tag travels with
+        // the number rather than trailing it in a parenthesis.
         cell: (c) => (
-          <span>
-            {formatMoney(c.getValue(), c.row.original.currency)}{' '}
-            <span className="text-xs font-normal text-deep/60">({t('equipment.indicative')})</span>
+          <span className="inline-flex flex-wrap items-baseline justify-end gap-2">
+            <span className="tabular font-semibold">
+              {formatMoney(c.getValue(), c.row.original.currency)}
+            </span>
+            <IndicativePill />
           </span>
         ),
       }),
@@ -109,26 +117,35 @@ export function DemandListScreen() {
   }
 
   return (
-    <section className="space-y-6">
-      <h1 className="text-lg font-semibold">{t('demand.title')}</h1>
+    <section className="flex flex-col gap-5">
+      <h1 className="type-screen-title">{t('demand.title')}</h1>
 
-      <section className="max-w-2xl space-y-3 rounded border border-deep/10 bg-white/60 p-4">
-        <h2 className="text-sm font-semibold">{t('demand.createTitle')}</h2>
+      <section
+        className="flex max-w-2xl flex-col gap-3 p-[18px]"
+        style={{
+          border: '1px solid var(--rule)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--paper)',
+        }}
+      >
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('demand.createTitle')}
+        </h2>
 
         {/* A real form: eight fields typed then submitted, so Enter has to
             work and a keyboard user must not have to tab past all of them to
             reach the control. QA #11. */}
         <form
-          className="space-y-3"
+          className="flex flex-col gap-3"
           noValidate
           onSubmit={(e) => {
             e.preventDefault()
             submit()
           }}
         >
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-wrap gap-3">
           <Field label={t('demand.buyer')} id="demand-buyer" error={missing.buyer ? t('demand.required') : undefined} errorTestId="demand-buyer-error">
-            <select id="demand-buyer" data-testid="demand-buyer" value={buyerId} onChange={(e) => setBuyerId(e.target.value)} className={input}>
+            <select id="demand-buyer" data-testid="demand-buyer" value={buyerId} onChange={(e) => setBuyerId(e.target.value)} className={input} style={CONTROL}>
               <option value="">{t('demand.chooseBuyer')}</option>
               {(options.data?.buyers ?? []).map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -137,7 +154,7 @@ export function DemandListScreen() {
           </Field>
 
           <Field label={t('demand.crop')} id="demand-crop" error={missing.crop ? t('demand.required') : undefined} errorTestId="demand-crop-error">
-            <select id="demand-crop" data-testid="demand-crop" value={cropId} onChange={(e) => setCropId(e.target.value)} className={input}>
+            <select id="demand-crop" data-testid="demand-crop" value={cropId} onChange={(e) => setCropId(e.target.value)} className={input} style={CONTROL}>
               <option value="">{t('demand.chooseCrop')}</option>
               {(options.data?.crops ?? []).map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -146,27 +163,27 @@ export function DemandListScreen() {
           </Field>
 
           <Field label={t('demand.quantity')} id="demand-quantity" error={missing.quantity ? t('demand.required') : undefined} errorTestId="demand-quantity-error">
-            <input id="demand-quantity" data-testid="demand-quantity" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={input} />
+            <input id="demand-quantity" data-testid="demand-quantity" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} className={input} style={CONTROL} />
           </Field>
 
           <Field label={t('demand.pricePerKg')} id="demand-price">
-            <input id="demand-price" data-testid="demand-price" inputMode="decimal" value={pricePerKg} onChange={(e) => setPricePerKg(e.target.value)} className={input} />
+            <input id="demand-price" data-testid="demand-price" inputMode="decimal" value={pricePerKg} onChange={(e) => setPricePerKg(e.target.value)} className={input} style={CONTROL} />
           </Field>
 
           <Field label={t('demand.windowStart')} id="demand-window-start">
-            <input id="demand-window-start" data-testid="demand-window-start" type="date" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} className={input} />
+            <input id="demand-window-start" data-testid="demand-window-start" type="date" value={windowStart} onChange={(e) => setWindowStart(e.target.value)} className={input} style={CONTROL} />
           </Field>
 
           <Field label={t('demand.windowEnd')} id="demand-window-end">
-            <input id="demand-window-end" data-testid="demand-window-end" type="date" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} className={input} />
+            <input id="demand-window-end" data-testid="demand-window-end" type="date" value={windowEnd} onChange={(e) => setWindowEnd(e.target.value)} className={input} style={CONTROL} />
           </Field>
 
           <Field label={t('demand.deliveryPoint')} id="demand-delivery">
-            <input id="demand-delivery" data-testid="demand-delivery" value={deliveryPoint} onChange={(e) => setDeliveryPoint(e.target.value)} className={input} />
+            <input id="demand-delivery" data-testid="demand-delivery" value={deliveryPoint} onChange={(e) => setDeliveryPoint(e.target.value)} className={input} style={CONTROL} />
           </Field>
 
           <Field label={t('demand.qualityNote')} id="demand-quality-note">
-            <input id="demand-quality-note" data-testid="demand-quality-note" value={qualityNote} onChange={(e) => setQualityNote(e.target.value)} className={input} />
+            <input id="demand-quality-note" data-testid="demand-quality-note" value={qualityNote} onChange={(e) => setQualityNote(e.target.value)} className={input} style={CONTROL} />
           </Field>
         </div>
 
@@ -180,7 +197,8 @@ export function DemandListScreen() {
           type="submit"
           data-testid="demand-create-submit"
           disabled={create.isPending}
-          className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          className="w-fit disabled:opacity-60"
+          style={BUTTON_PRIMARY}
         >
           {create.isPending ? t('demand.creating') : t('demand.create')}
         </button>
@@ -188,7 +206,7 @@ export function DemandListScreen() {
       </section>
 
       {query.isLoading ? (
-        <p data-testid="demand-loading" className="text-sm text-deep/60">{t('common.loading')}</p>
+        <Loading testId="demand-loading" />
       ) : (
         <DataTable
           columns={columns}
@@ -203,7 +221,7 @@ export function DemandListScreen() {
   )
 }
 
-const input = 'w-full rounded border border-deep/20 bg-white px-3 py-2'
+const input = 'w-full'
 
 function Field({
   label,
@@ -219,11 +237,24 @@ function Field({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium" htmlFor={id}>{label}</label>
+    <div className="flex min-w-0 flex-col gap-1.5" style={{ flex: '1 1 200px' }}>
+      <label
+        className="block"
+        htmlFor={id}
+        style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}
+      >
+        {label}
+      </label>
       {children}
       {error && (
-        <p data-testid={errorTestId} className="text-sm text-destructive">{error}</p>
+        <p
+          data-testid={errorTestId}
+          className="flex items-start gap-[7px] font-medium"
+          style={{ fontSize: 13, color: 'var(--flag-ink)' }}
+        >
+          <BangMark />
+          {error}
+        </p>
       )}
     </div>
   )

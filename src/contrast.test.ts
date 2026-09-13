@@ -17,17 +17,14 @@ import { code, offendingLines, sourceFiles } from './styles/design'
 
 const OPACITY = /(^|[^\w-])(text|bg|border|fill|stroke|ring|divide|outline)-(deep|white|primary|accent|destructive|black|foreground|muted)\/[0-9]+/
 
+/**
+ * One entry left, and it is dead code: `Placeholder.tsx` was the first
+ * session's scaffold marker and nothing has imported it since. Restyling a file
+ * no route renders would be theatre, and deleting it is a separate change from
+ * a visual pass — so it stays listed, and the list stays honest.
+ */
 const PENDING = new Set([
   'src/app/Placeholder.tsx',
-  'src/features/ops/BuyersScreen.tsx',
-  'src/features/ops/CatalogueScreen.tsx',
-  'src/features/ops/DemandDetailScreen.tsx',
-  'src/features/ops/DemandListScreen.tsx',
-  'src/features/ops/OpportunityDetailScreen.tsx',
-  'src/features/ops/OpsHomeScreen.tsx',
-  'src/features/ops/OpsRequestReviewScreen.tsx',
-  'src/features/ops/OpsRequestsScreen.tsx',
-  'src/features/ops/VillagesScreen.tsx',
 ])
 
 const files = sourceFiles('src', ['.ts', '.tsx'])

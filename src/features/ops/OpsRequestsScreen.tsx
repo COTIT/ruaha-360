@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { useScopeNames } from '@/app/scope'
 import { DataTable } from '@/components/DataTable'
 import { ErrorState } from '@/components/ErrorState'
+import { CONTROL } from '@/components/controlStyles'
+import { Loading } from '@/components/controls'
 import { StatusPill } from '@/components/StatusPill'
 import { validateRequestSearch } from '@/features/ops/requestSearch'
 import { useOpsRequests, type OpsRequest } from '@/features/ops/useOpsRequests'
@@ -79,17 +81,17 @@ export function OpsRequestsScreen() {
   }
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-lg font-semibold">{t('ops.requestsTitle')}</h1>
+    <section className="flex flex-col gap-4">
+      <h1 className="type-screen-title">{t('ops.requestsTitle')}</h1>
 
       <div className="flex flex-wrap gap-3">
         <label className="text-sm">
-          <span className="mr-2 text-deep/60">{t('ops.filterStatus')}</span>
+          <span style={{ color: 'var(--ink-2)' }}>{t('ops.filterStatus')}</span>
           <select
             data-testid="filter-status"
             value={search.status ?? ''}
             onChange={(e) => setFilter({ status: e.target.value || undefined })}
-            className="rounded border border-deep/20 bg-white px-2 py-1"
+            style={CONTROL}
           >
             <option value="">{t('ops.allStatuses')}</option>
             {STATUSES.map((s) => (
@@ -101,12 +103,12 @@ export function OpsRequestsScreen() {
         </label>
 
         <label className="text-sm">
-          <span className="mr-2 text-deep/60">{t('ops.filterVillage')}</span>
+          <span style={{ color: 'var(--ink-2)' }}>{t('ops.filterVillage')}</span>
           <select
             data-testid="filter-village"
             value={search.village ?? ''}
             onChange={(e) => setFilter({ village: e.target.value || undefined })}
-            className="rounded border border-deep/20 bg-white px-2 py-1"
+            style={CONTROL}
           >
             <option value="">{t('ops.allVillages')}</option>
             {Object.entries(scope.data?.villages ?? {}).map(([id, name]) => (
@@ -119,9 +121,7 @@ export function OpsRequestsScreen() {
       </div>
 
       {query.isLoading ? (
-        <p data-testid="ops-requests-loading" className="text-sm text-deep/60">
-          {t('common.loading')}
-        </p>
+        <Loading testId="ops-requests-loading" />
       ) : (
         <DataTable
           columns={columns}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useRef, useState } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -5,6 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { DrillLink } from '@/components/DrillLink'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { BUTTON_PRIMARY, BUTTON_SECONDARY, CONTROL } from '@/components/controlStyles'
+import { Loading, ProductNote, TableCard } from '@/components/controls'
+import { BangMark } from '@/components/marks'
 import { StatusPill } from '@/components/StatusPill'
 import { supplySchema } from '@/features/ops/supplySchema'
 import {
@@ -77,9 +81,7 @@ export function OpportunityDetailScreen() {
 
   if (query.isLoading) {
     return (
-      <p data-testid="opportunity-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="opportunity-loading" />
     )
   }
 
@@ -128,7 +130,12 @@ export function OpportunityDetailScreen() {
 
   const attachError = (field: 'harvest_report_id' | 'contributed_kg', testId: string) =>
     attachErrors[field] ? (
-      <p data-testid={`${testId}-error`} className="text-sm text-destructive">
+      <p
+        data-testid={`${testId}-error`}
+        className="flex items-start gap-[7px] font-medium"
+        style={{ fontSize: 13, color: 'var(--flag-ink)' }}
+      >
+        <BangMark />
         {t(attachErrors[field])}
       </p>
     ) : null
@@ -141,34 +148,42 @@ export function OpportunityDetailScreen() {
   }
 
   return (
-    <section className="max-w-3xl space-y-5" data-testid="opportunity-detail">
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold">
+    <section className="flex max-w-3xl flex-col gap-[18px]" data-testid="opportunity-detail">
+      <header className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="type-screen-title">
             {opportunity.buyer_name} · {opportunity.village_name}
           </h1>
           <StatusPill kind="opportunity" status={opportunity.status} />
         </div>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <Row label={t('demand.colCrop')} value={opportunity.crop_name} />
-          {/* Two quantities, and the screen's whole job is keeping them
-              apart. "Quantity" named neither of them — QA #12. */}
-          <Row
+        <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>{opportunity.crop_name}</p>
+
+        {/*
+          Two quantities, and the screen's whole job is keeping them apart —
+          "Quantity" named neither of them (QA #12). They sit in two cards, only
+          one of them tinted: what the buyer asked for is context, what this
+          village has offered is the figure this screen is about.
+        */}
+        <div className="flex flex-wrap gap-2.5">
+          <Quantity
             label={t('opportunity.demandQuantity')}
             value={formatKg(opportunity.demand_quantity_kg)}
             rowTestId="demand-quantity-row"
           />
-          <Row label={t('opportunity.offered')} value={offered} testId="offered-total" />
-        </dl>
-        <p data-testid="offered-total-note" className="text-xs text-deep/60">
+          <Quantity
+            label={t('opportunity.offered')}
+            value={offered}
+            testId="offered-total"
+            offered
+          />
+        </div>
+        <p data-testid="offered-total-note" className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
           {t('opportunity.offeredNote')}
         </p>
       </header>
 
       {/* An opportunity is not a sale. Stated on every opportunity surface. */}
-      <p className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70">
-        {t('opportunity.notASale')}
-      </p>
+      <ProductNote>{t('opportunity.notASale')}</ProductNote>
 
       {released ? (
         // Declined and lapsed are terminal, so there is nothing to offer —
@@ -176,7 +191,16 @@ export function OpportunityDetailScreen() {
         // below: the record of what was offered is not erased.
         <p
           data-testid="released-note"
-          className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70"
+          className="px-3.5 py-3"
+          style={{
+            border: '1px solid var(--rule-2)',
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--hatch), var(--paper)',
+            fontSize: 14,
+            lineHeight: 1.55,
+            color: 'var(--ink-2)',
+            textWrap: 'pretty',
+          }}
         >
           {t('opportunity.releasedNote', { kg: offered })}
         </p>
@@ -185,13 +209,25 @@ export function OpportunityDetailScreen() {
           data-testid="release-confirm"
           role="alertdialog"
           aria-label={t('opportunity.releaseTitle')}
-          className="space-y-2 rounded border border-destructive/30 bg-destructive/5 p-3"
+          className="flex flex-col gap-2.5 px-4 py-3.5"
+          style={{
+            border: '1px solid rgba(158, 27, 27, .25)',
+            borderLeft: '4px solid var(--flag-ink)',
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--flag-tint)',
+          }}
         >
-          <p className="text-sm font-medium text-deep">{t('opportunity.releaseTitle')}</p>
-          <p className="text-xs text-deep/70">
+          <p
+            className="inline-flex items-center gap-2"
+            style={{ fontSize: 15, fontWeight: 600, color: 'var(--flag-ink)' }}
+          >
+            <BangMark size={18} />
+            {t('opportunity.releaseTitle')}
+          </p>
+          <p style={{ fontSize: 14, lineHeight: 1.55, textWrap: 'pretty' }}>
             {t('opportunity.releaseDetail', { kg: offered })}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <button
               type="button"
               data-testid="release-confirm-yes"
@@ -199,7 +235,10 @@ export function OpportunityDetailScreen() {
                 move.mutate(OPPORTUNITY_ACTION_TARGET[confirming])
                 setConfirming(null)
               }}
-              className="rounded bg-destructive px-3 py-2 text-sm font-medium text-white"
+              style={{
+                ...BUTTON_PRIMARY,
+                background: 'var(--flag-ink)',
+              }}
             >
               {t('opportunity.releaseYes')}
             </button>
@@ -207,14 +246,14 @@ export function OpportunityDetailScreen() {
               type="button"
               data-testid="release-confirm-no"
               onClick={() => setConfirming(null)}
-              className="rounded border border-deep/20 px-3 py-2 text-sm font-medium"
+              style={BUTTON_SECONDARY}
             >
               {t('opportunity.releaseNo')}
             </button>
           </div>
         </div>
       ) : (
-        <div data-testid="opportunity-actions" className="flex flex-wrap items-center gap-2">
+        <div data-testid="opportunity-actions" className="flex flex-wrap items-center gap-2.5">
           {actions.map((action) => (
             <button
               key={action}
@@ -222,11 +261,17 @@ export function OpportunityDetailScreen() {
               data-testid={`action-${action}`}
               disabled={move.isPending}
               onClick={() => act(action)}
-              className={`rounded px-3 py-2 text-sm font-medium disabled:opacity-60 ${
+              className="disabled:opacity-60"
+              style={
                 releasesSupply(action)
-                  ? 'border border-destructive/30 text-destructive'
-                  : 'bg-primary text-primary-foreground'
-              }`}
+                  ? {
+                      ...BUTTON_SECONDARY,
+                      borderColor: 'rgba(158, 27, 27, .4)',
+                      color: 'var(--flag-ink)',
+                      fontWeight: 600,
+                    }
+                  : BUTTON_PRIMARY
+              }
             >
               {t(ACTION_LABEL[action])}
             </button>
@@ -234,7 +279,7 @@ export function OpportunityDetailScreen() {
           {/* One write, so one claim about it — rather than every button
               announcing that it is the one saving. */}
           {move.isPending && (
-            <span data-testid="status-saving" className="text-sm text-deep/60">
+            <span data-testid="status-saving" style={{ fontSize: 14, color: 'var(--ink-2)' }}>
               {t('opportunity.moving')}
             </span>
           )}
@@ -248,8 +293,10 @@ export function OpportunityDetailScreen() {
         </div>
       )}
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">{t('opportunity.supplyLines')}</h2>
+      <section className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('opportunity.supplyLines')}
+        </h2>
 
         {opportunity.supply.length === 0 ? (
           <EmptyState
@@ -257,14 +304,15 @@ export function OpportunityDetailScreen() {
             detail={t('opportunity.noSupplyDetail')}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+          <TableCard>
+            <div className="overflow-x-auto">
+            <table className="w-full border-collapse" style={{ fontSize: 15 }}>
               <thead>
-                <tr className="border-b border-deep/15 text-left">
-                  <th scope="col" className="px-2 py-2 font-semibold">{t('opportunity.colFarmer')}</th>
-                  <th scope="col" className="px-2 py-2 font-semibold">{t('opportunity.colPlot')}</th>
-                  <th scope="col" className="px-2 py-2 font-semibold">{t('opportunity.colCycle')}</th>
-                  <th scope="col" className="px-2 py-2 font-semibold">{t('opportunity.colContributed')}</th>
+                <tr style={{ background: 'var(--sand-2)' }}>
+                  <Th>{t('opportunity.colFarmer')}</Th>
+                  <Th>{t('opportunity.colPlot')}</Th>
+                  <Th>{t('opportunity.colCycle')}</Th>
+                  <Th numeric>{t('opportunity.colContributed')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -272,30 +320,56 @@ export function OpportunityDetailScreen() {
                   <tr
                     key={line.harvest_report_id}
                     data-testid="supply-row"
-                    className="border-b border-deep/10"
+                    style={{ borderTop: '1px solid var(--rule)' }}
                   >
-                    <td className="px-2 py-2">
+                    <td className="px-3.5 py-3">
                       <DrillLink kind="person" id={line.person_id}>
                         {line.farmer ?? '—'}
                       </DrillLink>
                     </td>
-                    <td className="px-2 py-2">{line.plot_label ?? '—'}</td>
-                    <td className="px-2 py-2">
+                    <td className="px-3.5 py-3" style={{ color: 'var(--ink-2)' }}>
+                      {line.plot_label ?? '—'}
+                    </td>
+                    <td className="px-3.5 py-3">
                       <DrillLink kind="cycle" id={line.crop_cycle_id}>
                         {line.crop_name}
                       </DrillLink>
                     </td>
-                    <td className="tabular px-2 py-2">{formatKg(line.contributed_kg)}</td>
+                    <td className="tabular px-3.5 py-3 text-right font-semibold">
+                      {formatKg(line.contributed_kg)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
+              {/* The offered total restated at the foot of the lines that make
+                  it up, so the header figure and these rows visibly agree. */}
+              <tfoot>
+                <tr style={{ borderTop: '1px solid var(--rule-2)', background: 'var(--sand-2)' }}>
+                  <td colSpan={3} className="px-3.5 py-3" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                    {t('opportunity.offered')}
+                  </td>
+                  <td className="tabular px-3.5 py-3 text-right font-semibold" style={{ fontSize: 17 }}>
+                    {offered}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
-          </div>
+            </div>
+          </TableCard>
         )}
       </section>
 
-      <section className="max-w-lg space-y-3 rounded border border-deep/10 bg-white/60 p-4">
-        <h2 className="text-sm font-semibold">{t('opportunity.attachTitle')}</h2>
+      <section
+        className="flex max-w-lg flex-col gap-3 p-[18px]"
+        style={{
+          border: '1px solid var(--rule)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--paper)',
+        }}
+      >
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('opportunity.attachTitle')}
+        </h2>
 
         {released ? (
           // committed_kg only sums live opportunities, so a line attached
@@ -307,7 +381,7 @@ export function OpportunityDetailScreen() {
             />
           </div>
         ) : available.isLoading ? (
-          <p className="text-sm text-deep/60">{t('common.loading')}</p>
+          <Loading />
         ) : rows.length === 0 ? (
           <EmptyState
             title={t('opportunity.noneAvailableTitle')}
@@ -316,15 +390,15 @@ export function OpportunityDetailScreen() {
         ) : (
           // A field-then-submit form, so Enter has to work — QA #11.
           <form
-            className="space-y-3"
+            className="flex flex-col gap-3"
             noValidate
             onSubmit={(e) => {
               e.preventDefault()
               attachSupply()
             }}
           >
-            <div className="space-y-1">
-              <label className="block text-sm font-medium" htmlFor="attach-harvest">
+            <div className="flex flex-col gap-1.5">
+              <label className="block" htmlFor="attach-harvest" style={LABEL}>
                 {t('opportunity.attachHarvest')}
               </label>
               <select
@@ -332,7 +406,8 @@ export function OpportunityDetailScreen() {
                 data-testid="attach-harvest"
                 value={harvestId}
                 onChange={(e) => setHarvestId(e.target.value)}
-                className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+                className="w-full"
+                style={CONTROL}
               >
                 <option value="">{t('opportunity.chooseHarvest')}</option>
                 {/* Fully committed figures stay listed. Hiding them would be a
@@ -353,8 +428,8 @@ export function OpportunityDetailScreen() {
               {attachError('harvest_report_id', 'attach-harvest')}
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-sm font-medium" htmlFor="attach-kg">
+            <div className="flex flex-col gap-1.5">
+              <label className="block" htmlFor="attach-kg" style={LABEL}>
                 {t('opportunity.attachKg')}
               </label>
               <input
@@ -363,7 +438,8 @@ export function OpportunityDetailScreen() {
                 inputMode="decimal"
                 value={kg}
                 onChange={(e) => setKg(e.target.value)}
-                className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+                className="w-full"
+                style={CONTROL}
               />
               {attachError('contributed_kg', 'attach-kg')}
             </div>
@@ -380,7 +456,8 @@ export function OpportunityDetailScreen() {
               // Enabled while incomplete, deliberately: a dead button gives
               // no reason, and the reason is the point.
               disabled={attach.isPending}
-              className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+              className="w-fit disabled:opacity-60"
+              style={BUTTON_PRIMARY}
             >
               {attach.isPending ? t('opportunity.attaching') : t('opportunity.attach')}
             </button>
@@ -391,23 +468,63 @@ export function OpportunityDetailScreen() {
   )
 }
 
-function Row({
+/**
+ * One of the two quantities, in a card of its own. Only the offered total is
+ * tinted: it is the figure this screen is about, and what the buyer asked for
+ * is the context it sits against.
+ */
+function Quantity({
   label,
   value,
   testId,
   rowTestId,
+  offered = false,
 }: {
   label: string
   value: string
   testId?: string
   rowTestId?: string
+  offered?: boolean
 }) {
   return (
-    <div data-testid={rowTestId} className="flex items-baseline justify-between gap-3">
-      <dt className="text-deep/60">{label}</dt>
-      <dd data-testid={testId} className="tabular font-medium">
+    <div
+      data-testid={rowTestId}
+      className="flex min-w-0 flex-col gap-1 px-3.5 py-3"
+      style={{
+        flex: '1 1 180px',
+        border: `1px solid ${offered ? 'var(--primary)' : 'var(--rule)'}`,
+        borderRadius: 'var(--radius-control)',
+        background: offered ? 'var(--primary-tint)' : 'var(--sand-2)',
+      }}
+    >
+      <span className="type-note" style={{ color: offered ? 'var(--primary-ink)' : 'var(--ink-2)' }}>
+        {label}
+      </span>
+      <span
+        data-testid={testId}
+        className="tabular type-figure"
+        style={offered ? { color: 'var(--primary-ink)' } : undefined}
+      >
         {value}
-      </dd>
+      </span>
     </div>
   )
 }
+
+function Th({ children, numeric = false }: { children: ReactNode; numeric?: boolean }) {
+  return (
+    <th
+      scope="col"
+      className={
+        numeric
+          ? 'type-column-label px-3.5 py-2.5 text-right'
+          : 'type-column-label px-3.5 py-2.5 text-left'
+      }
+      style={{ color: 'var(--ink-3)' }}
+    >
+      {children}
+    </th>
+  )
+}
+
+const LABEL = { fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' } as const

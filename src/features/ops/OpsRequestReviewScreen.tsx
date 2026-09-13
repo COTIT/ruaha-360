@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/controlStyles'
+import { Loading } from '@/components/controls'
+import { BangMark } from '@/components/marks'
 import { StatusPill } from '@/components/StatusPill'
 import {
   requiresDecisionNote,
@@ -37,9 +40,7 @@ export function OpsRequestReviewScreen() {
 
   if (query.isLoading) {
     return (
-      <p data-testid="ops-review-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="ops-review-loading" />
     )
   }
 
@@ -62,13 +63,13 @@ export function OpsRequestReviewScreen() {
   }
 
   return (
-    <section className="max-w-2xl space-y-5" data-testid="request-review">
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold">{request.equipment_name}</h1>
+    <section className="flex max-w-2xl flex-col gap-[18px]" data-testid="request-review">
+      <header className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="type-screen-title">{request.equipment_name}</h1>
           <StatusPill kind="request" status={request.status} />
         </div>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <dl className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
           <Row label={t('ops.applicant')} value={request.applicant} />
           <Row label={t('ops.village')} value={request.village_name} />
           <Row label={t('ops.farm')} value={request.farm_label ?? '—'} />
@@ -76,14 +77,33 @@ export function OpsRequestReviewScreen() {
             <Row label={t('ops.colSubmitted')} value={formatTimestamp(request.submitted_at)} />
           )}
         </dl>
-        {request.purpose && <p className="text-sm text-deep/70">{request.purpose}</p>}
+        {request.purpose && (
+          <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>{request.purpose}</p>
+        )}
       </header>
 
-      <section className="space-y-1" data-testid="review-estimate">
-        <h2 className="text-sm font-semibold">{t('ops.snapshotted')}</h2>
-        <p className="text-xs text-deep/60">{t('ops.snapshottedNote')}</p>
+      {/*
+        The inputs the estimate was calculated from, as they were at the moment
+        it was stored. Hatched: this is a snapshot of an estimate, and neither
+        half of that is a measurement.
+      */}
+      <section
+        className="flex flex-col gap-2 p-4"
+        data-testid="review-estimate"
+        style={{
+          border: '1px solid var(--rule-2)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--hatch), var(--paper)',
+        }}
+      >
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('ops.snapshotted')}
+        </h2>
+        <p className="type-note" style={{ color: 'var(--ink-2)', textWrap: 'pretty' }}>
+          {t('ops.snapshottedNote')}
+        </p>
         {estimate ? (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <dl className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
             <Row label={t('estimate.ratedPower')} value={formatKw(estimate.rated_power_kw)} />
             <Row label={t('estimate.quantity')} value={String(estimate.quantity)} />
             <Row label={t('estimate.hours')} value={String(estimate.hours_per_day)} />
@@ -94,54 +114,80 @@ export function OpsRequestReviewScreen() {
         ) : (
           <EmptyState title={t('requests.noEstimate')} detail={t('requests.noEstimateDetail')} />
         )}
-        <p className="text-xs text-deep/60">{t('estimate.isEstimate')}</p>
+        <p style={{ fontSize: 13, lineHeight: 1.5, fontWeight: 500 }}>{t('estimate.isEstimate')}</p>
       </section>
 
-      <section className="space-y-1">
-        <h2 className="text-sm font-semibold">{t('ops.headroom')}</h2>
+      <section className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('ops.headroom')}
+        </h2>
         {energy.isLoading ? (
-          <p className="text-sm text-deep/60">{t('common.loading')}</p>
+          <Loading />
         ) : energy.data ? (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-            <Row label={t('ops.capacity')} value={formatKw(energy.data.capacity_kw)} />
-            {/* Capacity is PLANNED, never measured. Always shown with its basis. */}
-            <Row
-              label={t('ops.capacityBasis')}
-              value={t(`capacityBasis.${energy.data.capacity_basis}`)}
-              testId="review-capacity-basis"
-            />
-            <Row
-              label={t('ops.approvedPeak')}
-              value={formatKw(energy.data.approved_peak_kw)}
-              testId="review-approved-peak"
-            />
-            <Row
-              label={t('ops.prospectivePeak')}
-              value={formatKw(energy.data.prospective_peak_kw)}
-            />
-            <Row
-              label={t('ops.headroom')}
-              value={formatKw(energy.data.headroom_kw)}
-              testId="review-headroom"
-            />
-            <Row
-              label={t('ops.simultaneity')}
-              value={String(energy.data.simultaneity_factor)}
-            />
-          </dl>
+          <>
+            <div className="flex flex-wrap gap-2.5">
+              <Cell
+                label={t('ops.capacity')}
+                value={formatKw(energy.data.capacity_kw)}
+                /* Capacity is PLANNED, never measured. The basis is in the
+                   cell, not in a row of its own. */
+                pill={t(`capacityBasis.${energy.data.capacity_basis}`)}
+                pillTestId="review-capacity-basis"
+              />
+              <Cell
+                label={t('ops.headroom')}
+                value={formatKw(energy.data.headroom_kw)}
+                testId="review-headroom"
+              />
+            </div>
+
+            {/* Two cells with a rule between them: no layout here sums them. */}
+            <div
+              className="flex flex-wrap items-stretch overflow-hidden"
+              style={{ border: '1px solid var(--rule-2)', borderRadius: 'var(--radius-card)' }}
+            >
+              <Peak
+                label={t('ops.prospectivePeak')}
+                value={formatKw(energy.data.prospective_peak_kw)}
+              />
+              <span
+                aria-hidden
+                style={{ flex: '0 0 auto', width: '100%', height: 1, background: 'var(--rule-2)' }}
+              />
+              <Peak
+                label={t('ops.approvedPeak')}
+                value={formatKw(energy.data.approved_peak_kw)}
+                testId="review-approved-peak"
+                decided
+              />
+            </div>
+
+            <dl className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+              <Row
+                label={t('ops.simultaneity')}
+                value={String(energy.data.simultaneity_factor)}
+              />
+            </dl>
+          </>
         ) : (
           <EmptyState title={t('ops.noHeadroom')} detail={t('ops.noHeadroomDetail')} />
         )}
         {/* Prospective and approved are separate figures, never summed. */}
-        <p className="text-xs text-deep/60">{t('ops.neverSummed')}</p>
+        <p style={{ fontSize: 13, lineHeight: 1.5, fontWeight: 500, textWrap: 'pretty' }}>
+          {t('ops.neverSummed')}
+        </p>
       </section>
 
       {request.decision_note && (
-        <section className="space-y-1">
-          <h2 className="text-sm font-semibold">{t('requests.decision')}</h2>
-          <p className="text-sm text-deep/80">{request.decision_note}</p>
+        <section className="flex flex-col gap-1.5">
+          <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+            {t('requests.decision')}
+          </h2>
+          <p style={{ fontSize: 15, lineHeight: 1.55 }}>{request.decision_note}</p>
           {request.decided_at && (
-            <p className="text-xs text-deep/50">{formatTimestamp(request.decided_at)}</p>
+            <p className="type-note" style={{ color: 'var(--ink-3)' }}>
+              {formatTimestamp(request.decided_at)}
+            </p>
           )}
         </section>
       )}
@@ -153,12 +199,16 @@ export function OpsRequestReviewScreen() {
       )}
 
       {actions.length === 0 ? (
-        <p className="text-sm text-deep/60">{t('ops.noActions')}</p>
+        <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>{t('ops.noActions')}</p>
       ) : (
-        <section className="space-y-3">
+        <section className="flex flex-col gap-3">
           {actions.some(requiresDecisionNote) && (
-            <div className="space-y-1">
-              <label className="block text-sm font-medium" htmlFor="decision-note">
+            <div className="flex flex-col gap-1.5">
+              <label
+                className="block"
+                htmlFor="decision-note"
+                style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}
+              >
                 {t('ops.decisionNote')}
               </label>
               <textarea
@@ -168,10 +218,21 @@ export function OpsRequestReviewScreen() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 aria-invalid={noteError || undefined}
-                className="w-full rounded border border-deep/20 bg-white px-3 py-2"
+                aria-describedby={noteError ? 'decision-note-error' : undefined}
+                className="w-full"
+                style={
+                  noteError ? { ...CONTROL, border: '1.5px solid var(--flag-ink)' } : CONTROL
+                }
               />
               {noteError && (
-                <p data-testid="decision-note-error" role="alert" className="text-sm text-destructive">
+                <p
+                  id="decision-note-error"
+                  data-testid="decision-note-error"
+                  role="alert"
+                  className="flex items-start gap-[7px] font-medium"
+                  style={{ fontSize: 13, color: 'var(--flag-ink)' }}
+                >
+                  <BangMark />
                   {t('ops.decisionNoteRequired')}
                 </p>
               )}
@@ -186,7 +247,8 @@ export function OpsRequestReviewScreen() {
                 data-testid={`action-${action}`}
                 disabled={review.isPending}
                 onClick={() => run(action)}
-                className="rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+                className="disabled:opacity-60"
+                style={BUTTON_PRIMARY}
               >
                 {review.isPending ? t('ops.working') : t(`ops.${camel(action)}`)}
               </button>
@@ -204,11 +266,101 @@ function camel(action: ReviewerAction): string {
 
 function Row({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-deep/60">{label}</dt>
-      <dd data-testid={testId} className="tabular font-medium">
+    <div
+      className="grid items-baseline gap-3"
+      style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}
+    >
+      <dt style={{ fontSize: 13, color: 'var(--ink-2)' }}>{label}</dt>
+      <dd data-testid={testId} className="tabular font-semibold" style={{ fontSize: 15 }}>
         {value}
       </dd>
+    </div>
+  )
+}
+
+/** A figure in a cell of its own, with anything that qualifies it inside. */
+function Cell({
+  label,
+  value,
+  testId,
+  pill,
+  pillTestId,
+}: {
+  label: string
+  value: string
+  testId?: string
+  pill?: string
+  pillTestId?: string
+}) {
+  return (
+    <div
+      className="flex min-w-0 flex-col gap-1 px-3.5 py-3"
+      style={{
+        flex: '1 1 180px',
+        border: '1px solid var(--rule)',
+        borderRadius: 'var(--radius-control)',
+        background: 'var(--sand-2)',
+      }}
+    >
+      <span className="type-note" style={{ color: 'var(--ink-2)' }}>
+        {label}
+      </span>
+      <span className="flex flex-wrap items-baseline gap-2">
+        <span data-testid={testId} className="tabular type-figure">
+          {value}
+        </span>
+        {pill && (
+          <span
+            data-testid={pillTestId}
+            className="type-column-label px-2 py-[3px]"
+            style={{
+              border: '1px solid var(--rule-2)',
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--hatch), var(--paper)',
+              color: 'var(--ink-2)',
+              fontWeight: 700,
+            }}
+          >
+            {pill}
+          </span>
+        )}
+      </span>
+    </div>
+  )
+}
+
+/** One of the two peaks the review must never let be read as a sum. */
+function Peak({
+  label,
+  value,
+  testId,
+  decided = false,
+}: {
+  label: string
+  value: string
+  testId?: string
+  decided?: boolean
+}) {
+  return (
+    <div
+      data-peak-cell={decided ? 'approved' : 'prospective'}
+      className="flex flex-col gap-0.5 p-3.5"
+      style={{
+        flex: '1 1 160px',
+        minWidth: 0,
+        background: decided ? 'var(--primary-tint)' : 'var(--paper)',
+      }}
+    >
+      <span className="type-note" style={{ color: decided ? 'var(--primary-ink)' : 'var(--ink-3)' }}>
+        {label}
+      </span>
+      <span
+        data-testid={testId}
+        className="tabular type-figure"
+        style={decided ? { color: 'var(--primary-ink)' } : undefined}
+      >
+        {value}
+      </span>
     </div>
   )
 }
