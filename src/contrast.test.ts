@@ -10,43 +10,18 @@ import { code, offendingLines, sourceFiles } from './styles/design'
  * notes are `--ink-3` (4.8:1), and a tint is a named token rather than a
  * number somebody chose in the moment.
  *
- * PENDING is a ratchet, not an allowlist. Every screen commit deletes entries;
- * the test fails if a converted file regresses, and the list must reach [] by
- * the end of the redesign.
+ * This ran as a ratchet through the redesign, with a shrinking list of files
+ * still to convert. The list reached zero, so the rule now simply holds for
+ * every file — which is the point a ratchet is built to arrive at.
  */
 
 const OPACITY = /(^|[^\w-])(text|bg|border|fill|stroke|ring|divide|outline)-(deep|white|primary|accent|destructive|black|foreground|muted)\/[0-9]+/
 
-/**
- * One entry left, and it is dead code: `Placeholder.tsx` was the first
- * session's scaffold marker and nothing has imported it since. Restyling a file
- * no route renders would be theatre, and deleting it is a separate change from
- * a visual pass — so it stays listed, and the list stays honest.
- */
-const PENDING = new Set([
-  'src/app/Placeholder.tsx',
-])
-
-const files = sourceFiles('src', ['.ts', '.tsx'])
-
 describe('colour is a named token, never an opacity', () => {
-  test.each(files.filter((file) => !PENDING.has(file)))('%s', (file) => {
+  test.each(sourceFiles('src', ['.ts', '.tsx']))('%s', (file) => {
     expect(
       offendingLines(code(file), OPACITY),
       'use --ink-2 for secondary text, --ink-3 for notes, and the named tints — not an opacity',
     ).toEqual([])
-  })
-})
-
-describe('the ratchet only turns one way', () => {
-  test('every pending file still exists', () => {
-    for (const file of PENDING) {
-      expect(files, `${file} is listed as pending but is not a source file`).toContain(file)
-    }
-  })
-
-  test('a pending file that is already clean has been taken off the list', () => {
-    const clean = [...PENDING].filter((file) => !OPACITY.test(code(file)))
-    expect(clean, 'these files no longer use opacity colours — delete them from PENDING').toEqual([])
   })
 })
