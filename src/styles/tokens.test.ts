@@ -1,0 +1,116 @@
+import { describe, expect, test } from 'vitest'
+
+import { read } from './design'
+
+/**
+ * The redesign's token set, as delivered in `docs/design/tokens.css`, must
+ * actually reach `src/styles/globals.css`. Tailwind v4 is CSS-first: there is
+ * no config file, so this stylesheet is the whole design system and a token
+ * that never lands here is a token no screen can use.
+ */
+
+const DELIVERED = 'docs/design/tokens.css'
+const LIVE = 'src/styles/globals.css'
+
+function customProperties(source: string): string[] {
+  return [...source.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm)].map((match) => match[1])
+}
+
+describe('the delivered tokens reach globals.css', () => {
+  const delivered = read(DELIVERED)
+  const live = read(LIVE)
+
+  // `@theme inline` aliases are re-declared in the live file against the same
+  // names, so comparing the declared set is enough.
+  const names = [...new Set(customProperties(delivered))]
+
+  test('there are tokens to check', () => {
+    expect(names.length).toBeGreaterThan(20)
+  })
+
+  test.each(names)('%s is declared', (name) => {
+    expect(live).toContain(`${name}:`)
+  })
+
+  test('the ink scale replaces the opacity zoo', () => {
+    for (const [token, value] of [
+      ['--ink', '#0c1f5b'],
+      ['--ink-2', '#46547d'],
+      ['--ink-3', '#5d698b'],
+      ['--primary-ink', '#14548a'],
+      ['--green-ink', '#3f5410'],
+      ['--flag-ink', '#9e1b1b'],
+    ]) {
+      expect(live, `${token} must be ${value}`).toMatch(
+        new RegExp(`${token}\\s*:\\s*${value}`, 'i'),
+      )
+    }
+  })
+
+  test('hatching is one shared gradient, so provisional looks the same everywhere', () => {
+    expect(live).toMatch(/--hatch\s*:\s*repeating-linear-gradient\(\s*135deg/)
+  })
+
+  test('the four radii are named', () => {
+    for (const radius of [
+      '--radius-control',
+      '--radius-card',
+      '--radius-frame',
+      '--radius-pill',
+    ]) {
+      expect(live).toContain(`${radius}:`)
+    }
+  })
+
+  test('the brand block is untouched', () => {
+    for (const [token, value] of [
+      ['--primary', '#1d70b7'],
+      ['--accent', '#93c01f'],
+      ['--deep', '#0c1f5b'],
+      ['--surface', '#f5f3e5'],
+    ]) {
+      expect(live).toMatch(new RegExp(`${token}\\s*:\\s*${value}`, 'i'))
+    }
+  })
+})
+
+describe('the utilities the tests and screens depend on', () => {
+  const live = read(LIVE)
+
+  // `EnergyEstimatePanel.test.tsx` reads this class name off an element.
+  test('the tabular utility keeps its name', () => {
+    expect(live).toMatch(/\.tabular\s*\{[^}]*tabular-nums/)
+  })
+
+  test('the eight type steps are named', () => {
+    for (const step of [
+      'display',
+      'figure',
+      'title',
+      'section',
+      'body',
+      'body-strong',
+      'small',
+      'note',
+    ]) {
+      expect(live, `type step "${step}" is missing`).toContain(`.type-${step}`)
+    }
+  })
+
+  test('nothing in the type scale is below 12px', () => {
+    const sizes = [...live.matchAll(/font-size:\s*([0-9.]+)px/g)].map((m) => Number(m[1]))
+    expect(sizes.length).toBeGreaterThan(7)
+    expect(sizes.filter((size) => size < 12)).toEqual([])
+  })
+})
+
+describe('no dark palette is introduced', () => {
+  const live = read(LIVE)
+
+  // The `dark:` variant compiles so nothing breaks, but defining values for it
+  // would be a product decision nobody has made.
+  test('the dark variant defines no colours', () => {
+    expect(live).not.toMatch(/\.dark\s*\{/)
+    expect(live).not.toMatch(/prefers-color-scheme/)
+  })
+})
