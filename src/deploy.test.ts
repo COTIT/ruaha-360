@@ -48,3 +48,24 @@ describe('the static host is told how to build and how to route', () => {
     )
   })
 })
+
+/**
+ * The same rule again, in the one place a hand-dropped deploy can still see it.
+ *
+ * `netlify.toml` is read from the root of what is PUBLISHED. A site built from
+ * git publishes `dist/`, and the toml at the repository root is read before
+ * that build — fine. But dragging `dist/` onto Netlify publishes a folder the
+ * toml is not in, and the rewrite silently disappears with it: `/` works,
+ * `/login` is a 404, and nothing explains why.
+ *
+ * `public/` is copied verbatim into `dist/`, so `_redirects` travels with the
+ * bundle however it gets there. Two files saying the same thing is the point.
+ */
+describe('the SPA fallback survives a hand-dropped deploy', () => {
+  const REDIRECTS = 'public/_redirects'
+
+  test('public/_redirects carries the same rewrite', () => {
+    expect(existsSync(REDIRECTS), `${REDIRECTS} is missing`).toBe(true)
+    expect(readFileSync(REDIRECTS, 'utf8')).toMatch(/^\/\*\s+\/index\.html\s+200\b/m)
+  })
+})
