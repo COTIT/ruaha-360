@@ -5,6 +5,7 @@ import { activeMemberships, roleHome } from '@/app/membership'
 import { useScopeNames } from '@/app/scope'
 import { useSession } from '@/app/session'
 import { EmptyState } from '@/components/EmptyState'
+import { Loading } from '@/components/controls'
 import { ErrorState } from '@/components/ErrorState'
 
 /**
@@ -22,11 +23,7 @@ export function SelectRoleScreen() {
 
   // Wait for the names too, so rows do not appear and then relabel themselves.
   if (session.isLoading || scope.isLoading || !session.data || !scope.data) {
-    return (
-      <p data-testid="select-role-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
-    )
+    return <Loading testId="select-role-loading" />
   }
 
   const memberships = activeMemberships(session.data.memberships)
@@ -39,11 +36,15 @@ export function SelectRoleScreen() {
   }
 
   return (
-    <section className="mx-auto max-w-md space-y-3" data-testid="select-role">
-      <h1 className="text-lg font-semibold">{t('selectRole.title')}</h1>
-      <p className="text-sm text-deep/70">{t('selectRole.detail')}</p>
+    <section className="mx-auto flex w-full max-w-md flex-col gap-3.5" data-testid="select-role">
+      <div className="flex flex-col gap-1">
+        <h1 className="type-screen-title">{t('selectRole.title')}</h1>
+        <p style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--ink-2)', textWrap: 'pretty' }}>
+          {t('selectRole.detail')}
+        </p>
+      </div>
 
-      <ul className="space-y-2">
+      <ul className="flex flex-col gap-2.5">
         {memberships.map((m) => {
           const project = scope.data.projects[m.project_id] ?? m.project_id
           // village_id NULL is whole-project scope, which is ops and admin.
@@ -57,12 +58,21 @@ export function SelectRoleScreen() {
               <button
                 type="button"
                 data-testid={`select-role-${m.role}`}
-                className="w-full rounded border border-deep/20 bg-white px-3 py-2 text-left text-sm"
+                className="flex w-full flex-col justify-center gap-1 px-4 py-3 text-left hover:bg-primary-tint"
+                style={{
+                  minHeight: 64,
+                  border: '1.5px solid var(--rule-2)',
+                  borderRadius: 'var(--radius-control)',
+                  background: 'var(--paper)',
+                  color: 'var(--ink)',
+                  fontFamily: 'inherit',
+                }}
                 onClick={() => void navigate({ to: roleHome(m.role), replace: true })}
               >
-                <span className="block font-medium">{t(`role.${m.role}`)}</span>
-                <span className="block text-xs text-deep/60">{project}</span>
-                <span className="block text-xs text-deep/60">{village}</span>
+                <span style={{ fontSize: 16, fontWeight: 600 }}>{t(`role.${m.role}`)}</span>
+                <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                  {project} · {village}
+                </span>
               </button>
             </li>
           )

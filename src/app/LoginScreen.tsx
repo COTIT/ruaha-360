@@ -4,6 +4,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
+
+import { BrandLockup } from '@/app/BrandLockup'
+import { CONTROL_FIELD } from '@/components/controlStyles'
+import { BangMark } from '@/components/marks'
 import { z } from 'zod'
 
 import { resolveLanding, safeRedirect } from '@/app/membership'
@@ -96,12 +100,15 @@ export function LoginScreen() {
   const passwordError = fieldError('password')
 
   return (
-    <section className="mx-auto max-w-sm space-y-4">
-      <h1 className="text-lg font-semibold">{t('login.title')}</h1>
+    <section className="mx-auto flex w-full max-w-sm flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <BrandLockup height={34} />
+        <h1 className="type-screen-title">{t('login.title')}</h1>
+      </div>
 
-      <form className="space-y-3" onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div className="space-y-1">
-          <label className="block text-sm font-medium" htmlFor="login-email">
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <div className="flex flex-col gap-1.5">
+          <label className="block" htmlFor="login-email" style={LABEL}>
             {t('login.email')}
           </label>
           <input
@@ -111,18 +118,24 @@ export function LoginScreen() {
             autoComplete="email"
             aria-invalid={emailError ? true : undefined}
             aria-describedby={emailError ? 'login-email-error' : undefined}
-            className="w-full rounded border border-deep/20 bg-white px-3 py-2 aria-[invalid]:border-destructive"
+            style={emailError ? INVALID_FIELD : CONTROL_FIELD}
             {...register('email')}
           />
           {emailError && (
-            <p id="login-email-error" data-testid="login-email-error" className="text-sm text-destructive">
+            <p
+              id="login-email-error"
+              data-testid="login-email-error"
+              className="flex items-start gap-[7px] font-medium"
+              style={FIELD_ERROR}
+            >
+              <BangMark />
               {emailError}
             </p>
           )}
         </div>
 
-        <div className="space-y-1">
-          <label className="block text-sm font-medium" htmlFor="login-password">
+        <div className="flex flex-col gap-1.5">
+          <label className="block" htmlFor="login-password" style={LABEL}>
             {t('login.password')}
           </label>
           <input
@@ -132,15 +145,17 @@ export function LoginScreen() {
             autoComplete="current-password"
             aria-invalid={passwordError ? true : undefined}
             aria-describedby={passwordError ? 'login-password-error' : undefined}
-            className="w-full rounded border border-deep/20 bg-white px-3 py-2 aria-[invalid]:border-destructive"
+            style={passwordError ? INVALID_FIELD : CONTROL_FIELD}
             {...register('password')}
           />
           {passwordError && (
             <p
               id="login-password-error"
               data-testid="login-password-error"
-              className="text-sm text-destructive"
+              className="flex items-start gap-[7px] font-medium"
+              style={FIELD_ERROR}
             >
+              <BangMark />
               {passwordError}
             </p>
           )}
@@ -150,8 +165,19 @@ export function LoginScreen() {
           <p
             data-testid="login-error"
             role="alert"
-            className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+            className="flex items-start gap-2 px-3.5 py-3"
+            style={{
+              border: '1px solid rgba(158, 27, 27, .25)',
+              borderLeft: '4px solid var(--flag-ink)',
+              borderRadius: 'var(--radius-card)',
+              background: 'var(--flag-tint)',
+              fontSize: 14,
+              lineHeight: 1.55,
+              color: 'var(--ink)',
+              textWrap: 'pretty',
+            }}
           >
+            <BangMark size={18} />
             {formError}
           </p>
         )}
@@ -160,7 +186,17 @@ export function LoginScreen() {
           type="submit"
           data-testid="login-submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-primary px-3 py-2 font-medium text-primary-foreground disabled:opacity-60"
+          className="w-full font-semibold disabled:opacity-60"
+          style={{
+            minHeight: 48,
+            border: 0,
+            borderRadius: 'var(--radius-control)',
+            background: 'var(--primary)',
+            color: '#fff',
+            fontSize: 16,
+            fontFamily: 'inherit',
+            textWrap: 'balance',
+          }}
         >
           {isSubmitting ? t('login.submitting') : t('login.submit')}
         </button>
@@ -168,3 +204,9 @@ export function LoginScreen() {
     </section>
   )
 }
+
+const LABEL = { fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' } as const
+
+const INVALID_FIELD = { ...CONTROL_FIELD, border: '1.5px solid var(--flag-ink)' }
+
+const FIELD_ERROR = { fontSize: 13, color: 'var(--flag-ink)', textWrap: 'pretty' } as const

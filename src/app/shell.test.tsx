@@ -1,6 +1,6 @@
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
 
 import { routeTree } from '@/routeTree.gen'
@@ -28,8 +28,10 @@ function renderAt(path: string) {
 // accessible name, or the header would read as a decoration to a screen reader.
 test('the shell mounts and renders the brand lockup', async () => {
   renderAt('/login')
-  expect(await screen.findByAltText('Ruaha Energy')).toBeInTheDocument()
-  expect(screen.getByText('360')).toBeInTheDocument()
+  // Scoped to the header: the login card carries a lockup of its own, at 34px.
+  const header = await screen.findByRole('banner')
+  expect(within(header).getByAltText('Ruaha Energy')).toBeInTheDocument()
+  expect(within(header).getByText('360')).toBeInTheDocument()
 })
 
 test('an unauthenticated visit to a guarded surface lands on /login', async () => {

@@ -18,10 +18,7 @@ import { code, offendingLines, sourceFiles } from './styles/design'
 const OPACITY = /(^|[^\w-])(text|bg|border|fill|stroke|ring|divide|outline)-(deep|white|primary|accent|destructive|black|foreground|muted)\/[0-9]+/
 
 const PENDING = new Set([
-  'src/app/LoginScreen.tsx',
-  'src/app/NoAccessScreen.tsx',
   'src/app/Placeholder.tsx',
-  'src/app/SelectRoleScreen.tsx',
   'src/features/officer/OfficerHomeScreen.tsx',
   'src/features/officer/OfficerRecordScreens.tsx',
   'src/features/officer/PersonDetailScreen.tsx',

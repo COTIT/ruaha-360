@@ -48,7 +48,9 @@
   "noAccess": {
     "title": "No access yet",
     "detail": "Your account is not attached to a project yet. Ask your programme manager to add you.",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "nothingTitle": "Nothing to show yet",
+    "nothingDetail": "This is a real screen with a next step — never a blank page, and never an error."
   },
   "role": {
     "farmer": "Farmer",
