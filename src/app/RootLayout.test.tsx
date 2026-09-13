@@ -114,3 +114,37 @@ describe('RootLayout signed-in state', () => {
     expect(screen.getByTestId('nav-sidebar')).toBeInTheDocument()
   })
 })
+
+/**
+ * The bottom tab bar is fixed to the viewport, so `main` has to end above it.
+ *
+ * This broke once already and took the register form's only submit button with
+ * it: a `lg:` padding shorthand added for the ops surface beat `pb-20` at a
+ * desktop width, and the 60px bar sat on top of the button. Nothing in the
+ * suite noticed until Playwright spent thirty seconds trying to click through
+ * a navigation link.
+ */
+describe('the tab bar never covers the last control', () => {
+  test('a field surface pads the content clear of the bar', () => {
+    useSession.mockReturnValue({ data: { appUser: { display_name: 'Salima' }, memberships: [m('field_officer')] } })
+    pathname.mockReturnValue('/officer/register')
+    renderLayout()
+
+    const main = screen.getByTestId('outlet').closest('main')!
+    expect(main.className).toMatch(/\bpb-2[4-9]\b/)
+    expect(
+      main.className,
+      'a padding shorthand at any breakpoint would beat the bottom padding',
+    ).not.toMatch(/lg:p-/)
+  })
+
+  test('the ops surface has no bar, and gets its own desktop padding', () => {
+    useSession.mockReturnValue({ data: { appUser: { display_name: 'Asha' }, memberships: [m('ops')] } })
+    pathname.mockReturnValue('/ops/tower')
+    renderLayout()
+
+    const main = screen.getByTestId('outlet').closest('main')!
+    expect(main.className).toMatch(/lg:p-/)
+    expect(screen.queryByTestId('nav-tabs')).not.toBeInTheDocument()
+  })
+})

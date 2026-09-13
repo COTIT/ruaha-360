@@ -161,12 +161,19 @@ export function TowerProductionScreen() {
                   data-testid="production-row"
                   style={{ borderTop: '1px solid var(--rule)' }}
                 >
-                  <td data-testid="production-cycle" className="px-3.5 py-3">
+                  <td className="px-3.5 py-3">
                     <span className="flex flex-col gap-0.5">
-                      {/* Ends in a link to an actual row: this crop cycle. */}
-                      <DrillLink kind="cycle" id={row.id}>
-                        {row.crop_name}
-                      </DrillLink>
+                      {/*
+                        The testid sits on the cycle link alone, not on the cell:
+                        the farmer's name is a second drill in the same cell now,
+                        and `production-cycle` has always meant the way to the
+                        crop cycle rather than the way to anything in that column.
+                      */}
+                      <span data-testid="production-cycle">
+                        <DrillLink kind="cycle" id={row.id}>
+                          {row.crop_name}
+                        </DrillLink>
+                      </span>
                       <span className="type-note" style={{ color: 'var(--ink-2)' }}>
                         <DrillLink kind="person" id={row.person_id}>
                           {row.farmer ?? '—'}

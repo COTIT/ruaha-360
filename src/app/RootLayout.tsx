@@ -73,8 +73,16 @@ export function RootLayout() {
       <div className="flex flex-1 flex-col lg:flex-row">
         {layout === 'sidebar' && <SurfaceNav layout={layout} items={items} />}
 
-        {/* Bottom padding keeps the tab bar clear of the last row of content. */}
-        <main id="main" className={`flex-1 p-4 lg:p-[22px] ${layout === 'tabs' ? 'pb-20' : ''}`}>
+        {/*
+          Bottom padding keeps the tab bar clear of the last row of content.
+          The desktop padding is applied only where there IS no tab bar: a `lg:`
+          variant beats `pb-20`, which at a desktop width left the 60px bar
+          sitting on top of the register form's only submit button.
+        */}
+        <main
+          id="main"
+          className={layout === 'tabs' ? 'flex-1 p-4 pb-24' : 'flex-1 p-4 lg:p-[22px]'}
+        >
           <Outlet />
         </main>
       </div>
