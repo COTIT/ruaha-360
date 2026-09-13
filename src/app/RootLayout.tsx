@@ -1,5 +1,7 @@
 import { Link, Outlet, useLocation } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
+import { BrandLockup } from '@/app/BrandLockup'
 import { DemoBanner } from '@/app/DemoBanner'
 import { LanguageSwitch } from '@/app/LanguageSwitch'
 import { SignOutButton } from '@/app/SignOutButton'
@@ -15,10 +17,16 @@ import { useSession } from '@/app/session'
  * mobile-first; ops gets a sidebar and is desktop-first. The layout follows the
  * CURRENT surface rather than the role set, because a user may hold several
  * roles and the active one lives in the URL.
+ *
+ * The header carries the supplied Ruaha Energy lockup — 26px on ops, 23px on a
+ * field surface, where the header has less room and more thumb — followed by a
+ * hairline divider and `360`. A skip link precedes everything: the ops sidebar
+ * is six destinations to tab past otherwise.
  */
 export function RootLayout() {
   const { data: session } = useSession()
   const { pathname } = useLocation()
+  const { t } = useTranslation()
 
   const memberships = activeMemberships(session?.memberships ?? [])
   // The surface whose nav to show — not always the surface of the path. An ops
@@ -29,18 +37,29 @@ export function RootLayout() {
   const signedIn = Boolean(session)
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface font-sans text-deep">
+    <div className="flex min-h-dvh flex-col bg-sand font-sans text-ink">
+      <a
+        href="#main"
+        className="sr-only rounded-[var(--radius-control)] bg-paper px-4 py-2 font-medium text-primary-ink focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50"
+        style={{ border: '1.5px solid var(--primary)' }}
+      >
+        {t('a11y.skipToContent')}
+      </a>
+
       {/* Always visible, driven by VITE_DATA_MODE and never by a column. */}
       <DemoBanner />
 
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-deep/10 bg-white px-4 py-3">
-        <Link to="/" className="font-semibold text-primary">
-          Ruaha 360
+      <header
+        className="flex flex-wrap items-center justify-between gap-3.5 px-4 py-3 lg:px-[18px]"
+        style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}
+      >
+        <Link to="/">
+          <BrandLockup height={layout === 'tabs' ? 23 : 26} />
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {session?.appUser && (
-            <span className="text-sm text-deep/70" data-testid="current-user">
+            <span data-testid="current-user" style={{ fontSize: 14, color: 'var(--ink-2)' }}>
               {session.appUser.display_name}
             </span>
           )}
@@ -55,7 +74,7 @@ export function RootLayout() {
         {layout === 'sidebar' && <SurfaceNav layout={layout} items={items} />}
 
         {/* Bottom padding keeps the tab bar clear of the last row of content. */}
-        <main className={`flex-1 p-4 ${layout === 'tabs' ? 'pb-20' : ''}`}>
+        <main id="main" className={`flex-1 p-4 lg:p-[22px] ${layout === 'tabs' ? 'pb-20' : ''}`}>
           <Outlet />
         </main>
       </div>

@@ -95,7 +95,16 @@ export function LanguageSwitch() {
         <span className="sr-only">{t('a11y.language')}</span>
         <select
           data-testid="language-switch"
-          className="rounded border border-deep/20 bg-white px-2 py-1 disabled:opacity-60"
+          className="px-2.5 py-1.5 disabled:opacity-60"
+          style={{
+            minHeight: 40,
+            fontSize: 14,
+            fontFamily: 'inherit',
+            border: '1.5px solid var(--rule-2)',
+            borderRadius: 'var(--radius-control)',
+            background: 'var(--paper)',
+            color: 'var(--ink)',
+          }}
           value={i18n.resolvedLanguage}
           disabled={persist.isPending}
           onChange={(e) => void onChange(e.target.value)}
@@ -109,7 +118,12 @@ export function LanguageSwitch() {
       </label>
 
       {failureMessage && (
-        <p data-testid="language-error" role="alert" className="text-xs text-destructive">
+        <p
+          data-testid="language-error"
+          role="alert"
+          className="type-note"
+          style={{ color: 'var(--flag-ink)' }}
+        >
           {t('language.notSaved')} {failureMessage}
         </p>
       )}

@@ -1,3 +1,19 @@
+import type { ComponentType } from 'react'
+import {
+  BookOpen,
+  Briefcase,
+  CircleCheckBig,
+  FileText,
+  Gauge,
+  Handshake,
+  MapPin,
+  Package,
+  Sprout,
+  UserPlus,
+  Users,
+  Wrench,
+  ClipboardList,
+} from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -7,8 +23,29 @@ import type { NavItem, NavLayout } from '@/app/nav'
 // `to` is a typed union, and this is the single place the two meet.
 type LinkTo = Parameters<typeof Link>[0]['to']
 
-const linkClass =
-  'text-deep/70 underline-offset-4 hover:underline data-[status=active]:font-medium data-[status=active]:text-primary'
+/**
+ * Icon plus label, never icon alone. The label carries the meaning for a
+ * first-time user and survives translation into a language none of these
+ * glyphs were drawn for; the icon carries recognition on the tenth visit.
+ *
+ * Every one of them is `aria-hidden`: the label is already the accessible
+ * name, and a second one would only be read twice.
+ */
+const ICON: Record<string, ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  '/farm/my-farm': Sprout,
+  '/farm/equipment': Wrench,
+  '/farm/requests': FileText,
+  '/farm/opportunities': Handshake,
+  '/officer/register': UserPlus,
+  '/officer/people': Users,
+  '/officer/verify': CircleCheckBig,
+  '/ops/requests': ClipboardList,
+  '/ops/demand': Package,
+  '/ops/catalogue': BookOpen,
+  '/ops/buyers': Briefcase,
+  '/ops/villages': MapPin,
+  '/ops/tower': Gauge,
+}
 
 /**
  * Spec 4.1: farmer and officer get a bottom tab bar (mobile-first), ops gets a
@@ -21,6 +58,10 @@ const linkClass =
  * thing as desktop-first, so the sidebar becomes a horizontal strip there
  * instead of disappearing: collapsing is not hiding, and every destination
  * stays reachable.
+ *
+ * Touch targets are `min-height`, never `height`: 44px on ops, 60px on a field
+ * surface, and a Kiswahili label that runs 30% longer has to be allowed to
+ * wrap rather than be clipped.
  */
 export function SurfaceNav({ layout, items }: { layout: NavLayout; items: NavItem[] }) {
   const { t } = useTranslation()
@@ -31,17 +72,13 @@ export function SurfaceNav({ layout, items }: { layout: NavLayout; items: NavIte
       <nav
         aria-label={t('a11y.primaryNav')}
         data-testid="nav-sidebar"
-        className="w-full shrink-0 border-b border-deep/10 bg-white p-3 lg:w-52 lg:border-b-0 lg:border-r"
+        className="w-full shrink-0 p-3 lg:w-[216px] lg:border-b-0 lg:border-r"
+        style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}
       >
-        <ul className="flex gap-1 overflow-x-auto lg:block lg:space-y-1 lg:overflow-visible">
+        <ul className="flex gap-1 overflow-x-auto lg:block lg:space-y-0.5 lg:overflow-visible">
           {items.map((item) => (
             <li key={item.to} className="shrink-0">
-              <Link
-                to={item.to as LinkTo}
-                className={`block rounded px-2 py-1.5 text-sm ${linkClass}`}
-              >
-                {t(item.labelKey)}
-              </Link>
+              <SurfaceLink item={item} layout="sidebar" label={t(item.labelKey)} />
             </li>
           ))}
         </ul>
@@ -53,20 +90,47 @@ export function SurfaceNav({ layout, items }: { layout: NavLayout; items: NavIte
     <nav
       aria-label={t('a11y.primaryNav')}
       data-testid="nav-tabs"
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-deep/10 bg-white pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 z-10 pb-[env(safe-area-inset-bottom)]"
+      style={{ background: 'var(--paper)', borderTop: '1px solid var(--rule-2)' }}
     >
       <ul className="flex">
         {items.map((item) => (
           <li key={item.to} className="flex-1">
-            <Link
-              to={item.to as LinkTo}
-              className={`block px-1 py-2.5 text-center text-xs ${linkClass}`}
-            >
-              {t(item.labelKey)}
-            </Link>
+            <SurfaceLink item={item} layout="tabs" label={t(item.labelKey)} />
           </li>
         ))}
       </ul>
     </nav>
+  )
+}
+
+function SurfaceLink({
+  item,
+  layout,
+  label,
+}: {
+  item: NavItem
+  layout: 'sidebar' | 'tabs'
+  label: string
+}) {
+  const Icon = ICON[item.to]
+  const sidebar = layout === 'sidebar'
+
+  return (
+    <Link
+      to={item.to as LinkTo}
+      // The active treatment is a tinted ground plus a rule — a border, not the
+      // inset box-shadow the design file draws it with, because nothing in this
+      // build composites a shadow layer.
+      className={
+        sidebar
+          ? 'flex items-center gap-[11px] rounded-[var(--radius-control)] px-3 py-2.5 text-ink-2 hover:bg-sand-2 data-[status=active]:border-l-[3px] data-[status=active]:border-l-primary data-[status=active]:bg-primary-tint data-[status=active]:pl-[9px] data-[status=active]:font-semibold data-[status=active]:text-primary-ink'
+          : 'flex flex-col items-center justify-center gap-[5px] px-1 py-2 text-center text-ink-2 data-[status=active]:border-t-2 data-[status=active]:border-t-primary data-[status=active]:font-semibold data-[status=active]:text-primary-ink'
+      }
+      style={sidebar ? { minHeight: 44, fontSize: 15 } : { minHeight: 60, fontSize: 12 }}
+    >
+      {Icon && <Icon aria-hidden size={sidebar ? 18 : 22} strokeWidth={2} />}
+      {label}
+    </Link>
   )
 }

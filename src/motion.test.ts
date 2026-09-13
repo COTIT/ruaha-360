@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { offendingLines, read, sourceFiles } from './styles/design'
+import { code, offendingLines, read, sourceFiles } from './styles/design'
 
 /**
  * Nothing animates and nothing transitions. This is a field constraint, not a
@@ -26,7 +26,7 @@ describe('nothing in src animates', () => {
   })
 
   test.each(files)('%s', (file) => {
-    const source = read(file)
+    const source = code(file)
     const offenders = MOTION.flatMap((pattern) => offendingLines(source, pattern))
 
     expect(

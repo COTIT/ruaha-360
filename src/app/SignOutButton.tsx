@@ -38,15 +38,30 @@ export function SignOutButton({ className }: { className?: string }) {
         data-testid="sign-out"
         disabled={pending}
         onClick={() => void onClick()}
-        className={
-          className ??
-          'rounded border border-deep/20 px-2 py-1 text-sm disabled:opacity-60'
+        className={className ?? 'px-3.5 py-2 font-medium disabled:opacity-60'}
+        style={
+          className
+            ? undefined
+            : {
+                minHeight: 40,
+                fontSize: 14,
+                fontFamily: 'inherit',
+                border: '1.5px solid var(--rule-2)',
+                borderRadius: 'var(--radius-control)',
+                background: 'var(--paper)',
+                color: 'var(--ink)',
+              }
         }
       >
         {pending ? t('nav.signingOut') : t('nav.signOut')}
       </button>
       {error && (
-        <p data-testid="sign-out-error" role="alert" className="text-xs text-destructive">
+        <p
+          data-testid="sign-out-error"
+          role="alert"
+          className="type-note"
+          style={{ color: 'var(--flag-ink)' }}
+        >
           {error}
         </p>
       )}

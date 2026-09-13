@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { offendingLines, read, sourceFiles } from './styles/design'
+import { code, offendingLines, sourceFiles } from './styles/design'
 
 /**
  * `text-deep/60` on the sand ground measures 4.17:1 and was used for every
@@ -18,14 +18,10 @@ import { offendingLines, read, sourceFiles } from './styles/design'
 const OPACITY = /(^|[^\w-])(text|bg|border|fill|stroke|ring|divide|outline)-(deep|white|primary|accent|destructive|black|foreground|muted)\/[0-9]+/
 
 const PENDING = new Set([
-  'src/app/LanguageSwitch.tsx',
   'src/app/LoginScreen.tsx',
   'src/app/NoAccessScreen.tsx',
   'src/app/Placeholder.tsx',
-  'src/app/RootLayout.tsx',
   'src/app/SelectRoleScreen.tsx',
-  'src/app/SignOutButton.tsx',
-  'src/app/SurfaceNav.tsx',
   'src/features/farmer/EquipmentDetailScreen.tsx',
   'src/features/farmer/EquipmentListScreen.tsx',
   'src/features/farmer/FarmHomeScreen.tsx',
@@ -59,7 +55,7 @@ const files = sourceFiles('src', ['.ts', '.tsx'])
 describe('colour is a named token, never an opacity', () => {
   test.each(files.filter((file) => !PENDING.has(file)))('%s', (file) => {
     expect(
-      offendingLines(read(file), OPACITY),
+      offendingLines(code(file), OPACITY),
       'use --ink-2 for secondary text, --ink-3 for notes, and the named tints — not an opacity',
     ).toEqual([])
   })
@@ -73,7 +69,7 @@ describe('the ratchet only turns one way', () => {
   })
 
   test('a pending file that is already clean has been taken off the list', () => {
-    const clean = [...PENDING].filter((file) => !OPACITY.test(read(file)))
+    const clean = [...PENDING].filter((file) => !OPACITY.test(code(file)))
     expect(clean, 'these files no longer use opacity colours — delete them from PENDING').toEqual([])
   })
 })

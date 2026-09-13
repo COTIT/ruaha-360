@@ -58,6 +58,7 @@
   },
   "a11y": {
     "primaryNav": "Primary navigation",
+    "skipToContent": "Skip to content",
     "language": "Language"
   },
   "error": {

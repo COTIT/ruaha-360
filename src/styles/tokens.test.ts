@@ -97,10 +97,24 @@ describe('the utilities the tests and screens depend on', () => {
     }
   })
 
-  test('nothing in the type scale is below 12px', () => {
-    const sizes = [...live.matchAll(/font-size:\s*([0-9.]+)px/g)].map((m) => Number(m[1]))
-    expect(sizes.length).toBeGreaterThan(7)
-    expect(sizes.filter((size) => size < 12)).toEqual([])
+  /**
+   * 12px is the floor for everything a user reads for meaning. Two uppercase
+   * micro-labels sit below it because the design file puts them there and the
+   * implementation prompt says the design file wins where it and the prose
+   * disagree — and this is where that exemption is allowed to live. Two, no
+   * more: a third would mean the floor had stopped being a rule.
+   */
+  test('nothing in the type scale is below 12px, bar the two micro-labels', () => {
+    const steps = [...live.matchAll(/\.(type-[a-z-]+)\s*\{([^}]*)\}/g)].map((match) => ({
+      name: match[1],
+      size: Number(/font-size:\s*([0-9.]+)px/.exec(match[2])?.[1] ?? Number.NaN),
+    }))
+
+    expect(steps.length).toBeGreaterThan(7)
+    expect(steps.filter((step) => step.size < 12).map((step) => step.name)).toEqual([
+      'type-column-label',
+      'type-microlabel',
+    ])
   })
 })
 

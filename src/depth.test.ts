@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { offendingLines, read, sourceFiles } from './styles/design'
+import { code, offendingLines, sourceFiles } from './styles/design'
 
 /**
  * Depth is borders and white-on-sand contrast. No shadow, no filter, no blur —
@@ -20,7 +20,7 @@ describe('depth is borders, not shadows', () => {
   const files = sourceFiles('src')
 
   test.each(files)('%s', (file) => {
-    const source = read(file)
+    const source = code(file)
     const offenders = DEPTH.flatMap((pattern) => offendingLines(source, pattern))
 
     expect(
@@ -34,7 +34,7 @@ describe('no images beyond the brand mark', () => {
   const files = sourceFiles('src', ['.ts', '.tsx'])
 
   test.each(files)('%s', (file) => {
-    const source = read(file)
+    const source = code(file)
     const images = offendingLines(source, /\.(png|jpe?g|gif|webp|avif)\b/i)
 
     expect(images, 'icons are inline lucide components; marks and meters are CSS').toEqual([])

@@ -291,4 +291,34 @@
     line-height: 17px;
     font-weight: 400;
   }
+
+  /* ── below the floor, deliberately, and only here ────────────────────────
+     The handoff contradicts itself: its prose says nothing below 12px ships,
+     its design file sets column labels at 11px and tag pills at 10px, and the
+     implementation prompt says that where the two disagree the design file
+     wins. So these two steps exist — and they are the ONLY two. Both are
+     uppercase micro-labels: a word naming a column or tagging a card, read
+     once on arrival by someone already oriented, never a sentence and never a
+     figure. Everything a user reads for meaning is 12px or larger.
+
+     If the designer confirms the 12px floor was meant to apply here too, this
+     is the one place to change it. */
+
+  /* Column headers in a DataTable. */
+  .type-column-label {
+    font-size: 11px;
+    line-height: 15px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ESTIMATE, DEMO DATA, and the verify count — a tag, not a label. */
+  .type-microlabel {
+    font-size: 10px;
+    line-height: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
 }

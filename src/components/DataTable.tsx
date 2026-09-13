@@ -111,8 +111,12 @@ export function DataTable<T>({
                     aria-sort={
                       sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'
                     }
-                    className={numeric ? 'px-4 py-[11px] text-right' : 'px-4 py-[11px]'}
-                    style={HEAD_CELL}
+                    className={
+                      numeric
+                        ? 'type-column-label px-4 py-[11px] text-right'
+                        : 'type-column-label px-4 py-[11px]'
+                    }
+                    style={{ color: 'var(--ink-3)' }}
                   >
                     {header.column.getCanSort() ? (
                       <button
@@ -177,13 +181,3 @@ export function DataTable<T>({
     </div>
   )
 }
-
-/** 11px uppercase, quiet, on the sunken head row. */
-const HEAD_CELL = {
-  fontSize: 11,
-  lineHeight: '15px',
-  fontWeight: 600,
-  letterSpacing: '.08em',
-  textTransform: 'uppercase',
-  color: 'var(--ink-3)',
-} as const

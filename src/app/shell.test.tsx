@@ -22,9 +22,14 @@ function renderAt(path: string) {
   return router
 }
 
-test('the shell mounts and renders the wordmark', async () => {
+// The text wordmark became the supplied lockup plus `360` after a hairline
+// divider. Ruaha 360 is a programme surface, not a second brand, so the two
+// halves are deliberately separate elements — and the brand half has to keep an
+// accessible name, or the header would read as a decoration to a screen reader.
+test('the shell mounts and renders the brand lockup', async () => {
   renderAt('/login')
-  expect(await screen.findByText('Ruaha 360')).toBeInTheDocument()
+  expect(await screen.findByAltText('Ruaha Energy')).toBeInTheDocument()
+  expect(screen.getByText('360')).toBeInTheDocument()
 })
 
 test('an unauthenticated visit to a guarded surface lands on /login', async () => {
