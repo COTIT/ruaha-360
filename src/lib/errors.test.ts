@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { humanizeDbError } from '@/lib/errors'
+import { humanizeDbError, isTransientError } from '@/lib/errors'
 
 const key = (error: unknown) => {
   const result = humanizeDbError(error)
@@ -193,5 +193,62 @@ describe('nothing at all', () => {
       'VERBATIM:over-commitment: 1 kg available',
     )
     expect(key({ code: '23514' })).toBe('error.unexpected')
+  })
+})
+
+/**
+ * QA #33. Signing in occasionally left the user on the login form reporting
+ * `JWT issued at future`: the password was accepted, and the FIRST request
+ * carrying the fresh token was rejected because GoTrue minted it a fraction
+ * ahead of the validator's clock. A second later the same token is fine.
+ *
+ * This is the one failure worth retrying automatically. The user typed a
+ * correct password, the server agreed, and then a read failed for a reason
+ * they can do nothing about — and the app strands them on a form as though
+ * they had got something wrong.
+ *
+ * It is NOT a licence to retry generally. CLAUDE.md: zero rows is an answer,
+ * render an empty state, never retry. Zero rows is a SUCCESS and never reaches
+ * this function; what reaches it is a thrown error, and almost all of those are
+ * permanent.
+ */
+describe('isTransientError', () => {
+  test.each([
+    'JWT issued at future',
+    'JWT expired',
+    'Failed to fetch',
+    'NetworkError when attempting to fetch resource.',
+    'Load failed',
+  ])('%s is worth trying again', (message) => {
+    expect(isTransientError(new Error(message))).toBe(true)
+  })
+
+  // Everything the database decided. Trying again produces the same answer and
+  // delays the message the user needs.
+  test.each([
+    'new row violates row-level security policy for table "person"',
+    'over-commitment: 4100.00 kg available, 4100.00 kg already committed, 100.00 kg requested',
+    'illegal transition draft -> approved',
+    'this crop is measured by area: area_ha is required',
+    'new row for relation "pue_request" violates check constraint "pue_request_hours_per_day_check"',
+    'invalid input syntax for type uuid: "nope"',
+  ])('%s is not', (message) => {
+    expect(isTransientError(new Error(message))).toBe(false)
+  })
+
+  // The app's own guard against a read that did not run as the user. Retrying
+  // it would spin on a condition that needs a person.
+  test('a refused account read is not transient', () => {
+    expect(isTransientError(new Error('Your account could not be read. Try again.'))).toBe(false)
+  })
+
+  test('nothing at all is not transient', () => {
+    expect(isTransientError(null)).toBe(false)
+    expect(isTransientError(undefined)).toBe(false)
+  })
+
+  // A wrong password must fail immediately and say so.
+  test('bad credentials are not transient', () => {
+    expect(isTransientError(new Error('Invalid login credentials'))).toBe(false)
   })
 })

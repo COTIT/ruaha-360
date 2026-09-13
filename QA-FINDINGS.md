@@ -1390,16 +1390,45 @@ wrong wording satisfies.
 
 ---
 
-## 33 · `JWT issued at future` on a cold sign-in — low
+## 33 · `JWT issued at future` on a cold sign-in — medium
 
 The first sign-in of the walkthrough failed with `JWT issued at future`,
 surfaced verbatim on the login form, and succeeded on an immediate retry. Local
 and database clocks agree to the second, so this is sub-second skew between
-this machine and GoTrue at token issue.
+GoTrue, which mints the token, and the service that validates it.
 
-The app's behaviour is correct — the read failed and said so rather than
-leaving the user staring at a form. Worth knowing before a demo: **sign in once
-before the stakeholders are watching.** A retry clears it.
+**Fixed 13 September 2026 — and it was the same bug as the e2e flake.**
 
-Possibly the same underlying cause as the first-test-of-a-run flake recorded
-under #30, which the 10s expect timeout now absorbs.
+The first test of a run had been failing `toHaveURL` while sitting on `/login`,
+roughly once per full run, passing on retry. It was recorded as a cold-start
+cost and given a longer timeout. That was wrong, and two measurements say so:
+
+```
+cold first page load   1,386ms      warm  325ms
+sign-in, end to end    750–1,615ms  over six consecutive attempts
+```
+
+Neither is within reach of a ten-second timeout. What actually happens is that
+the password is accepted and the FIRST request carrying the fresh token is
+rejected for clock skew — so the app reports the failure, correctly, and never
+navigates. The test then waits out its timeout on the login form. Exactly the
+symptom, and exactly what the walkthrough hit by hand.
+
+**The fix is a retry on the session query alone.** It is the worst-placed
+failure in the app: it runs immediately after a correct password and strands
+the user on a form having just proved who they are, for a reason they can do
+nothing about. Twice, not forever, and only for the two conditions
+`isTransientError` recognises — the connection, and JWT timing.
+
+Everything else still fails at once. A policy, a constraint, a guard, an
+account that cannot be read: repeating those repeats the answer and delays the
+message.
+
+**Note on the rule this appears to bend.** CLAUDE.md says "Zero rows is an
+answer … never retry, never escalate." That is about an EMPTY RESULT, which is
+a success — it never reaches a retry policy, and none has ever applied to it.
+`retry: false` stays the default for every other query in the app.
+
+**A warm-up was written for this and then deleted.** It compiled the app in
+`globalSetup` before the first test. The measurement above is what killed it:
+one second on a nine-minute suite, for a theory that turned out to be false.

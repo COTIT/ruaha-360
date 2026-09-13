@@ -74,6 +74,33 @@ function messageOf(error: unknown): string {
   return ''
 }
 
+/**
+ * Conditions where the same request would probably succeed a moment later.
+ *
+ * Deliberately short. `retry: false` is the app's default because almost every
+ * failure here is a decision the database made — a policy, a constraint, a
+ * guard — and repeating the request repeats the decision while delaying the
+ * message the user needs.
+ *
+ * Two exceptions earn a retry:
+ *
+ *   the connection   a village with intermittent signal, which is the whole
+ *                    deployment context
+ *   JWT timing       GoTrue can mint a token a fraction ahead of the clock
+ *                    that validates it, and the first request carrying it is
+ *                    rejected for skew (QA #33). A second later it is fine.
+ *
+ * Note what this is NOT about. CLAUDE.md's "zero rows is an answer … never
+ * retry" concerns an EMPTY RESULT, which is a success: it never reaches this
+ * function, and no retry policy has ever applied to it.
+ */
+const TRANSIENT = /^JWT (issued at future|expired)|failed to fetch|networkerror|network request failed|load failed/i
+
+export function isTransientError(error: unknown): boolean {
+  const message = messageOf(error).trim()
+  return message !== '' && TRANSIENT.test(message)
+}
+
 export function humanizeDbError(error: unknown): HumanError {
   const message = messageOf(error).trim()
 

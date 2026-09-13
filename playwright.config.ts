@@ -17,12 +17,11 @@ export default defineConfig({
   // real regression: a test that fails twice in a row still fails.
   retries: 1,
   reporter: 'list',
-  // 5s is the default and it is tight for the FIRST test of a run: Vite serves
-  // index.html immediately and compiles the module graph on the first request,
-  // so that one sign-in pays for the whole app's first build on top of a round
-  // trip to a remote database. It showed up as the first spec alphabetically
-  // failing `toHaveURL` while still on /login, and passing on retry. This only
-  // changes how long a failing assertion waits, not what passes.
+  // The suite runs against a REMOTE database, and signing in is three
+  // sequential round trips to it: the password, then the app_user and
+  // membership reads behind `toHaveURL`. Measured at 750–1,615ms on a good
+  // connection, so 5s is a thin margin and 10s is not a licence to be slow.
+  // This only changes how long a failing assertion waits, not what passes.
   expect: { timeout: 10_000 },
   // The suite creates real records. Both hooks remove anything carrying the
   // E2E- marker, so the seeded figures rls_test.sql asserts stay intact even

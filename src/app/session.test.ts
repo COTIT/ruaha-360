@@ -12,7 +12,7 @@ vi.mock('@/lib/supabase', () => ({
   isDemoData: true,
 }))
 
-const { fetchSession, signOut } = await import('@/app/session')
+const { fetchSession, signOut, sessionQuery } = await import('@/app/session')
 
 const USER = '80000000-0000-4000-8000-000000000003'
 
@@ -214,5 +214,55 @@ describe('signOut', () => {
     expect((caught as Error).message).toBe('network')
     // And the cache is NOT dropped: the user is still signed in.
     expect(client.clear).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * QA #33. The session read runs immediately after a correct password, so its
+ * failure is the worst-placed one in the app: it strands the user on a login
+ * form having just proved who they are.
+ *
+ * And one of its failures is not the user's fault at all — GoTrue can mint a
+ * token a fraction ahead of the clock that validates it, so the first request
+ * carrying it is rejected for skew. It was the flake that had the first test
+ * of an e2e run sitting on /login until the assertion gave up.
+ */
+describe('the session query retry policy', () => {
+  const shouldRetry = (failures: number, error: unknown) => {
+    const retry = sessionQuery.retry
+    return typeof retry === 'function' ? retry(failures, error as Error) : Boolean(retry)
+  }
+
+  test('tries again once when the token was issued a moment ahead', () => {
+    expect(shouldRetry(0, new Error('JWT issued at future'))).toBe(true)
+  })
+
+  test('and when the connection dropped', () => {
+    expect(shouldRetry(0, new TypeError('Failed to fetch'))).toBe(true)
+  })
+
+  // Twice, not forever: a condition that survives two attempts is not a blip,
+  // and the user is waiting on a form.
+  test('but gives up rather than spinning', () => {
+    expect(shouldRetry(2, new Error('JWT issued at future'))).toBe(false)
+  })
+
+  /**
+   * The rule this must not break. A read RLS refused, or an account that
+   * genuinely cannot be read, has to surface at once — repeating it repeats
+   * the same answer and delays the message.
+   */
+  test('never retries a decision the database made', () => {
+    expect(shouldRetry(0, new Error('new row violates row-level security policy'))).toBe(false)
+    expect(shouldRetry(0, new Error('Your account could not be read. Try again.'))).toBe(false)
+  })
+
+  // Zero rows is a success and never reaches a retry policy at all — asserted
+  // so that nobody "fixes" this by widening it.
+  test('an empty result is not an error and cannot be retried', async () => {
+    mockTables({ data: null, error: null }, { data: [], error: null })
+    getSession.mockResolvedValue({ data: { session: null }, error: null })
+
+    await expect(sessionQuery.queryFn()).resolves.toBeNull()
   })
 })

@@ -2,6 +2,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query'
 
 import type { ActiveMembership } from '@/app/membership'
 import { supabase } from '@/lib/supabase'
+import { isTransientError } from '@/lib/errors'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
 
@@ -79,6 +80,23 @@ export const sessionQuery = {
   // A revoked membership takes effect on the next query; RLS re-evaluates
   // every statement, so no session invalidation is needed.
   staleTime: 0,
+  /**
+   * The one query in the app that retries — QA #33.
+   *
+   * It runs immediately after a correct password, so its failure is the
+   * worst-placed one here: it strands the user on a login form having just
+   * proved who they are. And one of its failures is not their fault at all.
+   * GoTrue can mint a token a fraction ahead of the clock that validates it,
+   * so the FIRST request carrying it comes back `JWT issued at future`; a
+   * second later the same token is fine.
+   *
+   * Twice, not forever, and only for the two conditions `isTransientError`
+   * recognises. Anything the database decided — a policy, a constraint, an
+   * account that cannot be read — surfaces at once, because repeating it
+   * repeats the answer and delays the message.
+   */
+  retry: (failureCount: number, error: unknown) =>
+    failureCount < 2 && isTransientError(error),
 }
 
 export function useSession() {
