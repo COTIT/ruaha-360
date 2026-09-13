@@ -4,6 +4,7 @@ import { useScopeNames } from '@/app/scope'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { ProvenanceBadge } from '@/components/ProvenanceBadge'
+import { VerificationMark } from '@/components/marks'
 import { VerifyButton } from '@/features/officer/VerifyButton'
 import { useVerifyFromQueue, useVerifyQueue } from '@/features/officer/useVerifyQueue'
 
@@ -14,6 +15,9 @@ import { useVerifyFromQueue, useVerifyQueue } from '@/features/officer/useVerify
  * Verification is a deliberate act with the verifier's name attached
  * (business-rules §5), never a checkbox inside an edit form — so each row is
  * its own decision, and verifying one leaves the rest alone.
+ *
+ * State reads down the left edge: the mark leads every row, so the queue can be
+ * scanned for what is outstanding without reading a word of it.
  */
 export function VerifyQueueScreen() {
   const { t } = useTranslation()
@@ -26,10 +30,28 @@ export function VerifyQueueScreen() {
   const rows = query.data ?? []
 
   return (
-    <section data-testid="verify-queue" className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-lg font-semibold">{t('verifyQueue.title')}</h1>
-        <p className="text-xs text-deep/60">{t('verifyQueue.intro')}</p>
+    <section data-testid="verify-queue" className="flex max-w-2xl flex-col gap-4">
+      <header className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="type-screen-title">{t('verifyQueue.title')}</h1>
+          {rows.length > 0 && (
+            <span
+              data-testid="verify-queue-count"
+              className="type-note px-2.5 py-1 font-semibold"
+              style={{
+                border: '1px solid var(--rule-2)',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--sand-2)',
+                color: 'var(--ink-2)',
+              }}
+            >
+              {t('verifyQueue.outstanding', { count: rows.length })}
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)', textWrap: 'pretty' }}>
+          {t('verifyQueue.intro')}
+        </p>
       </header>
 
       {/* app_verify's own message if it refuses — shown as written, never
@@ -37,7 +59,7 @@ export function VerifyQueueScreen() {
       {verify.error && <ErrorState error={verify.error} />}
 
       {query.isLoading ? (
-        <p data-testid="verify-queue-loading" className="text-sm text-deep/60">
+        <p data-testid="verify-queue-loading" style={{ fontSize: 15, color: 'var(--ink-2)' }}>
           {t('common.loading')}
         </p>
       ) : rows.length === 0 ? (
@@ -45,48 +67,63 @@ export function VerifyQueueScreen() {
         // list and never an error.
         <EmptyState title={t('verifyQueue.noneTitle')} detail={t('verifyQueue.noneDetail')} />
       ) : (
-        <>
-          <p data-testid="verify-queue-count" className="text-sm text-deep/70">
-            {t('verifyQueue.outstanding', { count: rows.length })}
-          </p>
+        <ul
+          className="flex flex-col overflow-hidden"
+          style={{
+            border: '1px solid var(--rule)',
+            borderRadius: 'var(--radius-card)',
+            background: 'var(--paper)',
+          }}
+        >
+          {rows.map((row, index) => (
+            <li
+              key={`${row.table}:${row.id}`}
+              data-testid="verify-queue-row"
+              data-table={row.table}
+              className="flex flex-wrap items-center gap-3 px-4 py-3"
+              style={{
+                minHeight: 48,
+                ...(index > 0 ? { borderTop: '1px solid var(--rule)' } : {}),
+              }}
+            >
+              {/* The mark leads. State is legible before any word is read. */}
+              <VerificationMark verification={row.verification} size={20} />
 
-          <ul className="space-y-2">
-            {rows.map((row) => (
-              <li
-                key={`${row.table}:${row.id}`}
-                data-testid="verify-queue-row"
-                data-table={row.table}
-                className="flex flex-wrap items-center justify-between gap-3 rounded border border-deep/10 bg-white/70 p-3"
-              >
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-deep">
-                    <span className="mr-2 rounded bg-deep/10 px-1.5 py-0.5 text-xs font-normal text-deep/70">
-                      {t(`verifyQueue.table.${row.table}`)}
-                    </span>
-                    {row.label}
-                  </p>
-                  <p className="text-xs text-deep/60">
-                    {scope.data?.villages[row.village_id] ?? row.village_id}
-                  </p>
-                  <ProvenanceBadge
-                    source={row.source}
-                    verification={row.verification}
-                    confidence={row.confidence ?? undefined}
-                    capturedAt={row.captured_at}
-                  />
-                </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="type-note px-2 py-0.5"
+                    style={{
+                      border: '1px solid var(--rule-2)',
+                      borderRadius: 'var(--radius-pill)',
+                      background: 'var(--sand-2)',
+                      color: 'var(--ink-2)',
+                    }}
+                  >
+                    {t(`verifyQueue.table.${row.table}`)}
+                  </span>
+                  <b style={{ fontSize: 16, fontWeight: 600 }}>{row.label}</b>
+                </p>
+                <ProvenanceBadge
+                  compact
+                  recordLabel={scope.data?.villages[row.village_id] ?? row.village_id}
+                  source={row.source}
+                  verification={row.verification}
+                  confidence={row.confidence ?? undefined}
+                  capturedAt={row.captured_at}
+                />
+              </div>
 
-                <VerifyButton
+              <VerifyButton
                   table={row.table}
                   id={row.id}
                   verification={row.verification}
                   pending={verify.isPending}
-                  onVerify={(target) => verify.mutate(target)}
-                />
-              </li>
-            ))}
-          </ul>
-        </>
+                onVerify={(target) => verify.mutate(target)}
+              />
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   )

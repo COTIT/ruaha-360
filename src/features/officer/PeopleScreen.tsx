@@ -4,6 +4,8 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 
 import { useScopeNames } from '@/app/scope'
+import { CONTROL } from '@/components/controlStyles'
+import { ControlLabel, Loading } from '@/components/controls'
 import { DataTable } from '@/components/DataTable'
 import { ErrorState } from '@/components/ErrorState'
 import { ProvenanceBadge } from '@/components/ProvenanceBadge'
@@ -67,29 +69,27 @@ export function PeopleScreen() {
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-lg font-semibold">{t('people.title')}</h1>
+    <section className="flex flex-col gap-4">
+      <h1 className="type-screen-title">{t('people.title')}</h1>
 
-      <div className="flex flex-wrap gap-3">
-        <label className="space-y-1 text-sm">
-          <span className="block text-xs text-deep/60">{t('people.search')}</span>
+      <div className="flex flex-wrap gap-2.5">
+        <ControlLabel label={t('people.search')} grow>
           <input
             data-testid="people-search"
             type="search"
             value={search.q ?? ''}
             onChange={(e) => setSearch({ q: e.target.value || undefined })}
             placeholder={t('people.searchPlaceholder')}
-            className="rounded border border-deep/20 bg-white px-3 py-2"
+            style={{ ...CONTROL, minHeight: 44, fontWeight: 400 }}
           />
-        </label>
+        </ControlLabel>
 
-        <label className="space-y-1 text-sm">
-          <span className="block text-xs text-deep/60">{t('people.filterVerification')}</span>
+        <ControlLabel label={t('people.filterVerification')}>
           <select
             data-testid="people-filter-verification"
             value={search.verification ?? ''}
             onChange={(e) => setSearch({ verification: e.target.value || undefined })}
-            className="rounded border border-deep/20 bg-white px-3 py-2"
+            style={{ ...CONTROL, minHeight: 44, fontWeight: 400 }}
           >
             <option value="">{t('people.allVerifications')}</option>
             {VERIFICATIONS.map((v) => (
@@ -98,13 +98,11 @@ export function PeopleScreen() {
               </option>
             ))}
           </select>
-        </label>
+        </ControlLabel>
       </div>
 
       {query.isLoading ? (
-        <p data-testid="people-loading" className="text-sm text-deep/60">
-          {t('common.loading')}
-        </p>
+        <Loading testId="people-loading" />
       ) : (
         <DataTable
           columns={columns}
