@@ -18,12 +18,12 @@ English is visibly untranslated and a wrong Swahili string is not.
 ## Priority
 
 - **Required** — the farmer and officer surfaces, and the chrome both of
-  them render. 325 strings. CLAUDE.md specifies these ship
+  them render. 341 strings. CLAUDE.md specifies these ship
   complete Swahili.
-- **Optional** — Ops and Tower. 236 strings. These may ship
+- **Optional** — Ops and Tower. 260 strings. These may ship
   English for the demo.
 
-561 strings in total, of which 2 already have Swahili.
+601 strings in total, of which 2 already have Swahili.
 
 ## How to read the table
 
@@ -42,10 +42,12 @@ English is visibly untranslated and a wrong Swahili string is not.
 | --- | --- | --- | --- |
 | `a11y.language` | Language |  |  |
 | `a11y.primaryNav` | Primary navigation |  |  |
+| `a11y.skipToContent` | Skip to content |  |  |
 | `capacityBasis.nameplate` | Nameplate |  | Capacity is PLANNED or NAMEPLATE, never measured. Always shown with its basis. |
 | `capacityBasis.planned` | Planned |  | Capacity is PLANNED or NAMEPLATE, never measured. Always shown with its basis. |
 | `common.loading` | Loading… |  |  |
 | `common.no` | No |  |  |
+| `common.optional` | optional |  |  |
 | `common.yes` | Yes |  |  |
 | `confidence.high` | High |  | Confidence level recorded with a figure. Low / medium / high. |
 | `confidence.low` | Low |  | Confidence level recorded with a figure. Low / medium / high. |
@@ -82,7 +84,7 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `equipment.estimateImpossibleTitle` | This cannot be estimated |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `equipment.hours` | Hours per day |  |  |
 | `equipment.hoursRange` | Hours per day run from 0 to 24. |  |  |
-| `equipment.indicative` | indicative |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
+| `equipment.indicative` | Indicative |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
 | `equipment.indicativePrice` | Indicative price |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
 | `equipment.intro` | Powered equipment available through the programme. |  |  |
 | `equipment.moreThanZero` | This must be more than zero. |  |  |
@@ -92,6 +94,7 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `equipment.notAQuotation` | Prices are indicative, not quotations. |  |  |
 | `equipment.notFoundDetail` | It may no longer be listed, or you may not have access to it. |  |  |
 | `equipment.notFoundTitle` | Equipment not found |  |  |
+| `equipment.price` | Price |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
 | `equipment.purpose` | What will you use it for? |  |  |
 | `equipment.quantity` | How many |  |  |
 | `equipment.ratedPower` | Rated power |  |  |
@@ -125,17 +128,25 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `error.title` | Something went wrong |  |  |
 | `error.unexpected` | Something went wrong that should not have. Try again, and tell the programme team if it keeps happening. |  |  |
 | `error.windowBackwards` | The window must end on or after it starts. |  |  |
+| `estimate.aDay` | a day |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.aWeek` | a week |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.basis` | Calculated from rated power and the operating assumptions below (Level 1). |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.days` | Days per week |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.daysAWeek` | days a week |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.hours` | Hours per day |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.hoursADay` | hours a day |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.isEstimate` | This is an estimate, not a measurement. |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.peak` | Estimated peak |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.peakNote` | Peak power does not change with hours of use. |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.perDay` | Estimated per day |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.perWeek` | Estimated per week |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.quantity` | Quantity |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.rated` | rated |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.ratedPower` | Rated power |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.tag` | Estimate |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `estimate.title` | Energy estimate |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.units_one` | unit |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `estimate.units_other` | units |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `farmDetail.gps` | GPS point |  |  |
 | `farmDetail.noGps` | Not captured |  |  |
 | `farmDetail.noPlotsDetail` | This farm has no plots yet. |  |  |
@@ -207,6 +218,8 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `nav.verify` | Verify |  |  |
 | `nav.villages` | Villages |  |  |
 | `noAccess.detail` | Your account is not attached to a project yet. Ask your programme manager to add you. |  |  |
+| `noAccess.nothingDetail` | This is a real screen with a next step — never a blank page, and never an error. |  |  |
+| `noAccess.nothingTitle` | Nothing to show yet |  |  |
 | `noAccess.signOut` | Sign out |  |  |
 | `noAccess.title` | No access yet |  |  |
 | `notFound.detail` | The link may be out of date. |  |  |
@@ -271,23 +284,26 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `register.familyName` | Family name |  |  |
 | `register.farmLabel` | Farm name |  |  |
 | `register.givenName` | First name |  |  |
+| `register.gpsNote` | Leaving GPS blank is allowed, and shows up honestly in the Tower's data-quality tile as a farm without a point. |  |  |
+| `register.groupsComplete` | {{done}} of {{total}} groups complete · saved on this phone only |  | Keep {{done}} {{total}} |
 | `register.harvestEnd` | Harvest window ends |  |  |
 | `register.harvestKg` | Expected harvest (kg) |  |  |
 | `register.harvestStart` | Harvest window starts |  |  |
-| `register.householdLabel` | Household name (optional) |  |  |
+| `register.householdLabel` | Household name |  |  |
 | `register.intro` | One page, one submit. Everything below is created together. |  |  |
 | `register.isHead` | This person heads the household |  |  |
-| `register.latitude` | Latitude (optional) |  |  |
+| `register.latitude` | Latitude |  |  |
 | `register.latitudeRange` | Latitude runs from -90 to 90. |  |  |
-| `register.longitude` | Longitude (optional) |  |  |
+| `register.longitude` | Longitude |  |  |
 | `register.longitudeRange` | Longitude runs from -180 to 180. |  |  |
+| `register.measuredBy` | {{crop}} is measured this way |  | Keep {{crop}} |
 | `register.notANumber` | Enter a number. |  |  |
 | `register.notNegative` | This cannot be negative. |  |  |
 | `register.noVillage` | No village to register into |  |  |
 | `register.noVillageDetail` | Registration needs a village assignment. Ask your programme manager. |  |  |
-| `register.phone` | Phone (optional) |  |  |
+| `register.phone` | Phone |  |  |
 | `register.phoneHint` | Include the country code, for example +255700000101. |  |  |
-| `register.plantedOn` | Planted on (optional) |  |  |
+| `register.plantedOn` | Planted on |  |  |
 | `register.plotArea` | Plot area (ha) |  |  |
 | `register.plotLabel` | Plot name |  |  |
 | `register.provenanceNote` | Recorded as field-verified, captured by you. This is not a choice. |  | Provenance wording: where a record came from, and who verified it. |
@@ -393,10 +409,13 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `catalogue.colPrice` | Indicative price |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
 | `catalogue.title` | Equipment catalogue |  |  |
 | `coverage.available` | Available |  |  |
+| `coverage.availableNow` | Available now |  |  |
 | `coverage.committed` | Already committed |  |  |
 | `coverage.committedNote` | Committed supply is promised to a live opportunity and is not available again. |  |  |
+| `coverage.coverageOf` | Coverage of {{total}} |  | Keep {{total}} |
 | `coverage.demand` | Demand |  |  |
 | `coverage.label` | Coverage |  |  |
+| `coverage.notCoveredOf` | Not covered of {{total}} |  | Keep {{total}} |
 | `demand.buyer` | Buyer |  |  |
 | `demand.chooseBuyer` | Choose a buyer |  |  |
 | `demand.chooseCrop` | Choose a crop |  |  |
@@ -522,31 +541,43 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `ops.working` | Working… |  |  |
 | `opsHome.awaitingReview` | Requests awaiting review |  |  |
 | `opsHome.awaitingReviewDetail` | Submitted or under review |  |  |
+| `opsHome.lead` | Three queues. Every figure is a link, because a count nobody can act on is a statistic. |  |  |
 | `opsHome.openDemands` | Open buyer demands |  |  |
 | `opsHome.openDemandsDetail` | Still looking for supply |  |  |
+| `opsHome.openOrderBook` | Open the order book |  |  |
+| `opsHome.openPipeline` | Open the pipeline |  |  |
+| `opsHome.openVerifyQueue` | Open the verify queue |  |  |
 | `opsHome.outstandingRecords` | Records to verify |  |  |
 | `opsHome.outstandingRecordsDetail` | Captured but not yet checked |  |  |
 | `opsHome.title` | Today |  |  |
 | `tower.actual` | Actual |  |  |
 | `tower.approvedNote` | Decided yes. Still not measured consumption. |  |  |
 | `tower.approvedPeak` | Approved peak |  |  |
+| `tower.approvedPerWeek` | Approved, estimated per week |  |  |
 | `tower.available` | Available |  |  |
 | `tower.backToTower` | Back to the Tower |  |  |
 | `tower.basis` | Basis |  | Capacity is PLANNED or NAMEPLATE, never measured. Always shown with its basis. |
 | `tower.capacity` | Planned capacity |  | Capacity is PLANNED or NAMEPLATE, never measured. Always shown with its basis. |
 | `tower.chooseVillage` | Choose a village |  |  |
 | `tower.colActual` | Actual |  |  |
+| `tower.colActualKg` | Actual kg |  |  |
 | `tower.colApplicant` | Applicant |  |  |
+| `tower.colApplicantEquipment` | Applicant · equipment |  |  |
 | `tower.colAvailable` | Available |  |  |
 | `tower.colBuyer` | Buyer |  |  |
+| `tower.colBuyerCrop` | Buyer · crop |  |  |
 | `tower.colCoverage` | Coverage |  |  |
 | `tower.colCrop` | Crop |  |  |
+| `tower.colCropFarmerPlot` | Crop · farmer · plot |  |  |
+| `tower.colCropWindow` | Crop · window |  |  |
 | `tower.colCycles` | Cycles |  |  |
 | `tower.colDemand` | Demand |  |  |
 | `tower.colEquipment` | Equipment |  |  |
 | `tower.colExpected` | Expected |  |  |
+| `tower.colExpectedKg` | Expected kg |  |  |
 | `tower.colOpportunity` | Opportunity |  |  |
 | `tower.colPeak` | Est. peak |  |  |
+| `tower.colPlanted` | Planted |  |  |
 | `tower.colStatus` | Status |  |  |
 | `tower.colVerified` | Verified cycles |  |  |
 | `tower.colWindow` | Window |  |  |
@@ -559,10 +590,15 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `tower.excludedFromFigures_one` | 1 more request in this village is draft, rejected or withdrawn. It feeds neither figure — the equipment pipeline tile counts every status. |  |  |
 | `tower.excludedFromFigures_other` | {{count}} more requests in this village are draft, rejected or withdrawn. They feed neither figure — the equipment pipeline tile counts every status. |  | Keep {{count}} |
 | `tower.expected` | Expected |  |  |
+| `tower.expectedWeightFor` | Expected weight, {{crop}} · {{window}} |  | Keep {{crop}} {{window}} |
 | `tower.farmsWithGps` | Farms with GPS |  |  |
+| `tower.figureOnTile` | {{crop}}, {{window}} — the figure on the tile |  | Keep {{crop}} {{window}} |
 | `tower.headroom` | Headroom |  |  |
+| `tower.headroomLeft` | Headroom left |  |  |
+| `tower.headroomNote` | Approved peak against planned capacity. Prospective requests are not on this bar; they are not a load. |  |  |
 | `tower.indicativeValue` | Indicative value |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
-| `tower.indicativeValueNote` | Catalogue price times quantity. Not financed value and not a loan book. |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
+| `tower.indicativeValueNote` | Indicative catalogue value: price times quantity. Not financed value and not a loan book. |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |
+| `tower.lead` | Every headline here drills to the records underneath it. |  |  |
 | `tower.market` | Market |  |  |
 | `tower.marketDrill` | Demand against available supply |  |  |
 | `tower.marketNote` | Open demand against supply that is still available. |  |  |
@@ -586,10 +622,14 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `tower.pue` | Equipment pipeline |  |  |
 | `tower.pueNote` | Requests by status, with the catalogue value they represent. |  |  |
 | `tower.quality` | Data quality |  |  |
+| `tower.qualityNoDrill` | This tile has no drill link, because it counts records rather than reporting a figure. |  |  |
 | `tower.qualityNote` | How much of what has been recorded has been checked. |  |  |
+| `tower.requestCount_one` | 1 request |  |  |
+| `tower.requestCount_other` | {{count}} requests |  | Keep {{count}} |
 | `tower.requests` | Requests |  |  |
 | `tower.simultaneity` | Simultaneity factor |  |  |
 | `tower.simultaneityNote` | Applied to the peaks above. Village peak is not the sum of rated power. |  |  |
+| `tower.stillFree` | Still free |  |  |
 | `tower.sumOfPeaks` | Sum of estimated peaks |  |  |
 | `tower.timesFactor` | × {{factor}} simultaneity = |  | Keep {{factor}} |
 | `tower.title` | Control Tower |  |  |
