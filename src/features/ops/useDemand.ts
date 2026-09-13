@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { supabase } from '@/lib/supabase'
 import { isUuid } from '@/lib/ids'
+import { localisedName } from '@/lib/names'
 import { queryKeys, isTowerQueryForVillage } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
 
@@ -98,9 +100,9 @@ export function useDemandMatches(demandId: string) {
 /** Buyers and crops, for the create form. */
 export function useDemandFormOptions() {
   const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = i18n.resolvedLanguage
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['demand-form-options'],
     staleTime: 5 * 60_000,
     queryFn: async () => {
@@ -113,10 +115,28 @@ export function useDemandFormOptions() {
 
       return {
         buyers: buyers.data ?? [],
-        crops: (crops.data ?? []).map((c) => ({ id: c.id, name: sw ? c.name_sw : c.name_en })),
+        // Both names; the language is chosen at render — QA #31.
+        crops: (crops.data ?? []).map((c) => ({
+          id: c.id,
+          name_en: c.name_en,
+          name_sw: c.name_sw,
+        })),
       }
     },
   })
+
+  const data = useMemo(
+    () =>
+      query.data
+        ? {
+            buyers: query.data.buyers,
+            crops: query.data.crops.map((c) => ({ id: c.id, name: localisedName(c, language) })),
+          }
+        : query.data,
+    [query.data, language],
+  )
+
+  return { ...query, data }
 }
 
 export interface NewDemand {

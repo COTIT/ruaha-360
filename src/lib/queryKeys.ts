@@ -39,11 +39,14 @@ export const queryKeys = {
     ['officerHome', [...villageIds].sort()] as const,
 
   /**
-   * Spec 5.7's verify queue, also beyond §10's list. Keyed by language because
-   * crop names come from the database per locale, so the same rows render
-   * differently and must not share a cache entry.
+   * Spec 5.7's verify queue, also beyond §10's list.
+   *
+   * NOT keyed by language, deliberately. It once was, because crop names come
+   * from the database per locale — but the fix for QA #31 moved that choice to
+   * render time everywhere, so the same rows serve every language from one
+   * cache entry and a switch takes effect without a refetch.
    */
-  verifyQueue: (language: string) => ['verifyQueue', language] as const,
+  verifyQueue: () => ['verifyQueue'] as const,
 
   /** Spec 7.1's ops home queue counts. */
   opsHome: () => ['opsHome'] as const,
@@ -51,8 +54,8 @@ export const queryKeys = {
   buyers: () => ['buyers'] as const,
   /** Spec 7.9's village list with its current capacity row. */
   villageCapacity: () => ['villageCapacity'] as const,
-  /** Spec 6.6's farmer-facing opportunities, keyed by language for crop names. */
-  farmerOpportunities: (language: string) => ['farmerOpportunities', language] as const,
+  /** Spec 6.6's farmer-facing opportunities. Language is chosen at render. */
+  farmerOpportunities: () => ['farmerOpportunities'] as const,
 
   farm: (farmId: string) => ['farm', farmId] as const,
   farms: (villageId: string) => ['farms', villageId] as const,

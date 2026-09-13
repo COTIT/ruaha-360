@@ -134,13 +134,13 @@ describe('OfficerFarmScreen', () => {
 /** Spec 5.6 — cycle detail with its harvest series, READ-ONLY. */
 describe('OfficerCycleScreen', () => {
   test('a cycle that is not visible is an empty state', () => {
-    useCycleDetail.mockReturnValue({ isLoading: false, error: null, data: null })
+    useCycleDetail.mockReturnValue({ isLoading: false, error: null, cycle: null })
     render(<OfficerCycleScreen />)
     expect(screen.getByTestId('empty-state')).toBeInTheDocument()
   })
 
   test('shows the crop, plot, window and measure', () => {
-    useCycleDetail.mockReturnValue({ isLoading: false, error: null, data: cycle() })
+    useCycleDetail.mockReturnValue({ isLoading: false, error: null, cycle: cycle() })
     render(<OfficerCycleScreen />)
 
     const detail = screen.getByTestId('cycle-detail')
@@ -153,7 +153,7 @@ describe('OfficerCycleScreen', () => {
   // A harvest figure is a SERIES, not a value: the superseded row stays
   // visible and labelled so a revision has an audit trail (business-rules §6).
   test('shows the current figure and the one it replaced, labelled', () => {
-    useCycleDetail.mockReturnValue({ isLoading: false, error: null, data: cycle() })
+    useCycleDetail.mockReturnValue({ isLoading: false, error: null, cycle: cycle() })
     render(<OfficerCycleScreen />)
 
     const rows = screen.getAllByTestId('cycle-harvest')
@@ -165,7 +165,7 @@ describe('OfficerCycleScreen', () => {
   })
 
   test('a cycle with no harvest figure says so', () => {
-    useCycleDetail.mockReturnValue({ isLoading: false, error: null, data: cycle({ harvests: [] }) })
+    useCycleDetail.mockReturnValue({ isLoading: false, error: null, cycle: cycle({ harvests: [] }) })
     render(<OfficerCycleScreen />)
 
     expect(screen.getByTestId('empty-state')).toBeInTheDocument()
@@ -177,7 +177,7 @@ describe('OfficerCycleScreen', () => {
     useCycleDetail.mockReturnValue({
       isLoading: false,
       error: null,
-      data: cycle({ area_ha: null, tree_count: 120, crop_name: 'Avocado' }),
+      cycle: cycle({ area_ha: null, tree_count: 120, crop_name: 'Avocado' }),
     })
     render(<OfficerCycleScreen />)
 
@@ -189,7 +189,7 @@ describe('OfficerCycleScreen', () => {
   })
 
   test('offers no write controls', () => {
-    useCycleDetail.mockReturnValue({ isLoading: false, error: null, data: cycle() })
+    useCycleDetail.mockReturnValue({ isLoading: false, error: null, cycle: cycle() })
     render(<OfficerCycleScreen />)
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()

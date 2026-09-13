@@ -1328,15 +1328,21 @@ locale-dependent data. Three patterns are in use and only two are right:
 |---|---|---|
 | fetch both names, choose at render | `usePersonDetail`, `useCrops` | yes |
 | choose in the queryFn, language in the key | `useVerifyQueue`, `useFarmerOpportunities` | yes |
-| choose in the queryFn, language NOT in the key | 13 queries across 6 files | **no** |
+| choose in the queryFn, language NOT in the key | 6 queries across 3 files | **no** |
 
 The third caches whichever language won the race. i18next initialises to `en`
 and the stored locale is applied by an effect, so a query that resolves first
 caches English and keeps serving it.
 
-**Affected:** `useOfficerRecords` (cycle), `useTower` (production, market,
-energy rows, production cycles), `useRequests` (list, detail), `useOpsRequests`
-(list, detail), `useDemand` (list, detail, form options), `useOpportunity`.
+**Affected:** `useTower` (production, market, energy rows, production cycles),
+`useOfficerRecords` (cycle detail), `useDemand` (form options).
+
+**Corrected while fixing.** The first draft of this finding claimed 13 queries
+across 6 files. It is 6 across 3: `useRequests`, `useOpsRequests`,
+`useDemand`'s list and detail, and `useOpportunity` all shape their rows
+OUTSIDE the queryFn already, so they were never affected. Counting by "the
+file mentions `sw`" overcounted; what matters is whether the choice happens
+inside the `queryFn`.
 
 **Why it matters more than it looks.** Reference data is the ONE part of
 Swahili that works today — #2 leaves every UI string in English, and crop and
@@ -1347,6 +1353,18 @@ requirement exists for.
 **The fix is already in the codebase.** `usePersonDetail` fetches both columns
 and selects at render: one cache entry, no duplication, and a language switch
 that takes effect immediately instead of after an invalidation.
+
+**Fixed 13 September 2026**, and the rule was made uniform rather than
+minimal. `useVerifyQueue` and `useFarmerOpportunities` were not broken — they
+carried the language IN their key, so they never served a stale locale — but
+they paid for it with two cache entries per screen and a refetch on every
+switch. Both now select at render like everything else, and `queryKeys` lost
+the language parameters it had grown.
+
+`src/lib/names.ts` holds the one selector; `src/features/localisation.test.ts`
+asserts the invariant over the source, because what failed was not a screen
+but a habit repeated across six queries — and the next query will be written
+by someone who has not read this entry.
 
 **Why the suite missed it.** Every unit test mocks the hook and asserts the
 shaped output; every e2e asserts one language. Nothing crosses a locale

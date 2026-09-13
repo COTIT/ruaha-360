@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import type { VerifiableTable } from '@/features/officer/personDetail'
+import { localisedName, type LocalisedNames } from '@/lib/names'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/db.types'
@@ -11,8 +13,14 @@ type Enums = Database['public']['Enums']
 export interface QueueRow {
   table: VerifiableTable
   id: string
-  /** What the record is, in the officer's own language where it comes from the database. */
+  /**
+   * What the record is. For a crop cycle this is the season alone and `crop`
+   * carries the names — the two are joined at render, in whichever language is
+   * showing then (QA #31).
+   */
   label: string
+  /** Present only for a crop cycle. Both names; neither chosen yet. */
+  crop?: LocalisedNames | null
   village_id: string
   source: Enums['source_type']
   verification: Enums['verification_status']
@@ -43,7 +51,7 @@ const PROVENANCE = 'village_id, source, verification, confidence, captured_at'
  * `*_read_staff` policy to `app_villages()`, so "outstanding in my villages" is
  * already the whole query.
  */
-export async function fetchVerifyQueue(sw: boolean): Promise<QueueRow[]> {
+export async function fetchVerifyQueue(): Promise<QueueRow[]> {
   const [persons, farms, plots, cycles, harvests] = await Promise.all([
     supabase
       .from('person')
@@ -79,11 +87,17 @@ export async function fetchVerifyQueue(sw: boolean): Promise<QueueRow[]> {
   }
 
   const rows: QueueRow[] = []
-  const push = (table: VerifiableTable, raw: Record<string, unknown>, label: string) =>
+  const push = (
+    table: VerifiableTable,
+    raw: Record<string, unknown>,
+    label: string,
+    crop?: LocalisedNames | null,
+  ) =>
     rows.push({
       table,
       id: raw.id as string,
       label,
+      crop,
       village_id: raw.village_id as string,
       source: raw.source as QueueRow['source'],
       verification: raw.verification as QueueRow['verification'],
@@ -98,10 +112,11 @@ export async function fetchVerifyQueue(sw: boolean): Promise<QueueRow[]> {
   for (const p of plots.data ?? []) push('plot', p, p.label)
   for (const c of cycles.data ?? []) {
     const raw = c as unknown as Record<string, unknown>
-    const crop = raw.crop as { name_en: string; name_sw: string } | null
-    const cropName = crop ? (sw ? crop.name_sw : crop.name_en) : ''
+    // The crop name is attached, not resolved: the label is completed at
+    // render, in the language showing then — QA #31.
+    const crop = raw.crop as LocalisedNames | null
     const season = (raw.season_label as string) ?? ''
-    push('crop_cycle', raw, [cropName, season].filter(Boolean).join(' · '))
+    push('crop_cycle', raw, season, crop)
   }
   for (const h of harvests.data ?? []) {
     const raw = h as unknown as Record<string, unknown>
@@ -115,12 +130,32 @@ export async function fetchVerifyQueue(sw: boolean): Promise<QueueRow[]> {
 
 export function useVerifyQueue() {
   const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = i18n.resolvedLanguage
 
-  return useQuery({
-    queryKey: queryKeys.verifyQueue(sw ? 'sw' : 'en'),
-    queryFn: () => fetchVerifyQueue(sw),
+  const query = useQuery({
+    queryKey: queryKeys.verifyQueue(),
+    queryFn: () => fetchVerifyQueue(),
   })
+
+  /**
+   * The label is completed HERE, not in the queryFn.
+   *
+   * The key is about the officer's villages, so a crop name chosen at fetch
+   * time would be served in whichever locale resolved first (QA #31). Doing it
+   * at render also means one cache entry rather than one per language, and a
+   * language switch that shows immediately.
+   */
+  const data = useMemo(
+    () =>
+      query.data?.map((row) =>
+        row.crop
+          ? { ...row, label: [localisedName(row.crop, language), row.label].filter(Boolean).join(' · ') }
+          : row,
+      ),
+    [query.data, language],
+  )
+
+  return { ...query, data }
 }
 
 /**

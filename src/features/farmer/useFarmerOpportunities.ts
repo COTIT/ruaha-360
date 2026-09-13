@@ -1,17 +1,20 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
+import { localisedName, type LocalisedNames } from '@/lib/names'
 import { queryKeys } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/db.types'
 
 type Enums = Database['public']['Enums']
 
-export interface FarmerOpportunity {
+/** What the query caches: both names per crop, neither chosen yet. */
+export interface FarmerOpportunityRow {
   id: string
   status: Enums['opportunity_status']
   /** From this farmer's OWN supply lines — see the note on the query. */
-  crop_name: string
+  crops: LocalisedNames[]
   /** The whole opportunity, re-summed by opportunity_resum from all its lines. */
   offered_quantity_kg: number | null
   /** This farmer's own share of it. */
@@ -39,7 +42,7 @@ export interface FarmerOpportunity {
  * of this hook did. The crop is taken instead from the farmer's OWN supply
  * lines, through `crop_cycle` — rows `app_farms()` already grants her.
  */
-export async function fetchFarmerOpportunities(sw: boolean): Promise<FarmerOpportunity[]> {
+export async function fetchFarmerOpportunities(): Promise<FarmerOpportunityRow[]> {
   const { data, error } = await supabase
     .from('opportunity')
     .select(
@@ -58,21 +61,14 @@ export async function fetchFarmerOpportunities(sw: boolean): Promise<FarmerOppor
       crop_cycle?: { crop?: { name_en: string; name_sw: string } | null } | null
     }>
 
-    // Distinct crops across this farmer's own lines. Normally one; an
-    // opportunity is per demand and a demand names a single crop.
-    const crops = [
-      ...new Set(
-        lines
-          .map((l) => l.crop_cycle?.crop)
-          .filter(Boolean)
-          .map((c) => (sw ? c!.name_sw : c!.name_en)),
-      ),
-    ]
+    // The crops across this farmer's own lines, both names kept. Normally one:
+    // an opportunity is per demand and a demand names a single crop.
+    const crops = lines.map((l) => l.crop_cycle?.crop).filter(Boolean) as LocalisedNames[]
 
     return {
       id: raw.id as string,
       status: raw.status as Enums['opportunity_status'],
-      crop_name: crops.join(' · '),
+      crops,
       offered_quantity_kg: (raw.offered_quantity_kg as number) ?? null,
       // Summing rows RLS already scoped to this farmer. Not a village
       // aggregate — business-rules §11 keeps those in views, and there is no
@@ -82,12 +78,30 @@ export async function fetchFarmerOpportunities(sw: boolean): Promise<FarmerOppor
   })
 }
 
+/** A cached row with its crop names resolved for the active language. */
+export type FarmerOpportunity = FarmerOpportunityRow & { crop_name: string }
+
 export function useFarmerOpportunities() {
   const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = i18n.resolvedLanguage
 
-  return useQuery({
-    queryKey: queryKeys.farmerOpportunities(sw ? 'sw' : 'en'),
-    queryFn: () => fetchFarmerOpportunities(sw),
+  const query = useQuery({
+    queryKey: queryKeys.farmerOpportunities(),
+    queryFn: fetchFarmerOpportunities,
   })
+
+  // Named at render, so one cache entry serves both languages and a switch
+  // shows immediately — QA #31.
+  const data = useMemo(
+    () =>
+      query.data?.map((row) => ({
+        ...row,
+        crop_name: [...new Set(row.crops.map((c) => localisedName(c, language)))]
+          .filter(Boolean)
+          .join(' · '),
+      })),
+    [query.data, language],
+  )
+
+  return { ...query, data }
 }

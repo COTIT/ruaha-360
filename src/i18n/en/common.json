@@ -273,7 +273,9 @@
     "hoursRange": "Hours per day run from 0 to 24.",
     "daysRange": "Days per week run from 0 to 7.",
     "estimateBlockedTitle": "No estimate yet",
-    "estimateBlockedDetail": "Fill in how many, hours per day and days per week, and the estimate appears here."
+    "estimateBlockedDetail": "Fill in how many, hours per day and days per week, and the estimate appears here.",
+    "estimateImpossibleTitle": "This cannot be estimated",
+    "estimateImpossibleDetail": "One of the figures above is outside what is possible, so no estimate is shown for it. Correct it and the estimate returns."
   },
   "requests": {
     "title": "My requests",

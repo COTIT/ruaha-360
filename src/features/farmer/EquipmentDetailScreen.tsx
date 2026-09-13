@@ -76,6 +76,17 @@ export function EquipmentDetailScreen() {
   const values = useWatch({ control })
   const parsed = requestSchema.safeParse(values)
 
+  /**
+   * QA #32. A withheld estimate has two quite different causes, and telling a
+   * farmer to "fill in hours per day" when they have just typed 99 into it
+   * asks them to do something they have already done.
+   *
+   * A blank is the one they can act on first, so it wins when both are true.
+   */
+  const anythingBlank =
+    !parsed.success &&
+    parsed.error.issues.some((issue) => issue.message === 'equipment.required')
+
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   if (query.isLoading || session.isLoading) {
@@ -222,8 +233,16 @@ export function EquipmentDetailScreen() {
         ) : (
           <div data-testid="estimate-blocked">
             <EmptyState
-              title={t('equipment.estimateBlockedTitle')}
-              detail={t('equipment.estimateBlockedDetail')}
+              title={t(
+                anythingBlank
+                  ? 'equipment.estimateBlockedTitle'
+                  : 'equipment.estimateImpossibleTitle',
+              )}
+              detail={t(
+                anythingBlank
+                  ? 'equipment.estimateBlockedDetail'
+                  : 'equipment.estimateImpossibleDetail',
+              )}
             />
           </div>
         )}

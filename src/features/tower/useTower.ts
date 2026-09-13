@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { supabase } from '@/lib/supabase'
+import { localisedName, type LocalisedNames } from '@/lib/names'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Database } from '@/lib/db.types'
 
@@ -17,31 +19,50 @@ type Enums = Database['public']['Enums']
  * Crop names are looked up separately rather than embedded: the views declare
  * no foreign-key relationships, so PostgREST cannot embed through them.
  */
-async function cropNames(sw: boolean): Promise<Map<string, string>> {
+/**
+ * Both names per crop — QA #31.
+ *
+ * The choice between them belongs at render: these rows are cached under keys
+ * about the VILLAGE, so a name chosen here would be served in whichever locale
+ * resolved first, for good.
+ */
+/** The active language, for the render-time name selection below. */
+function useLanguage(): string | undefined {
+  return useTranslation().i18n.resolvedLanguage
+}
+
+async function cropNames(): Promise<Map<string, LocalisedNames>> {
   const { data, error } = await supabase.from('crop').select('id, name_en, name_sw')
   if (error) throw new Error(error.message)
-  return new Map((data ?? []).map((c) => [c.id, sw ? c.name_sw : c.name_en]))
+  return new Map((data ?? []).map((c) => [c.id, { name_en: c.name_en, name_sw: c.name_sw }]))
 }
 
 export function useTowerProduction(villageId: string | undefined) {
-  const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = useLanguage()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.tower.production(villageId ?? ''),
     enabled: Boolean(villageId),
     queryFn: async () => {
       const [rows, names] = await Promise.all([
         supabase.from('v_village_production').select('*').eq('village_id', villageId!),
-        cropNames(sw),
+        cropNames(),
       ])
       if (rows.error) throw new Error(rows.error.message)
-      return (rows.data ?? []).map((r) => ({
-        ...r,
-        crop_name: names.get(r.crop_id ?? '') ?? r.crop_id ?? '',
-      }))
+      return (rows.data ?? []).map((r) => ({ ...r, crop: names.get(r.crop_id ?? '') ?? null }))
     },
   })
+
+  const data = useMemo(
+    () =>
+      query.data?.map((r) => ({
+        ...r,
+        crop_name: localisedName(r.crop, language) || (r.crop_id ?? ''),
+      })),
+    [query.data, language],
+  )
+
+  return { ...query, data }
 }
 
 export function useTowerPipeline(villageId: string | undefined) {
@@ -79,17 +100,16 @@ export function useTowerEnergy(villageId: string | undefined) {
 }
 
 export function useTowerMarket(villageId: string | undefined) {
-  const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = useLanguage()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.tower.market(villageId ?? ''),
     enabled: Boolean(villageId),
     queryFn: async () => {
       const [supply, matches, names] = await Promise.all([
         supabase.from('v_village_supply').select('*').eq('village_id', villageId!),
         supabase.from('v_demand_match').select('*').eq('village_id', villageId!),
-        cropNames(sw),
+        cropNames(),
       ])
       if (supply.error) throw new Error(supply.error.message)
       if (matches.error) throw new Error(matches.error.message)
@@ -114,18 +134,29 @@ export function useTowerMarket(villageId: string | undefined) {
       )
 
       return {
-        supply: (supply.data ?? []).map((s) => ({
-          ...s,
-          crop_name: names.get(s.crop_id ?? '') ?? s.crop_id ?? '',
-        })),
+        supply: (supply.data ?? []).map((s) => ({ ...s, crop: names.get(s.crop_id ?? '') ?? null })),
         matches: (matches.data ?? []).map((m) => ({
           ...m,
-          crop_name: names.get(m.crop_id ?? '') ?? m.crop_id ?? '',
+          crop: names.get(m.crop_id ?? '') ?? null,
           buyer_name: buyerByDemand.get(m.buyer_demand_id ?? '') ?? '',
         })),
       }
     },
   })
+
+  const data = useMemo(() => {
+    if (!query.data) return query.data
+    const named = <T extends { crop: LocalisedNames | null; crop_id: string | null }>(row: T) => ({
+      ...row,
+      crop_name: localisedName(row.crop, language) || (row.crop_id ?? ''),
+    })
+    return {
+      supply: query.data.supply.map(named),
+      matches: query.data.matches.map(named),
+    }
+  }, [query.data, language])
+
+  return { ...query, data }
 }
 
 export function useTowerQuality(villageId: string | undefined) {
@@ -146,10 +177,9 @@ export function useTowerQuality(villageId: string | undefined) {
 
 /** The requests behind the energy figures, for the drill-down. */
 export function useTowerEnergyRows(villageId: string | undefined) {
-  const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = useLanguage()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: [...queryKeys.tower.energy(villageId ?? ''), 'rows'],
     enabled: Boolean(villageId),
     queryFn: async () => {
@@ -182,12 +212,23 @@ export function useTowerEnergyRows(villageId: string | undefined) {
           status: raw.status as Enums['pue_status'],
           applicant: person ? `${person.given_name} ${person.family_name}` : '',
           person_id: person?.id ?? null,
-          equipment_name: equipment ? (sw ? equipment.name_sw : equipment.name_en) : '',
+          equipment,
           est_power_kw: estimate?.est_power_kw ?? null,
         }
       })
     },
   })
+
+  const data = useMemo(
+    () =>
+      query.data?.map((row) => ({
+        ...row,
+        equipment_name: localisedName(row.equipment, language),
+      })),
+    [query.data, language],
+  )
+
+  return { ...query, data }
 }
 
 /**
@@ -199,10 +240,9 @@ export function useTowerEnergyRows(villageId: string | undefined) {
  * on the officer surface.
  */
 export function useTowerProductionRows(villageId: string | undefined) {
-  const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = useLanguage()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: [...queryKeys.tower.production(villageId ?? ''), 'cycles'],
     enabled: Boolean(villageId),
     queryFn: async () => {
@@ -248,7 +288,7 @@ export function useTowerProductionRows(villageId: string | undefined) {
 
         return {
           id: raw.id as string,
-          crop_name: crop ? (sw ? crop.name_sw : crop.name_en) : '',
+          crop,
           season_label: (raw.season_label as string) ?? null,
           area_ha: (raw.area_ha as number) ?? null,
           harvest_start: (raw.harvest_start as string) ?? null,
@@ -263,4 +303,11 @@ export function useTowerProductionRows(villageId: string | undefined) {
       })
     },
   })
+
+  const data = useMemo(
+    () => query.data?.map((row) => ({ ...row, crop_name: localisedName(row.crop, language) })),
+    [query.data, language],
+  )
+
+  return { ...query, data }
 }

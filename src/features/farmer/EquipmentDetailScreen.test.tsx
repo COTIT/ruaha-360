@@ -207,13 +207,45 @@ describe('the estimate does not compute from impossible inputs', () => {
     expect(screen.queryByTestId('estimate-blocked')).not.toBeInTheDocument()
   })
 
-  test('the blocked note says what is missing rather than showing zeros', () => {
+  test('an unanswered field is asked for, not reported as an error', () => {
     render(<EquipmentDetailScreen />)
     set('request-hours', '')
 
     const blocked = screen.getByTestId('estimate-blocked')
-    expect(blocked).toHaveTextContent(/hours per day/i)
+    expect(blocked).toHaveTextContent(/fill in/i)
     expect(blocked).not.toHaveTextContent(/0\.000/)
+  })
+
+  /**
+   * QA #32. The copy assumed emptiness: at 99 hours it read "Fill in how many,
+   * hours per day and days per week", when the fields ARE filled and one value
+   * is simply impossible. It told the farmer to do something they had already
+   * done.
+   */
+  test('an answered but impossible field says that, not "fill it in"', () => {
+    render(<EquipmentDetailScreen />)
+    set('request-hours', '99')
+
+    const blocked = screen.getByTestId('estimate-blocked')
+    expect(blocked).not.toHaveTextContent(/fill in/i)
+    expect(blocked).toHaveTextContent(/cannot be estimated|not possible/i)
+  })
+
+  test('and the same for a number that is not a number', () => {
+    render(<EquipmentDetailScreen />)
+    set('request-quantity', 'abc')
+
+    expect(screen.getByTestId('estimate-blocked')).not.toHaveTextContent(/fill in/i)
+  })
+
+  // A blank AND an impossible value together: the blank is the thing the
+  // farmer can act on first.
+  test('a blank alongside an impossible value is still asked for', () => {
+    render(<EquipmentDetailScreen />)
+    set('request-hours', '99')
+    set('request-days', '')
+
+    expect(screen.getByTestId('estimate-blocked')).toHaveTextContent(/fill in/i)
   })
 })
 

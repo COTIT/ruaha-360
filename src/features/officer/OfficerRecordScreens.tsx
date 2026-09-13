@@ -123,7 +123,7 @@ export function OfficerCycleScreen() {
     )
   }
 
-  const cycle = query.data
+  const cycle = query.cycle
   if (!cycle) {
     return (
       <EmptyState title={t('cycleDetail.notFoundTitle')} detail={t('cycleDetail.notFoundDetail')} />

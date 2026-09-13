@@ -1,6 +1,6 @@
 # Swahili handover — Ruaha 360
 
-Generated 2026-09-12 from `src/i18n/en/common.json`. Do not edit by hand;
+Generated 2026-09-13 from `src/i18n/en/common.json`. Do not edit by hand;
 regenerate with `pnpm i18n:handover`.
 
 ## What this is
@@ -18,12 +18,12 @@ English is visibly untranslated and a wrong Swahili string is not.
 ## Priority
 
 - **Required** — the farmer and officer surfaces, and the chrome both of
-  them render. 323 strings. CLAUDE.md specifies these ship
+  them render. 325 strings. CLAUDE.md specifies these ship
   complete Swahili.
 - **Optional** — Ops and Tower. 236 strings. These may ship
   English for the demo.
 
-559 strings in total, of which 2 already have Swahili.
+561 strings in total, of which 2 already have Swahili.
 
 ## How to read the table
 
@@ -78,6 +78,8 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `equipment.daysRange` | Days per week run from 0 to 7. |  |  |
 | `equipment.estimateBlockedDetail` | Fill in how many, hours per day and days per week, and the estimate appears here. |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `equipment.estimateBlockedTitle` | No estimate yet |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `equipment.estimateImpossibleDetail` | One of the figures above is outside what is possible, so no estimate is shown for it. Correct it and the estimate returns. |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
+| `equipment.estimateImpossibleTitle` | This cannot be estimated |  | Always labelled an ESTIMATE. Not a measurement, not a commitment. |
 | `equipment.hours` | Hours per day |  |  |
 | `equipment.hoursRange` | Hours per day run from 0 to 24. |  |  |
 | `equipment.indicative` | indicative |  | Prices are INDICATIVE, never quotations. Must not read as a firm offer. |

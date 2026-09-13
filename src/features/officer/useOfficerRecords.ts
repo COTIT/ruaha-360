@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
 import { queryKeys } from '@/lib/queryKeys'
 import { isUuid } from '@/lib/ids'
+import { localisedName, type LocalisedNames } from '@/lib/names'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/db.types'
 
@@ -32,10 +34,12 @@ export interface CycleHarvest extends Provenance {
   is_current: boolean
 }
 
-export interface CycleDetail extends Provenance {
+/** What the query caches: both names, no language chosen yet. */
+export interface CycleRow extends Provenance {
   id: string
   village_id: string
-  crop_name: string
+  /** Both columns, so the language can be chosen at render — QA #31. */
+  crop: LocalisedNames | null
   season_label: string | null
   status: Enums['crop_cycle_status']
   area_ha: number | null
@@ -101,7 +105,7 @@ export function useFarmDetail(farmId: string) {
  * a revision goes through `app_supersede_harvest` and is deferred with the
  * other officer writes.
  */
-export async function fetchCycleDetail(cycleId: string, sw: boolean): Promise<CycleDetail | null> {
+export async function fetchCycleDetail(cycleId: string): Promise<CycleRow | null> {
   // QA #3: a malformed route param must reach the same "not found" state as a
   // well-formed id matching nothing, rather than a uuid parse failure.
   if (!isUuid(cycleId)) return null
@@ -136,19 +140,37 @@ export async function fetchCycleDetail(cycleId: string, sw: boolean): Promise<Cy
     })
 
   return {
-    ...(raw as unknown as CycleDetail),
-    crop_name: crop ? (sw ? crop.name_sw : crop.name_en) : '',
+    ...(raw as unknown as CycleRow),
+    // Both names, so the cache holds both and the language is chosen at
+    // render — QA #31.
+    crop,
     plot_label: plot?.label ?? null,
     harvests,
   }
 }
 
+/** A cached cycle with its name resolved for the active language. */
+export type CycleDetail = CycleRow & { crop_name: string }
+
 export function useCycleDetail(cycleId: string) {
   const { i18n } = useTranslation()
-  const sw = i18n.resolvedLanguage === 'sw'
+  const language = i18n.resolvedLanguage
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queryKeys.cycle(cycleId),
-    queryFn: () => fetchCycleDetail(cycleId, sw),
+    queryFn: () => fetchCycleDetail(cycleId),
   })
+
+  // The crop name is chosen HERE, not in the queryFn: the key is about the
+  // cycle, so a name chosen at fetch time would be served in whichever locale
+  // resolved first, for good (QA #31).
+  const cycle = useMemo(
+    () =>
+      query.data
+        ? { ...query.data, crop_name: localisedName(query.data.crop, language) }
+        : null,
+    [query.data, language],
+  )
+
+  return { ...query, cycle }
 }
