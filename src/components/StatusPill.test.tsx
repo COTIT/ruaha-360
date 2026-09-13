@@ -26,16 +26,43 @@ describe('StatusPill for a PUE request', () => {
     expect(screen.getByTestId('status-pill')).toHaveAttribute('data-status', 'under_review')
   })
 
+  // Distinctness is asserted on the whole visual signature rather than on the
+  // class attribute alone: the redesign carries the hatch and the tints as
+  // inline style, and a pill that stopped being distinguishable would be just
+  // as wrong however it was written.
   test('all six request statuses are visually distinct', () => {
-    const classes = new Set<string>()
+    const seen = new Set<string>()
     for (const [status] of statuses) {
       const { unmount } = render(<StatusPill kind="request" status={status} />)
-      classes.add(screen.getByTestId('status-pill').className)
+      seen.add(signature(screen.getByTestId('status-pill')))
       unmount()
     }
-    expect(classes.size).toBe(6)
+    expect(seen.size).toBe(6)
+  })
+
+  // The only solid fill in the system. An approved request is a decision with
+  // capacity consequences; nothing else in the product may look like one.
+  test('approved is the only filled request pill', () => {
+    const filled: string[] = []
+    for (const [status] of statuses) {
+      const { unmount } = render(<StatusPill kind="request" status={status} />)
+      if (isFilled(screen.getByTestId('status-pill'))) filled.push(status)
+      unmount()
+    }
+    expect(filled).toEqual(['approved'])
   })
 })
+
+/** Class list plus inline style — everything that decides how a pill looks. */
+function signature(element: HTMLElement): string {
+  return `${element.className}|${element.getAttribute('style') ?? ''}`
+}
+
+/** A solid brand fill, as opposed to a tint, a hatch or bare paper. */
+function isFilled(element: HTMLElement): boolean {
+  const style = element.getAttribute('style') ?? ''
+  return /background:\s*var\(--(accent|green|primary|flag-ink|green-ink)\)/.test(style)
+}
 
 describe('StatusPill for demand and opportunity', () => {
   test('demand statuses render', () => {
@@ -50,6 +77,30 @@ describe('StatusPill for demand and opportunity', () => {
     const pill = screen.getByTestId('status-pill')
     expect(pill).toHaveTextContent('Accepted')
     expect(pill).not.toHaveTextContent(/sold|sale|paid|delivered/i)
+  })
+
+  // An opportunity's accepted means both sides agreed to keep talking. A
+  // request's approved is a decision. The old palette gave them the same
+  // treatment; every opportunity pill is now outlined on white, and accepted is
+  // distinguished by a heavier edge rather than by a fill.
+  test('an accepted opportunity never looks like an approved request', () => {
+    const { unmount } = render(<StatusPill kind="request" status="approved" />)
+    const approved = signature(screen.getByTestId('status-pill'))
+    unmount()
+
+    render(<StatusPill kind="opportunity" status="accepted" />)
+    const accepted = screen.getByTestId('status-pill')
+
+    expect(signature(accepted)).not.toBe(approved)
+    expect(isFilled(accepted), 'an opportunity is not a sale, and never a fill').toBe(false)
+  })
+
+  test('every opportunity state is outlined on white', () => {
+    for (const status of ['proposed', 'shared', 'accepted', 'declined', 'lapsed'] as const) {
+      const { unmount } = render(<StatusPill kind="opportunity" status={status} />)
+      expect(isFilled(screen.getByTestId('status-pill')), status).toBe(false)
+      unmount()
+    }
   })
 
   test('the three kinds do not share a translation namespace', () => {

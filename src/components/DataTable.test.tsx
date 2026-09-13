@@ -114,3 +114,65 @@ describe('DataTable row activation', () => {
     expect(screen.getAllByTestId('row')[0]).not.toHaveAttribute('tabindex')
   })
 })
+
+/**
+ * Five idle ↕ glyphs down a header row were competing with the data for
+ * attention, and none of them said anything: a column that is not sorted has
+ * no direction to report. The caret now appears only where it means something.
+ */
+describe('DataTable sort affordance', () => {
+  test('no column shows a caret until one is sorted', () => {
+    render(<DataTable columns={columns} data={rows} testId="t" rowTestId="row" />)
+    expect(screen.queryByText(/[↑↓↕]/)).not.toBeInTheDocument()
+  })
+
+  test('the sorted column, and only it, shows a direction', async () => {
+    render(<DataTable columns={columns} data={rows} testId="t" rowTestId="row" />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /applicant/i }))
+
+    const carets = screen.getAllByText(/[↑↓]/)
+    expect(carets).toHaveLength(1)
+    expect(carets[0].textContent).toBe('↑')
+    expect(
+      screen.getByRole('columnheader', { name: /applicant/i }).contains(carets[0]),
+      'the caret belongs to the column it describes',
+    ).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: /applicant/i }))
+    expect(screen.getAllByText(/[↑↓]/)[0].textContent).toBe('↓')
+  })
+})
+
+describe('DataTable at a phone width', () => {
+  /**
+   * QA #8. The wrapper scrolls, the page does not — and `responsive.spec.ts`
+   * reaches the wrapper as the table's direct parent, so nothing may be
+   * inserted between them.
+   */
+  test('the scroll wrapper is the table own parent', () => {
+    render(<DataTable columns={columns} data={rows} testId="t" rowTestId="row" />)
+    const wrapper = screen.getByTestId('t').parentElement
+    expect(wrapper?.className).toContain('overflow-x-auto')
+  })
+
+  test('a numeric column is right-aligned and tabular', () => {
+    render(
+      <DataTable
+        columns={[
+          { accessorKey: 'name', header: 'Applicant' },
+          { accessorKey: 'kg', header: 'Quantity', meta: { numeric: true } },
+        ]}
+        data={[{ name: 'Amina Sanga', kg: '1,200.00' }]}
+        testId="t"
+        rowTestId="row"
+      />,
+    )
+
+    const cells = screen.getAllByTestId('row')[0].querySelectorAll('td')
+    expect(cells[1].className).toMatch(/text-right/)
+    expect(cells[1].className).toMatch(/tabular/)
+    expect(cells[0].className).not.toMatch(/text-right/)
+  })
+})

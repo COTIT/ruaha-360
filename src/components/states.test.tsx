@@ -96,3 +96,60 @@ describe('ErrorState', () => {
     expect(screen.getByText('just a string')).toBeInTheDocument()
   })
 })
+
+/**
+ * Empty is an answer. Error is a failure. They must not rhyme — that is a
+ * specification rule, not a preference, because "you may not see this" and
+ * "something broke" ask the user for completely different next moves.
+ */
+describe('empty and error are not interchangeable', () => {
+  test('empty is sunken sand with a dashed mark, and nothing red', () => {
+    render(<EmptyState title="No matching supply" detail="That is an honest zero." />)
+    const empty = screen.getByTestId('empty-state')
+
+    expect(empty.querySelector('[data-mark="empty"]'), 'the dashed ring mark').not.toBeNull()
+    const signature = `${empty.className}|${empty.getAttribute('style') ?? ''}`
+    expect(signature).not.toMatch(/flag|destructive|red/i)
+  })
+
+  test('error carries the red left rule and the bang', () => {
+    render(<ErrorState error={new Error('boom')} />)
+    const error = screen.getByTestId('error-state')
+
+    expect(error.querySelector('[data-mark="error"]'), 'the filled disc and bang').not.toBeNull()
+    expect(error.getAttribute('style') ?? '').toMatch(/border-left:\s*4px solid var\(--flag-ink\)/)
+  })
+
+  test('the two share no visual signature', () => {
+    const { unmount } = render(<EmptyState title="Nothing here" />)
+    const empty = screen.getByTestId('empty-state')
+    const emptySignature = `${empty.className}|${empty.getAttribute('style') ?? ''}`
+    unmount()
+
+    render(<ErrorState error={new Error('boom')} />)
+    const error = screen.getByTestId('error-state')
+    expect(`${error.className}|${error.getAttribute('style') ?? ''}`).not.toBe(emptySignature)
+  })
+})
+
+describe('the database sentence is never truncated', () => {
+  // The message this has to hold, in full, on a phone. Two lines, and every
+  // figure in it is one the user needs.
+  const OVER_COMMITMENT =
+    'over-commitment: 4100.00 kg available, 4100.00 kg already committed, 100.00 kg requested'
+
+  test('it wraps rather than clipping', () => {
+    render(<ErrorState error={new Error(OVER_COMMITMENT)} />)
+    const message = screen.getByText(OVER_COMMITMENT)
+    const style = message.getAttribute('style') ?? ''
+
+    expect(message.className).not.toMatch(/truncate|line-clamp|whitespace-nowrap/)
+    expect(style).not.toMatch(/text-overflow|white-space:\s*nowrap/)
+    expect(style, 'figures in the sentence stack against the ones above').toMatch(/tabular-nums/)
+  })
+
+  test('the retry control stays optional and is a real button', () => {
+    render(<ErrorState error={new Error(OVER_COMMITMENT)} onRetry={() => {}} />)
+    expect(screen.getByTestId('error-retry').tagName).toBe('BUTTON')
+  })
+})

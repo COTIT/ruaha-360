@@ -5,7 +5,8 @@
  * error, and never retry — there is nothing to retry.
  *
  * Deliberately carries no `role="alert"` and no retry control: an empty result
- * must not look like a failure.
+ * must not look like a failure. Sunken sand, a dashed ring, and not one red
+ * thing anywhere — an empty state and an error state must not rhyme.
  */
 export function EmptyState({
   title,
@@ -19,11 +20,37 @@ export function EmptyState({
   return (
     <div
       data-testid="empty-state"
-      className="rounded border border-dashed border-deep/20 bg-white/50 px-4 py-8 text-center"
+      className="flex flex-col items-center gap-2 px-5 py-8 text-center"
+      style={{
+        background: 'var(--sand-2)',
+        border: '1px solid var(--rule)',
+        borderRadius: 'var(--radius-card)',
+      }}
     >
-      <p className="font-medium text-deep">{title}</p>
-      {detail && <p className="mt-1 text-sm text-deep/60">{detail}</p>}
-      {action && <div className="mt-3">{action}</div>}
+      <span
+        data-mark="empty"
+        aria-hidden
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 'var(--radius-pill)',
+          border: '2px dashed var(--ink-3)',
+          boxSizing: 'border-box',
+          flex: 'none',
+        }}
+      />
+      <p style={{ fontSize: 16, lineHeight: '22px', fontWeight: 600, color: 'var(--ink)' }}>
+        {title}
+      </p>
+      {detail && (
+        <p
+          className="max-w-prose"
+          style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)', textWrap: 'pretty' }}
+        >
+          {detail}
+        </p>
+      )}
+      {action && <div className="mt-1">{action}</div>}
     </div>
   )
 }

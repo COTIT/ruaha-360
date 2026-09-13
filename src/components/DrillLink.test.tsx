@@ -74,3 +74,44 @@ describe('DrillLink', () => {
     expect(screen.getByText('—')).toBeInTheDocument()
   })
 })
+
+/**
+ * The traceability claim, rendered dozens of times per drill-down: no headline
+ * without a path back to the records under it. So the value itself is the link
+ * — not a "view" affordance parked beside it — and it carries an arrow, which
+ * is the one place in the system an icon appears next to a figure.
+ */
+describe('DrillLink as the value itself', () => {
+  test('the link carries an arrow after the value', () => {
+    render(
+      <DrillLink kind="person" id="6001">
+        12,000.00 kg
+      </DrillLink>,
+    )
+    const link = screen.getByTestId('drill-link')
+
+    expect(link).toHaveTextContent('12,000.00 kg')
+    expect(link.querySelector('svg'), 'the arrow-right mark').not.toBeNull()
+  })
+
+  test('the arrow is decoration, not part of the accessible name', () => {
+    render(
+      <DrillLink kind="person" id="6001">
+        Amina Sanga
+      </DrillLink>,
+    )
+    const svg = screen.getByTestId('drill-link').querySelector('svg')
+    expect(svg?.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  test('the underline is the link, so it never reads as decoration', () => {
+    render(
+      <DrillLink kind="cycle" id="7001">
+        3,140.00 kg
+      </DrillLink>,
+    )
+    const style = screen.getByTestId('drill-link').getAttribute('style') ?? ''
+    expect(style).toMatch(/border-bottom/)
+    expect(style).toMatch(/var\(--primary-ink\)/)
+  })
+})

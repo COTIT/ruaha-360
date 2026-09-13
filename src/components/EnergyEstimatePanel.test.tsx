@@ -57,3 +57,48 @@ describe('EnergyEstimatePanel', () => {
     expect(screen.getByTestId('estimate-power').className).toMatch(/tabular/)
   })
 })
+
+/**
+ * The arithmetic, shown as arithmetic. A two-column list of labels and figures
+ * said what the numbers were; it did not say that the second follows from the
+ * first. Three equation lines do, and an estimate that shows its working is
+ * harder to mistake for a measurement.
+ */
+describe('EnergyEstimatePanel shows its working', () => {
+  test('each line reads as an equation ending in its result', () => {
+    render(<EnergyEstimatePanel {...mill} />)
+    const panel = screen.getByTestId('estimate-panel')
+
+    const lines = panel.querySelectorAll('[data-equation]')
+    expect([...lines].map((l) => l.getAttribute('data-equation'))).toEqual(['peak', 'day', 'week'])
+
+    expect(lines[0]).toHaveTextContent('15.000 kW')
+    expect(lines[0]).toHaveTextContent('=')
+    expect(lines[1]).toHaveTextContent('90.000 kWh')
+    expect(lines[2]).toHaveTextContent('450.000 kWh')
+  })
+
+  test('the day line starts from the peak the line above produced', () => {
+    render(<EnergyEstimatePanel {...mill} />)
+    const day = screen.getByTestId('estimate-panel').querySelector('[data-equation="day"]')
+    expect(day).toHaveTextContent('15.000 kW')
+    expect(day).toHaveTextContent('6')
+  })
+
+  test('each result carries its unit mark', () => {
+    render(<EnergyEstimatePanel {...mill} />)
+    for (const testId of ['estimate-power', 'estimate-kwh-day', 'estimate-kwh-week']) {
+      expect(screen.getByTestId(testId).querySelector('svg'), testId).not.toBeNull()
+    }
+  })
+
+  // The hatch means provisional everywhere in the system, and it is what
+  // carries that meaning here now the dashed border is gone.
+  test('the header band is hatched, and tagged', () => {
+    render(<EnergyEstimatePanel {...mill} />)
+    const header = screen.getByTestId('estimate-panel').querySelector('header')
+
+    expect(header?.getAttribute('style') ?? '').toMatch(/var\(--hatch\)/)
+    expect(header).toHaveTextContent(/estimate/i)
+  })
+})

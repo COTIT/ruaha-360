@@ -70,3 +70,73 @@ describe('CoverageBar', () => {
     expect(screen.getByTestId('coverage-pct')).toHaveTextContent('41.5%')
   })
 })
+
+/**
+ * Three quantities, distinguished three ways: solid fill, hatched pattern, and
+ * an outlined swatch drawn OUTSIDE the track. Committed supply is not available
+ * and no stacked bar may imply that it is — which is the whole reason this
+ * component exists rather than a two-segment progress bar.
+ */
+describe('CoverageBar tells its three quantities apart', () => {
+  test('the track holds available and not-covered, and nothing else', () => {
+    render(<CoverageBar {...seeded} />)
+    const track = screen.getByRole('meter')
+
+    const segments = track.querySelectorAll('[data-segment]')
+    expect([...segments].map((s) => s.getAttribute('data-segment'))).toEqual([
+      'available',
+      'uncovered',
+    ])
+  })
+
+  test('available is solid and not-covered is hatched — pattern, not only colour', () => {
+    render(<CoverageBar {...seeded} />)
+    const track = screen.getByRole('meter')
+
+    const available = track.querySelector('[data-segment="available"]')?.getAttribute('style') ?? ''
+    const uncovered = track.querySelector('[data-segment="uncovered"]')?.getAttribute('style') ?? ''
+
+    expect(available).toMatch(/background:\s*var\(--accent\)/)
+    expect(uncovered).toMatch(/var\(--hatch\)/)
+  })
+
+  // The claim the design exists to prevent: committed supply looking like part
+  // of what is covered.
+  test('committed is drawn outside the track', () => {
+    render(<CoverageBar {...seeded} />)
+    const track = screen.getByRole('meter')
+    const committed = screen.getByTestId('coverage-committed')
+
+    expect(track.contains(committed), 'committed supply is not part of the bar').toBe(false)
+    expect(screen.getByTestId('coverage-committed')).toHaveTextContent('6,400.00 kg')
+  })
+
+  test('every legend row carries its own swatch and figure', () => {
+    render(<CoverageBar {...seeded} />)
+    const legend = screen.getByTestId('coverage-legend')
+
+    expect(legend.querySelectorAll('[data-swatch]')).toHaveLength(3)
+    expect([...legend.querySelectorAll('[data-swatch]')].map((s) => s.getAttribute('data-swatch'))).toEqual([
+      'available',
+      'uncovered',
+      'committed',
+    ])
+  })
+
+  // 9,000 asked for, 5,600 available. The gap is stated rather than left as the
+  // empty part of a bar.
+  test('the uncovered figure is stated, not left to be inferred', () => {
+    render(<CoverageBar {...seeded} />)
+    expect(screen.getByTestId('coverage-uncovered')).toHaveTextContent('3,400.00 kg')
+  })
+
+  test('supply beyond the demand leaves nothing uncovered', () => {
+    render(<CoverageBar demandKg={1000} availableKg={5000} committedKg={0} coveragePct={100} />)
+    expect(screen.getByTestId('coverage-uncovered')).toHaveTextContent('0.00 kg')
+  })
+
+  test('an unknown figure stays unknown rather than becoming a zero', () => {
+    render(<CoverageBar demandKg={9000} availableKg={null} committedKg={null} coveragePct={null} />)
+    expect(screen.getByTestId('coverage-uncovered')).toHaveTextContent('—')
+  })
+})

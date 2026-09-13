@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { Database } from '@/lib/db.types'
@@ -24,7 +25,15 @@ const NAMESPACE = {
  * opportunity's 'accepted' means both sides agreed to talk further and nothing
  * has moved, which is a different claim from a request being approved. Sharing
  * a label between them would blur exactly the distinction the schema exists to
- * keep.
+ * keep — and until the redesign they also shared a treatment, which blurred it
+ * again in the one place users actually look.
+ *
+ * So: a request's **approved** is the only solid fill in the product, because
+ * it is the only state that is a decision with capacity consequences. Every
+ * opportunity pill is outlined on white, and **accepted** is distinguished by a
+ * heavier edge rather than by a fill. Terminal-but-inert states — withdrawn,
+ * cancelled, lapsed — are hatched, which means provisional everywhere else in
+ * the system too.
  */
 export function StatusPill(props: StatusPillProps) {
   const { t } = useTranslation()
@@ -34,38 +43,103 @@ export function StatusPill(props: StatusPillProps) {
     <span
       data-testid="status-pill"
       data-status={status}
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${styleFor(props)}`}
+      className="type-note inline-flex items-center px-[11px] py-1"
+      style={{ borderRadius: 'var(--radius-pill)', ...styleFor(props) }}
     >
       {t(`${NAMESPACE[kind]}.${status}`)}
     </span>
   )
 }
 
-const REQUEST_STYLE: Record<RequestStatus, string> = {
-  draft: 'border-deep/20 bg-white text-deep/60',
-  submitted: 'border-primary/30 bg-primary/5 text-primary',
-  under_review: 'border-primary/50 bg-primary/10 text-primary',
-  approved: 'border-accent/50 bg-accent/15 text-deep',
-  rejected: 'border-destructive/30 bg-destructive/5 text-destructive',
-  withdrawn: 'border-dashed border-deep/30 bg-white text-deep/50',
+/** Outlined on bare paper: the quietest pill in the system. */
+const OUTLINE: CSSProperties = {
+  border: '1px solid var(--rule-2)',
+  background: 'var(--paper)',
+  color: 'var(--ink-2)',
+  fontWeight: 500,
 }
 
-const DEMAND_STYLE: Record<DemandStatus, string> = {
-  open: 'border-primary/30 bg-primary/5 text-primary',
-  matched: 'border-accent/50 bg-accent/15 text-deep',
-  closed: 'border-deep/20 bg-white text-deep/60',
-  cancelled: 'border-dashed border-deep/30 bg-white text-deep/50',
+/** Provisional, and going nowhere. */
+const HATCHED: CSSProperties = {
+  border: '1px solid var(--rule-2)',
+  background: 'var(--hatch), var(--paper)',
+  color: 'var(--ink-2)',
+  fontWeight: 500,
 }
 
-const OPPORTUNITY_STYLE: Record<OpportunityStatus, string> = {
-  proposed: 'border-deep/25 bg-white text-deep',
-  shared: 'border-primary/30 bg-primary/5 text-primary',
-  accepted: 'border-accent/50 bg-accent/15 text-deep',
-  declined: 'border-destructive/30 bg-destructive/5 text-destructive',
-  lapsed: 'border-dashed border-deep/30 bg-white text-deep/50',
+const REQUEST_STYLE: Record<RequestStatus, CSSProperties> = {
+  draft: { ...OUTLINE, color: 'var(--ink-3)' },
+  submitted: {
+    border: '1px solid rgba(29, 112, 183, .35)',
+    background: 'var(--primary-tint)',
+    color: 'var(--primary-ink)',
+    fontWeight: 500,
+  },
+  under_review: {
+    border: '1px solid var(--primary)',
+    background: 'var(--primary-tint)',
+    color: 'var(--primary-ink)',
+    fontWeight: 600,
+  },
+  // The one fill.
+  approved: {
+    border: '1px solid var(--green-ink)',
+    background: 'var(--accent)',
+    color: '#22300a',
+    fontWeight: 600,
+  },
+  rejected: {
+    border: '1px solid rgba(158, 27, 27, .4)',
+    background: 'var(--flag-tint)',
+    color: 'var(--flag-ink)',
+    fontWeight: 600,
+  },
+  withdrawn: HATCHED,
 }
 
-function styleFor(props: StatusPillProps): string {
+const DEMAND_STYLE: Record<DemandStatus, CSSProperties> = {
+  open: {
+    border: '1px solid rgba(29, 112, 183, .35)',
+    background: 'var(--primary-tint)',
+    color: 'var(--primary-ink)',
+    fontWeight: 500,
+  },
+  // A tint, not a fill: supply was found, nothing was sold.
+  matched: {
+    border: '1px solid var(--green-ink)',
+    background: 'var(--green-tint)',
+    color: 'var(--green-ink)',
+    fontWeight: 600,
+  },
+  closed: { ...OUTLINE, background: 'var(--sand-2)' },
+  cancelled: HATCHED,
+}
+
+const OPPORTUNITY_STYLE: Record<OpportunityStatus, CSSProperties> = {
+  proposed: OUTLINE,
+  shared: {
+    border: '1px solid rgba(29, 112, 183, .35)',
+    background: 'var(--paper)',
+    color: 'var(--primary-ink)',
+    fontWeight: 500,
+  },
+  // A heavier edge, and nothing else. Not an approval.
+  accepted: {
+    border: '1.5px solid var(--green-ink)',
+    background: 'var(--paper)',
+    color: 'var(--green-ink)',
+    fontWeight: 600,
+  },
+  declined: {
+    border: '1px solid rgba(158, 27, 27, .4)',
+    background: 'var(--paper)',
+    color: 'var(--flag-ink)',
+    fontWeight: 500,
+  },
+  lapsed: HATCHED,
+}
+
+function styleFor(props: StatusPillProps): CSSProperties {
   switch (props.kind) {
     case 'request':
       return REQUEST_STYLE[props.status]

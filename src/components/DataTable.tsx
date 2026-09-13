@@ -5,6 +5,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type RowData,
   type SortingState,
 } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +26,18 @@ export interface DataTableProps<T> {
 }
 
 /**
+ * Per-column presentation. A figure is right-aligned and tabular so the digits
+ * of one row stack on the digits of the next; a name is not. Unit marks belong
+ * in the header, once, rather than in every cell.
+ */
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    numeric?: boolean
+  }
+}
+
+/**
  * TanStack Table wrapper — spec §9.3. Sorting, an empty state, and rows that
  * lead somewhere.
  *
@@ -32,6 +45,14 @@ export interface DataTableProps<T> {
  * validated search params, so the owning screen holds it and passes filtered
  * data down. A table that owned its own filters would make that state
  * unshareable and unreloadable.
+ *
+ * The head is sunken sand with 11px uppercase labels, rows are one hairline
+ * apart with no zebra, and the sort caret appears only on the column that is
+ * actually sorted — five idle ↕ glyphs were competing with the data and saying
+ * nothing. The `overflow-x-auto` wrapper is the table's own parent and stays
+ * that way: at 375px the table scrolls inside itself and the page does not
+ * (QA #8), and `responsive.spec.ts` reaches the wrapper through that
+ * relationship.
  */
 export function DataTable<T>({
   columns,
@@ -72,12 +93,17 @@ export function DataTable<T>({
 
   return (
     <div className="overflow-x-auto">
-      <table data-testid={testId} className="w-full border-collapse text-sm">
+      <table
+        data-testid={testId}
+        className="w-full border-collapse"
+        style={{ fontSize: 15, lineHeight: '22px' }}
+      >
         <thead>
           {table.getHeaderGroups().map((group) => (
-            <tr key={group.id} className="border-b border-deep/15 text-left">
+            <tr key={group.id} className="text-left" style={{ background: 'var(--sand-2)' }}>
               {group.headers.map((header) => {
                 const sorted = header.column.getIsSorted()
+                const numeric = header.column.columnDef.meta?.numeric === true
                 return (
                   <th
                     key={header.id}
@@ -85,18 +111,21 @@ export function DataTable<T>({
                     aria-sort={
                       sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'
                     }
-                    className="px-2 py-2 font-semibold"
+                    className={numeric ? 'px-4 py-[11px] text-right' : 'px-4 py-[11px]'}
+                    style={HEAD_CELL}
                   >
                     {header.column.getCanSort() ? (
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="inline-flex items-center gap-1"
+                        className="inline-flex items-center gap-[5px]"
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
-                        <span aria-hidden className="text-deep/40">
-                          {sorted === 'asc' ? '↑' : sorted === 'desc' ? '↓' : '↕'}
-                        </span>
+                        {sorted && (
+                          <span aria-hidden style={{ color: 'var(--primary-ink)' }}>
+                            {sorted === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
                       </button>
                     ) : (
                       flexRender(header.column.columnDef.header, header.getContext())
@@ -126,10 +155,18 @@ export function DataTable<T>({
                     }
                   : undefined
               }
-              className={`border-b border-deep/10 ${clickable ? 'cursor-pointer hover:bg-primary/5' : ''}`}
+              className={clickable ? 'cursor-pointer hover:bg-primary-tint' : undefined}
+              style={{ borderTop: '1px solid var(--rule)' }}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="tabular px-2 py-2">
+                <td
+                  key={cell.id}
+                  className={
+                    cell.column.columnDef.meta?.numeric === true
+                      ? 'tabular px-4 py-[13px] text-right'
+                      : 'tabular px-4 py-[13px]'
+                  }
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -140,3 +177,13 @@ export function DataTable<T>({
     </div>
   )
 }
+
+/** 11px uppercase, quiet, on the sunken head row. */
+const HEAD_CELL = {
+  fontSize: 11,
+  lineHeight: '15px',
+  fontWeight: 600,
+  letterSpacing: '.08em',
+  textTransform: 'uppercase',
+  color: 'var(--ink-3)',
+} as const

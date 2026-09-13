@@ -8,7 +8,9 @@ import { humanizeDbError } from '@/lib/errors'
  * Error contract §9: the Postgres messages in this schema are written to be
  * read by humans, and they are surfaced VERBATIM —
  * `over-commitment: 4100.00 kg available, ...` names the numbers the user
- * needs, and no rewriting improves it.
+ * needs, and no rewriting improves it. Which is also why the message is set to
+ * wrap and never to clip: that sentence runs to two lines on a phone, and every
+ * figure in it is load-bearing.
  *
  * `humanizeDbError` is what decides. Its default IS verbatim; it replaces only
  * what it recognises as machine noise — a constraint identifier, a uuid parse
@@ -24,16 +26,60 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
     <div
       data-testid="error-state"
       role="alert"
-      className="rounded border border-destructive/30 bg-destructive/5 px-4 py-3"
+      className="flex flex-col gap-1.5 px-4 py-3.5"
+      style={{
+        background: 'var(--flag-tint)',
+        border: '1px solid rgba(158, 27, 27, .25)',
+        borderLeft: '4px solid var(--flag-ink)',
+        borderRadius: 'var(--radius-card)',
+      }}
     >
-      <p className="text-sm font-medium text-destructive">{t('error.title')}</p>
-      <p className="mt-1 text-sm text-deep/80">{message}</p>
+      <p className="flex items-center gap-2" style={{ color: 'var(--flag-ink)' }}>
+        <span
+          data-mark="error"
+          aria-hidden
+          className="inline-flex items-center justify-center"
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 'var(--radius-pill)',
+            background: 'var(--flag-ink)',
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1,
+            flex: 'none',
+          }}
+        >
+          !
+        </span>
+        <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: 600 }}>{t('error.title')}</span>
+      </p>
+      <p
+        style={{
+          fontSize: 14,
+          lineHeight: 1.55,
+          color: 'var(--ink)',
+          fontVariantNumeric: 'tabular-nums',
+          textWrap: 'pretty',
+        }}
+      >
+        {message}
+      </p>
       {onRetry && (
         <button
           type="button"
           data-testid="error-retry"
           onClick={onRetry}
-          className="mt-3 rounded border border-deep/20 bg-white px-3 py-1.5 text-sm font-medium"
+          className="mt-1.5 inline-flex w-fit items-center px-3.5 font-medium"
+          style={{
+            minHeight: 40,
+            border: '1px solid var(--rule-2)',
+            borderRadius: 'var(--radius-control)',
+            background: 'var(--paper)',
+            color: 'var(--ink)',
+            fontSize: 14,
+          }}
         >
           {t('error.retry')}
         </button>
