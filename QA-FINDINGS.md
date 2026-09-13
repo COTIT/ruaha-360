@@ -1269,3 +1269,119 @@ draft, so the only draft in the system was seeded and one-way. Each test now
 inserts its own marked draft through `sql()`, which `cleanup.sql` already
 matches on. The rule that produced the gap is worth restating: **the marker
 discipline covers rows, not columns on seeded rows.**
+
+---
+
+# Manual walkthrough — 13 September 2026
+
+Driven in a browser as officer, farmer, ops and admin, after M9. Every route,
+read-only on seeded records: nothing verified, nothing decided, no draft
+submitted, and the language switch untouched — it writes `app_user.locale`,
+which `cleanup.sql` cannot undo.
+
+**Confirmed intact afterwards:** 8 persons · 6 requests · 1 opportunity · zero
+`E2E-` leftovers · seeded draft still `draft` · officer locale still `sw` ·
+Ilundo still 3 verified persons.
+
+## What the walkthrough verified
+
+All six of CLAUDE.md's headline figures, live on `/ops/tower`:
+
+```
+production   12,000.00 kg expected     (superseded 3,200 excluded)
+market       9,000 demand · 5,600 available · 62.2% coverage
+energy       500.000 kW planned, "Basis: Planned"
+             prospective 7.200 kW · approved 10.800 kW, never summed
+             headroom 489.200 kW · simultaneity 0.6
+quality      3/6 verified · 3/4 with GPS · 5/7 with an estimate
+```
+
+Fixes confirmed by hand: #3 (malformed id → "Person not found"), #8 (nav
+collapses to a scrollable strip at 375px, `12,000.00 kg` uncut), #10 and #26
+(both guarded routes redirect), #12 ("Buyer's demand", sentence-case harvest
+options, the status machine offering share/decline/lapse but not accept), #16
+#19 #21 #27 #28 (all inline on the register form, no write), #9 (estimate
+withheld at 99 hours), and the M2 reconciliation (officer home 14 = verify
+queue 14).
+
+Also: **2 console errors across the whole walkthrough**, against the 24 that
+#13 recorded. One is the first sign-in's `JWT issued at future` — see below.
+
+Officer home shows 14 to verify and ops home shows 15. That is correct, not a
+drift: `app_villages()` resolves to every village in the project for ops, so
+ops sees Mgama's record too.
+
+---
+
+## 31 · Reference data caches under a key that ignores the language — high
+
+**Repro:** as the Ilundo officer, whose `app_user.locale` is `sw`. The verify
+queue lists `Kahawa`, `Parachichi`, `Asali`. Person detail lists `Mahindi`,
+`Ndizi`. Then `/officer/cycles/b0000000-…01` renders **`Maize`** — English, for
+the same user in the same session.
+
+**Cause.** Crop and equipment names are translated in the DATABASE
+(`name_en` / `name_sw`), so a query that picks one of them returns
+locale-dependent data. Three patterns are in use and only two are right:
+
+| pattern | where | correct |
+|---|---|---|
+| fetch both names, choose at render | `usePersonDetail`, `useCrops` | yes |
+| choose in the queryFn, language in the key | `useVerifyQueue`, `useFarmerOpportunities` | yes |
+| choose in the queryFn, language NOT in the key | 13 queries across 6 files | **no** |
+
+The third caches whichever language won the race. i18next initialises to `en`
+and the stored locale is applied by an effect, so a query that resolves first
+caches English and keeps serving it.
+
+**Affected:** `useOfficerRecords` (cycle), `useTower` (production, market,
+energy rows, production cycles), `useRequests` (list, detail), `useOpsRequests`
+(list, detail), `useDemand` (list, detail, form options), `useOpportunity`.
+
+**Why it matters more than it looks.** Reference data is the ONE part of
+Swahili that works today — #2 leaves every UI string in English, and crop and
+equipment names are what a farmer and officer actually read in their own
+language. This silently reverts them, for exactly the users the Swahili
+requirement exists for.
+
+**The fix is already in the codebase.** `usePersonDetail` fetches both columns
+and selects at render: one cache entry, no duplication, and a language switch
+that takes effect immediately instead of after an invalidation.
+
+**Why the suite missed it.** Every unit test mocks the hook and asserts the
+shaped output; every e2e asserts one language. Nothing crosses a locale
+boundary against a warm cache. `language.spec.ts` switches language but
+asserts UI strings, which come from the bundles rather than the database.
+
+---
+
+## 32 · The withheld estimate gives the wrong reason — low
+
+**Repro:** `/farm/equipment/51000000-…01`, set hours per day to `99`.
+
+The estimate is correctly withheld (#9). The message reads "No estimate yet —
+Fill in how many, hours per day and days per week, and the estimate appears
+here." The fields ARE filled; the value is out of range. The copy assumes
+emptiness and so reads as though the farmer has not answered.
+
+The inline field error underneath does say "Hours per day run from 0 to 24", so
+the information is on screen — it is the panel's own copy that is wrong.
+
+Caught by hand because the unit test asserts `/hours per day/i`, which the
+wrong wording satisfies.
+
+---
+
+## 33 · `JWT issued at future` on a cold sign-in — low
+
+The first sign-in of the walkthrough failed with `JWT issued at future`,
+surfaced verbatim on the login form, and succeeded on an immediate retry. Local
+and database clocks agree to the second, so this is sub-second skew between
+this machine and GoTrue at token issue.
+
+The app's behaviour is correct — the read failed and said so rather than
+leaving the user staring at a form. Worth knowing before a demo: **sign in once
+before the stakeholders are watching.** A retry clears it.
+
+Possibly the same underlying cause as the first-test-of-a-run flake recorded
+under #30, which the 10s expect timeout now absorbs.
