@@ -1,7 +1,9 @@
+import { Weight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { Loading } from '@/components/controls'
 import { ProvenanceBadge } from '@/components/ProvenanceBadge'
 import { useMyFarm, type MyFarm } from '@/features/farmer/useMyFarm'
 import { formatArea, formatKg, formatPlainDate } from '@/lib/format'
@@ -20,11 +22,7 @@ export function MyFarmScreen() {
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   if (query.isLoading) {
-    return (
-      <p data-testid="my-farm-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
-    )
+    return <Loading testId="my-farm-loading" />
   }
 
   // A real message, not an empty list: zero farms means none has been
@@ -34,20 +32,28 @@ export function MyFarmScreen() {
   }
 
   return (
-    <section className="space-y-4" data-testid="my-farm">
-      <header className="space-y-1">
-        <h1 className="text-lg font-semibold">{t('myFarm.title')}</h1>
-        <p className="text-xs text-deep/60">{t('myFarm.readOnly')}</p>
+    <section className="flex max-w-lg flex-col gap-4" data-testid="my-farm">
+      <header className="flex flex-col gap-1.5">
+        <h1 className="type-screen-title">{t('myFarm.title')}</h1>
+        <p style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)', textWrap: 'pretty' }}>
+          {t('myFarm.readOnly')}
+        </p>
       </header>
 
       {query.farms.map((farm) => (
         <article
           key={farm.id}
           data-testid="farm-card"
-          className="space-y-3 rounded border border-deep/10 bg-white/70 p-3"
+          className="flex flex-col gap-3 p-4"
+          style={{
+            border: '1px solid var(--rule)',
+            borderRadius: 'var(--radius-frame)',
+            background: 'var(--paper)',
+          }}
         >
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-semibold">{farm.label}</h2>
+          {/* Farm level keeps the full lozenge. */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 style={{ fontSize: 17, fontWeight: 600 }}>{farm.label}</h2>
             <Badge record={farm} />
           </div>
 
@@ -66,37 +72,61 @@ function Plot({ plot }: { plot: MyFarm['plots'][number] }) {
   const { t } = useTranslation()
 
   return (
-    <div data-testid="plot-card" className="space-y-2 border-t border-deep/10 pt-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium">{plot.label}</span>
-        <span className="tabular text-sm text-deep/70">{formatArea(plot.area_ha, 'hectare')}</span>
-        <Badge record={plot} />
+    <div
+      data-testid="plot-card"
+      className="flex flex-col gap-2.5 pt-3"
+      style={{ borderTop: '1px solid var(--rule)' }}
+    >
+      {/*
+        Provenance collapses in the nest. Plot and cycle lines carry the mark
+        plus one line of words, so four full lozenges down a card stop competing
+        with the kilograms.
+      */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span style={{ fontSize: 16, fontWeight: 600 }}>{plot.label}</span>
+        <span className="tabular" style={{ fontSize: 14, color: 'var(--ink-2)' }}>
+          {formatArea(plot.area_ha, 'hectare')}
+        </span>
       </div>
+      <Badge record={plot} compact />
 
       {plot.cycles.length === 0 ? (
-        <p className="text-xs text-deep/60">{t('myFarm.noCycles')}</p>
+        <p className="type-note" style={{ color: 'var(--ink-3)' }}>
+          {t('myFarm.noCycles')}
+        </p>
       ) : (
         plot.cycles.map((cycle) => (
-          <div key={cycle.id} data-testid="cycle-card" className="ml-3 space-y-1 border-l border-deep/10 pl-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm">{cycle.crop_name}</span>
-              <Badge record={cycle} />
+          <div
+            key={cycle.id}
+            data-testid="cycle-card"
+            className="ml-1 flex flex-col gap-1.5 pl-3.5"
+            style={{ borderLeft: '3px solid var(--rule)' }}
+          >
+            <div className="flex flex-wrap items-baseline gap-2.5">
+              <span style={{ fontSize: 16, fontWeight: 600 }}>{cycle.crop_name}</span>
+              <span className="type-note" style={{ color: 'var(--ink-3)' }}>
+                {formatPlainDate(cycle.harvest_start)} – {formatPlainDate(cycle.harvest_end)}
+              </span>
             </div>
 
-            <p className="text-xs text-deep/60">
-              {t('myFarm.window')}: {formatPlainDate(cycle.harvest_start)} –{' '}
-              {formatPlainDate(cycle.harvest_end)}
-            </p>
-
             {cycle.expected && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-deep/60">{t('myFarm.expected')}:</span>
-                <span className="tabular text-sm font-medium">
+              <div
+                className="grid items-baseline gap-3"
+                style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}
+              >
+                <span
+                  className="inline-flex items-center gap-[7px]"
+                  style={{ fontSize: 13, color: 'var(--ink-2)' }}
+                >
+                  <Weight aria-hidden size={15} strokeWidth={2.25} style={{ flex: 'none' }} />
+                  {t('myFarm.expected')}
+                </span>
+                <span className="tabular font-semibold" style={{ fontSize: 17 }}>
                   {formatKg(cycle.expected.quantity_kg)}
                 </span>
-                <Badge record={cycle.expected} />
               </div>
             )}
+            <Badge record={cycle.expected ?? cycle} compact />
           </div>
         ))
       )}
@@ -106,7 +136,9 @@ function Plot({ plot }: { plot: MyFarm['plots'][number] }) {
 
 function Badge({
   record,
+  compact = false,
 }: {
+  compact?: boolean
   record: {
     source: Parameters<typeof ProvenanceBadge>[0]['source']
     verification: Parameters<typeof ProvenanceBadge>[0]['verification']
@@ -120,6 +152,7 @@ function Badge({
       verification={record.verification}
       confidence={record.confidence}
       capturedAt={record.captured_at}
+      compact={compact}
     />
   )
 }

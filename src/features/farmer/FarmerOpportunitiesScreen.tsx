@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { Loading, ProductNote } from '@/components/controls'
 import { StatusPill } from '@/components/StatusPill'
 import { useFarmerOpportunities } from '@/features/farmer/useFarmerOpportunities'
 import { formatKg } from '@/lib/format'
@@ -22,55 +23,90 @@ export function FarmerOpportunitiesScreen() {
   const rows = query.data ?? []
 
   return (
-    <section data-testid="farmer-opportunities" className="space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-lg font-semibold">{t('farmerOpportunities.title')}</h1>
+    <section data-testid="farmer-opportunities" className="flex max-w-lg flex-col gap-4">
+      <header className="flex flex-col gap-2.5">
+        <h1 className="type-screen-title">{t('farmerOpportunities.title')}</h1>
         {/* Not a sale, not a delivery, not a payment. Stated on every
-            opportunity screen, farmer-facing most of all. */}
-        <p data-testid="farmer-opportunities-note" className="text-xs text-deep/70">
-          {t('farmerOpportunities.notASale')}
-        </p>
+            opportunity screen, farmer-facing most of all — at 14px on a panel,
+            where it cannot shrink into fine print. */}
+        <ProductNote>
+          <span data-testid="farmer-opportunities-note">
+            {t('farmerOpportunities.notASale')}
+          </span>
+        </ProductNote>
       </header>
 
       {query.isLoading ? (
-        <p data-testid="farmer-opportunities-loading" className="text-sm text-deep/60">
-          {t('common.loading')}
-        </p>
+        <Loading testId="farmer-opportunities-loading" />
       ) : rows.length === 0 ? (
         <EmptyState
           title={t('farmerOpportunities.noneTitle')}
           detail={t('farmerOpportunities.noneDetail')}
         />
       ) : (
-        <ul className="space-y-3">
+        <ul className="flex flex-col gap-3">
           {rows.map((o) => (
             <li
               key={o.id}
               data-testid="farmer-opportunity"
-              className="space-y-2 rounded border border-deep/10 bg-white/70 p-4"
+              className="flex flex-col gap-3 p-4"
+              style={{
+                border: '1px solid var(--rule)',
+                borderRadius: 'var(--radius-card)',
+                background: 'var(--paper)',
+              }}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-deep">{o.crop_name}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <p style={{ fontSize: 17, fontWeight: 600 }}>{o.crop_name}</p>
                 <StatusPill kind="opportunity" status={o.status} />
               </div>
 
               {/* No buyer, no demand window: `demand_read` is staff-only, so a
                   farmer cannot see who the buyer is. Saying so is better than
                   rendering blanks where a name would go. */}
-              <p className="text-xs text-deep/60">{t('farmerOpportunities.buyerWithOps')}</p>
+              <p className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
+                {t('farmerOpportunities.buyerWithOps')}
+              </p>
 
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                {/* The farmer's own share leads: it is the figure that
-                    concerns them. The opportunity's total is context. */}
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-deep/60">{t('farmerOpportunities.yourShare')}</dt>
-                  <dd data-testid="my-contribution" className="tabular font-medium">
+              {/*
+                The farmer's own share is the tinted card and the opportunity's
+                total is context beside it. On this surface the figure that
+                concerns them has to be the one that reads first.
+              */}
+              <dl className="flex flex-wrap gap-2.5">
+                <div
+                  className="flex min-w-0 flex-col gap-0.5 px-3.5 py-3"
+                  style={{
+                    flex: '1 1 150px',
+                    border: '1px solid var(--primary)',
+                    borderRadius: 'var(--radius-control)',
+                    background: 'var(--primary-tint)',
+                  }}
+                >
+                  <dt className="type-note" style={{ color: 'var(--primary-ink)' }}>
+                    {t('farmerOpportunities.yourShare')}
+                  </dt>
+                  <dd
+                    data-testid="my-contribution"
+                    className="tabular type-figure"
+                    style={{ color: 'var(--primary-ink)' }}
+                  >
                     {formatKg(o.my_contribution_kg)}
                   </dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-deep/60">{t('farmerOpportunities.opportunityTotal')}</dt>
-                  <dd data-testid="offered-total" className="tabular">
+                <div
+                  className="flex min-w-0 flex-col gap-0.5 px-3.5 py-3"
+                  style={{
+                    flex: '1 1 150px',
+                    border: '1px solid var(--rule)',
+                    borderRadius: 'var(--radius-control)',
+                    background: 'var(--sand-2)',
+                  }}
+                >
+                  <dt className="type-note" style={{ color: 'var(--ink-2)' }}>
+                    {t('farmerOpportunities.opportunityTotal')}
+                  </dt>
+                  <dd data-testid="offered-total" className="tabular" style={{ fontSize: 17, fontWeight: 600 }}>
                     {formatKg(o.offered_quantity_kg)}
                   </dd>
                 </div>

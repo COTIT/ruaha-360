@@ -9,6 +9,8 @@ import { useSession } from '@/app/session'
 import { EmptyState } from '@/components/EmptyState'
 import { EnergyEstimatePanel } from '@/components/EnergyEstimatePanel'
 import { ErrorState } from '@/components/ErrorState'
+import { IndicativePill, Loading } from '@/components/controls'
+import { BangMark } from '@/components/marks'
 import { useEquipmentItem } from '@/features/farmer/useEquipment'
 import { requestSchema, type RequestForm } from '@/features/farmer/requestSchema'
 import { useSubmitRequest } from '@/features/farmer/useRequests'
@@ -90,11 +92,7 @@ export function EquipmentDetailScreen() {
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   if (query.isLoading || session.isLoading) {
-    return (
-      <p data-testid="equipment-detail-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
-    )
+    return <Loading testId="equipment-detail-loading" />
   }
 
   // Zero rows is an answer: not listed, or outside this project's scope.
@@ -108,15 +106,25 @@ export function EquipmentDetailScreen() {
 
   if (submit.isSuccess) {
     return (
-      <section className="space-y-3" data-testid="request-success">
-        <h1 className="text-lg font-semibold">{t('equipment.successTitle')}</h1>
-        <p className="text-sm text-deep/70">{t('equipment.successDetail')}</p>
+      <section className="flex max-w-lg flex-col gap-2.5" data-testid="request-success">
+        <h1 className="type-screen-title">{t('equipment.successTitle')}</h1>
+        <p style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
+          {t('equipment.successDetail')}
+        </p>
         {submit.data?.id && (
           <Link
             to="/farm/requests/$requestId"
             params={{ requestId: submit.data.id }}
             data-testid="request-view"
-            className="inline-block text-sm font-medium text-primary underline underline-offset-4"
+            className="inline-flex w-full items-center justify-center font-semibold"
+            style={{
+              minHeight: 48,
+              border: '1.5px solid var(--primary)',
+              borderRadius: 'var(--radius-control)',
+              background: 'var(--primary-tint)',
+              color: 'var(--primary-ink)',
+              fontSize: 16,
+            }}
           >
             {t('equipment.viewRequest')}
           </Link>
@@ -150,35 +158,65 @@ export function EquipmentDetailScreen() {
     const error = errors[name]
     if (!error) return null
     return (
-      <p data-testid={`request-${fieldId(name)}-error`} className="text-sm text-destructive">
+      <p
+        id={`request-${fieldId(name)}-error`}
+        data-testid={`request-${fieldId(name)}-error`}
+        className="flex items-start gap-[7px] font-medium"
+        style={{ fontSize: 13, color: 'var(--flag-ink)', textWrap: 'pretty' }}
+      >
+        <BangMark />
         {t(error.message ?? 'equipment.required')}
       </p>
     )
   }
 
   return (
-    <section className="max-w-lg space-y-4" data-testid="equipment-detail">
-      <header className="space-y-1">
-        <h1 className="text-lg font-semibold">{item.name}</h1>
-        <p className="text-xs text-deep/60">{item.category_name}</p>
-        <p className="tabular text-sm">{formatKw(item.rated_power_kw)}</p>
-        <p data-testid="equipment-price" className="tabular text-sm">
-          {formatMoney(item.indicative_price, item.currency)}{' '}
-          <span className="text-xs font-normal text-deep/60">({t('equipment.indicative')})</span>
+    <section className="flex max-w-lg flex-col gap-4" data-testid="equipment-detail">
+      <header className="flex flex-col gap-2">
+        <p className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {item.category_name}
         </p>
-        <p className="text-xs text-deep/60">{t('equipment.notAQuotation')}</p>
+        <h1 className="type-screen-title">{item.name}</h1>
+        <div className="flex flex-wrap gap-2.5">
+          <span className="flex flex-col gap-0.5 px-3 py-2" style={SPEC_CELL}>
+            <span className="type-note" style={{ color: 'var(--ink-2)' }}>
+              {t('equipment.ratedPower')}
+            </span>
+            <span className="tabular font-semibold" style={{ fontSize: 17 }}>
+              {formatKw(item.rated_power_kw)}
+            </span>
+          </span>
+          <span data-testid="equipment-price" className="flex flex-col gap-0.5 px-3 py-2" style={SPEC_CELL}>
+            <span className="type-note inline-flex flex-wrap items-center gap-2" style={{ color: 'var(--ink-2)' }}>
+              {t('equipment.price')}
+              <IndicativePill />
+            </span>
+            <span className="tabular font-semibold" style={{ fontSize: 17 }}>
+              {formatMoney(item.indicative_price, item.currency)}
+            </span>
+          </span>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--ink-2)', textWrap: 'pretty' }}>
+          {t('equipment.notAQuotation')}
+        </p>
       </header>
 
-      <h2 className="text-sm font-semibold">{t('equipment.requestThis')}</h2>
+      <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+        {t('equipment.requestThis')}
+      </h2>
 
-      <form className="space-y-4" noValidate onSubmit={onSubmit}>
-        <div className="space-y-3">
+      <form className="flex flex-col gap-4" noValidate onSubmit={onSubmit}>
+        <div className="flex flex-col gap-3">
           <NumberField label={t('equipment.quantity')} testId="request-quantity">
             <input
               id="request-quantity"
               data-testid="request-quantity"
               inputMode="numeric"
               className={inputClass}
+              style={errors.quantity ? { ...inputStyle, border: '1.5px solid var(--flag-ink)' } : inputStyle}
+              {...(errors.quantity
+                ? { 'aria-invalid': true as const, 'aria-describedby': 'request-quantity-error' }
+                : {})}
               {...register('quantity')}
             />
           </NumberField>
@@ -190,6 +228,10 @@ export function EquipmentDetailScreen() {
               data-testid="request-hours"
               inputMode="decimal"
               className={inputClass}
+              style={errors.hours_per_day ? { ...inputStyle, border: '1.5px solid var(--flag-ink)' } : inputStyle}
+              {...(errors.hours_per_day
+                ? { 'aria-invalid': true as const, 'aria-describedby': 'request-hours-error' }
+                : {})}
               {...register('hours_per_day')}
             />
           </NumberField>
@@ -201,13 +243,21 @@ export function EquipmentDetailScreen() {
               data-testid="request-days"
               inputMode="decimal"
               className={inputClass}
+              style={errors.days_per_week ? { ...inputStyle, border: '1.5px solid var(--flag-ink)' } : inputStyle}
+              {...(errors.days_per_week
+                ? { 'aria-invalid': true as const, 'aria-describedby': 'request-days-error' }
+                : {})}
               {...register('days_per_week')}
             />
           </NumberField>
           {err('days_per_week')}
 
-          <div className="space-y-1">
-            <label className="block text-sm font-medium" htmlFor="request-purpose">
+          <div className="flex flex-col gap-1.5">
+            <label
+              className="block"
+              htmlFor="request-purpose"
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}
+            >
               {t('equipment.purpose')}
             </label>
             <textarea
@@ -215,6 +265,7 @@ export function EquipmentDetailScreen() {
               data-testid="request-purpose"
               rows={2}
               className={inputClass}
+              style={{ ...inputStyle, fontVariantNumeric: 'normal' }}
               {...register('purpose')}
             />
           </div>
@@ -257,7 +308,17 @@ export function EquipmentDetailScreen() {
           type="submit"
           data-testid="request-submit"
           disabled={submit.isPending || isSubmitting || !canRequest}
-          className="w-full rounded bg-primary px-3 py-2.5 font-medium text-primary-foreground disabled:opacity-60"
+          className="w-full font-semibold disabled:opacity-60"
+          style={{
+            minHeight: 52,
+            border: 0,
+            borderRadius: 10,
+            background: 'var(--primary)',
+            color: '#fff',
+            fontSize: 17,
+            fontFamily: 'inherit',
+            textWrap: 'balance',
+          }}
         >
           {submit.isPending || isSubmitting
             ? t('equipment.submitting')
@@ -268,7 +329,30 @@ export function EquipmentDetailScreen() {
   )
 }
 
-const inputClass = 'w-full rounded border border-deep/20 bg-white px-3 py-2'
+const inputClass = 'w-full'
+
+/** 48px, 17px, tabular — the same control the register form uses. */
+const inputStyle = {
+  minHeight: 48,
+  width: '100%',
+  boxSizing: 'border-box' as const,
+  border: '1.5px solid var(--rule-2)',
+  borderRadius: 'var(--radius-control)',
+  background: 'var(--paper)',
+  padding: '12px 14px',
+  fontSize: 17,
+  fontFamily: 'inherit',
+  color: 'var(--ink)',
+  fontVariantNumeric: 'tabular-nums' as const,
+}
+
+const SPEC_CELL = {
+  flex: '1 1 140px',
+  minWidth: 0,
+  border: '1px solid var(--rule)',
+  borderRadius: 'var(--radius-control)',
+  background: 'var(--sand-2)',
+}
 
 function fieldId(name: keyof RequestForm) {
   // `hours_per_day` is labelled `request-hours` on screen, as the spec names
@@ -293,8 +377,12 @@ function NumberField({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium" htmlFor={testId}>
+    <div className="flex flex-col gap-1.5">
+      <label
+        className="block"
+        htmlFor={testId}
+        style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}
+      >
         {label}
       </label>
       {children}

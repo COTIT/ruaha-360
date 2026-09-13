@@ -84,3 +84,54 @@ export function Loading({ testId }: { testId?: string }) {
     </p>
   )
 }
+
+/**
+ * "Indicative" is a tag, not a parenthesis.
+ *
+ * It travels with the number as a hatched pill, which cannot be skim-read away
+ * the way "(indicative)" in 12px grey could. A price here is not a quotation and
+ * the programme does not want it read as one.
+ */
+export function IndicativePill() {
+  const { t } = useTranslation()
+
+  return (
+    <span
+      className="type-microlabel px-2 py-px"
+      style={{
+        border: '1px solid var(--rule-2)',
+        borderRadius: 'var(--radius-pill)',
+        background: 'var(--hatch), var(--paper)',
+        color: 'var(--ink-2)',
+        flex: 'none',
+      }}
+    >
+      {t('equipment.indicative')}
+    </span>
+  )
+}
+
+/**
+ * A sentence the product cannot afford to have skipped.
+ *
+ * An opportunity is not a sale; an estimate is not a measurement. These live at
+ * 14px on a bordered panel rather than shrinking into a grey footnote.
+ */
+export function ProductNote({ children }: { children: ReactNode }) {
+  return (
+    <p
+      className="px-3.5 py-3"
+      style={{
+        border: '1px solid var(--rule-2)',
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--paper)',
+        fontSize: 14,
+        lineHeight: 1.55,
+        fontWeight: 500,
+        textWrap: 'pretty',
+      }}
+    >
+      {children}
+    </p>
+  )
+}

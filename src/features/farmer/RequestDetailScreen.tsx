@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { BUTTON_PRIMARY, BUTTON_SECONDARY } from '@/components/controlStyles'
+import { Card, Loading, ProductNote } from '@/components/controls'
 import { StatusPill } from '@/components/StatusPill'
 import { useFarmerTransition, useRequest } from '@/features/farmer/useRequests'
 import { farmerActions } from '@/features/ops/transitions'
@@ -31,11 +33,7 @@ export function RequestDetailScreen() {
   if (query.error) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />
 
   if (query.isLoading) {
-    return (
-      <p data-testid="request-detail-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
-    )
+    return <Loading testId="request-detail-loading" />
   }
 
   // Zero rows is an answer: RLS says this request is not visible.
@@ -49,33 +47,57 @@ export function RequestDetailScreen() {
   const actions = farmerActions(request.status)
 
   return (
-    <section className="max-w-lg space-y-4" data-testid="request-detail">
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold">{request.equipment_name}</h1>
+    <section className="flex max-w-lg flex-col gap-4" data-testid="request-detail">
+      <header className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="type-screen-title">{request.equipment_name}</h1>
           <StatusPill kind="request" status={request.status} />
         </div>
-        {request.purpose && <p className="text-sm text-deep/70">{request.purpose}</p>}
+        {request.purpose && (
+          <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>{request.purpose}</p>
+        )}
         {request.submitted_at && (
-          <p className="text-xs text-deep/50">
+          <p className="type-note" style={{ color: 'var(--ink-3)' }}>
             {t('requests.submittedOn')} {formatTimestamp(request.submitted_at)}
           </p>
         )}
       </header>
 
-      <section className="space-y-1">
-        <h2 className="text-sm font-semibold">{t('requests.assumptions')}</h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <Row label={t('equipment.quantity')} value={String(request.quantity)} />
-          <Row label={t('equipment.hours')} value={String(request.hours_per_day ?? '—')} />
-          <Row label={t('equipment.days')} value={String(request.days_per_week ?? '—')} />
-        </dl>
+      <section className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('requests.assumptions')}
+        </h2>
+        <Card className="flex flex-wrap gap-4 p-4" sunken>
+          <Assumption label={t('equipment.quantity')} value={String(request.quantity)} />
+          <Assumption label={t('equipment.hours')} value={String(request.hours_per_day ?? '—')} />
+          <Assumption label={t('equipment.days')} value={String(request.days_per_week ?? '—')} />
+        </Card>
       </section>
 
-      <section className="space-y-1">
-        <h2 className="text-sm font-semibold">{t('requests.storedEstimate')}</h2>
+      <section
+        className="flex flex-col gap-2.5 p-4"
+        style={{
+          border: '1px solid var(--rule-2)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--hatch), var(--paper)',
+        }}
+      >
+        <h2 className="type-section inline-flex flex-wrap items-center gap-2" style={{ color: 'var(--ink-3)' }}>
+          {t('requests.storedEstimate')}
+          <span
+            className="type-microlabel px-2 py-px"
+            style={{
+              border: '1px solid var(--rule-2)',
+              borderRadius: 'var(--radius-pill)',
+              background: 'var(--paper)',
+              color: 'var(--ink-2)',
+            }}
+          >
+            {t('estimate.tag')}
+          </span>
+        </h2>
         {estimate ? (
-          <dl className="grid gap-y-1 text-sm">
+          <dl className="flex flex-col gap-1.5">
             <Row
               label={t('estimate.peak')}
               value={formatKw(estimate.est_power_kw)}
@@ -95,42 +117,50 @@ export function RequestDetailScreen() {
         ) : (
           <EmptyState title={t('requests.noEstimate')} detail={t('requests.noEstimateDetail')} />
         )}
-        <p className="text-xs text-deep/60">{t('estimate.isEstimate')}</p>
+        <p style={{ fontSize: 13, lineHeight: 1.5, fontWeight: 500 }}>{t('estimate.isEstimate')}</p>
       </section>
 
       {request.decision_note && (
-        <section className="space-y-1">
-          <h2 className="text-sm font-semibold">{t('requests.decision')}</h2>
-          <p className="text-sm text-deep/80">{request.decision_note}</p>
+        <section className="flex flex-col gap-1.5">
+          <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+            {t('requests.decision')}
+          </h2>
+          <p style={{ fontSize: 15, lineHeight: 1.55 }}>{request.decision_note}</p>
           {request.decided_at && (
-            <p className="text-xs text-deep/50">{formatTimestamp(request.decided_at)}</p>
+            <p className="type-note" style={{ color: 'var(--ink-3)' }}>
+              {formatTimestamp(request.decided_at)}
+            </p>
           )}
         </section>
       )}
 
-      {frozen && (
-        <p className="rounded border border-deep/15 bg-white/60 px-3 py-2 text-xs text-deep/70">
-          {t('requests.frozen')}
-        </p>
-      )}
+      {frozen && <ProductNote>{t('requests.frozen')}</ProductNote>}
 
       {/* What the applicant may do from here — business-rules §2's role
           matrix, mirrored by farmerActions. A draft can be submitted or
           withdrawn; a submitted request withdrawn; anything under review or
           decided offers nothing, because it is no longer theirs to move. */}
       {actions.length > 0 && (
-        <section className="space-y-2">
+        <section className="flex flex-col gap-2.5">
           {transition.error && (
             <p
               data-testid="request-action-error"
               role="alert"
-              className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-deep/80"
+              className="px-3.5 py-3"
+              style={{
+                border: '1px solid rgba(158, 27, 27, .25)',
+                borderLeft: '4px solid var(--flag-ink)',
+                borderRadius: 'var(--radius-card)',
+                background: 'var(--flag-tint)',
+                fontSize: 14,
+                lineHeight: 1.55,
+              }}
             >
               {transition.error.message}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             {actions.map((action) => (
               <button
                 key={action}
@@ -138,10 +168,11 @@ export function RequestDetailScreen() {
                 data-testid={`request-action-${action}`}
                 disabled={transition.isPending}
                 onClick={() => transition.mutate(action)}
-                className={
+                className="flex-1 disabled:opacity-60"
+                style={
                   action === 'submit'
-                    ? 'rounded bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60'
-                    : 'rounded border border-deep/20 bg-white px-4 py-2 text-sm font-medium text-deep/80 disabled:opacity-60'
+                    ? { ...BUTTON_PRIMARY, minHeight: 48, fontSize: 16 }
+                    : { ...BUTTON_SECONDARY, minHeight: 48, fontSize: 16 }
                 }
               >
                 {t(`requests.action.${action}`)}
@@ -150,7 +181,9 @@ export function RequestDetailScreen() {
           </div>
 
           {request.status === 'draft' && (
-            <p className="text-xs text-deep/60">{t('requests.draftNote')}</p>
+            <p className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
+              {t('requests.draftNote')}
+            </p>
           )}
         </section>
       )}
@@ -158,13 +191,34 @@ export function RequestDetailScreen() {
   )
 }
 
+/**
+ * A label that may wrap to two lines with its figure still pinned right — a
+ * grid track, not `justify-between` on a flex row.
+ */
 function Row({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-deep/60">{label}</dt>
-      <dd data-testid={testId} className="tabular font-medium">
+    <div
+      className="grid items-baseline gap-3"
+      style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}
+    >
+      <dt style={{ fontSize: 13, color: 'var(--ink-2)' }}>{label}</dt>
+      <dd data-testid={testId} className="tabular font-semibold" style={{ fontSize: 17 }}>
         {value}
       </dd>
+    </div>
+  )
+}
+
+/** One of the three figures the stored estimate was calculated from. */
+function Assumption({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-px">
+      <span className="type-note" style={{ color: 'var(--ink-3)' }}>
+        {label}
+      </span>
+      <span className="tabular font-semibold" style={{ fontSize: 17 }}>
+        {value}
+      </span>
     </div>
   )
 }
