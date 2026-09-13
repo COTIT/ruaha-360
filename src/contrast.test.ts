@@ -19,9 +19,6 @@ const OPACITY = /(^|[^\w-])(text|bg|border|fill|stroke|ring|divide|outline)-(dee
 
 const PENDING = new Set([
   'src/app/Placeholder.tsx',
-  'src/features/officer/OfficerHomeScreen.tsx',
-  'src/features/officer/OfficerRecordScreens.tsx',
-  'src/features/officer/PersonDetailScreen.tsx',
   'src/features/ops/BuyersScreen.tsx',
   'src/features/ops/CatalogueScreen.tsx',
   'src/features/ops/DemandDetailScreen.tsx',

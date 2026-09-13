@@ -1,5 +1,9 @@
 import type { CSSProperties } from 'react'
 
+import type { Database } from '@/lib/db.types'
+
+type VerificationStatus = Database['public']['Enums']['verification_status']
+
 /**
  * The shared control surface.
  *
@@ -58,3 +62,22 @@ export const BUTTON_SECONDARY: CSSProperties = {
   textWrap: 'balance',
 }
 
+/**
+ * The rail down a nested record, tinted by that record's own state.
+ *
+ * Six levels deep on a person detail, the rail is what lets the eye follow one
+ * branch. Colour alone never carries the state — the mark beside it does that —
+ * so this is a second, quieter signal rather than the only one.
+ */
+export function railColour(verification: VerificationStatus): string {
+  switch (verification) {
+    case 'verified':
+      return 'var(--green-ink)'
+    case 'pending':
+      return 'var(--primary-ink)'
+    case 'disputed':
+      return 'var(--flag-ink)'
+    default:
+      return 'var(--rule-2)'
+  }
+}

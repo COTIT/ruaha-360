@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { ProvenanceBadge } from '@/components/ProvenanceBadge'
+import { railColour } from '@/components/controlStyles'
+import { Loading } from '@/components/controls'
+import { VerificationMark } from '@/components/marks'
 import { countUnverified, type Provenance } from '@/features/officer/personDetail'
 import { usePersonDetail, useVerify } from '@/features/officer/usePersonDetail'
 import { VerifyButton } from '@/features/officer/VerifyButton'
@@ -28,9 +31,7 @@ export function PersonDetailScreen() {
 
   if (query.isLoading) {
     return (
-      <p data-testid="person-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="person-loading" />
     )
   }
 
@@ -45,12 +46,12 @@ export function PersonDetailScreen() {
     verify.isPending && verify.variables?.table === table && verify.variables?.id === id
 
   return (
-    <section className="max-w-3xl space-y-5" data-testid="person-detail">
-      <header className="space-y-2">
-        <h1 className="text-lg font-semibold">
-          {detail.person.given_name} {detail.person.family_name}
-        </h1>
-        <div className="flex flex-wrap items-center gap-2">
+    <section className="flex max-w-3xl flex-col gap-[18px]" data-testid="person-detail">
+      <header className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="type-screen-title">
+            {detail.person.given_name} {detail.person.family_name}
+          </h1>
           <Badge record={detail.person} />
           <VerifyButton
             table="person"
@@ -60,10 +61,21 @@ export function PersonDetailScreen() {
             pending={verifying('person', detail.person.id)}
           />
         </div>
-        <p data-testid="person-outstanding" className="text-sm text-deep/60">
-          {outstanding === 0 ? t('person.allVerified') : t('person.unverifiedCount', { count: outstanding })}
+        <p
+          data-testid="person-outstanding"
+          className="inline-flex items-center gap-2.5"
+          style={{ fontSize: 15, fontWeight: 500 }}
+        >
+          <VerificationMark verification={outstanding === 0 ? 'verified' : 'unverified'} size={18} />
+          {outstanding === 0
+            ? t('person.allVerified')
+            : t('person.unverifiedCount', { count: outstanding })}
         </p>
-        {detail.person.phone && <p className="text-sm text-deep/70">{detail.person.phone}</p>}
+        {detail.person.phone && (
+          <p className="tabular" style={{ fontSize: 14, color: 'var(--ink-2)' }}>
+            {detail.person.phone}
+          </p>
+        )}
       </header>
 
       {verify.isError && (
@@ -91,7 +103,7 @@ export function PersonDetailScreen() {
                   />
                 }
               />
-              <p className="text-xs text-deep/60">
+              <p className="type-note" style={{ color: 'var(--ink-2)' }}>
                 {t('person.members')}:{' '}
                 {h.members.map((m) => `${m.given_name} ${m.family_name}`).join(', ')}
               </p>
@@ -121,7 +133,12 @@ export function PersonDetailScreen() {
               />
 
               {farm.plots.map((plot) => (
-                <div key={plot.id} data-testid={`plot-${plot.id}`} className="ml-3 space-y-2 border-l border-deep/10 pl-3">
+                <div
+                  key={plot.id}
+                  data-testid={`plot-${plot.id}`}
+                  className="ml-1 flex flex-col gap-2.5 pl-3.5"
+                  style={{ borderLeft: `3px solid ${railColour(plot.verification)}` }}
+                >
                   <Row
                     title={`${plot.label} · ${formatArea(plot.area_ha, 'hectare')}`}
                     record={plot}
@@ -137,7 +154,12 @@ export function PersonDetailScreen() {
                   />
 
                   {plot.cycles.map((cycle) => (
-                    <div key={cycle.id} data-testid={`cycle-${cycle.id}`} className="ml-3 space-y-2 border-l border-deep/10 pl-3">
+                    <div
+                      key={cycle.id}
+                      data-testid={`cycle-${cycle.id}`}
+                      className="ml-1 flex flex-col gap-2.5 pl-3.5"
+                      style={{ borderLeft: `3px solid ${railColour(cycle.verification)}` }}
+                    >
                       <Row
                         title={cycle.crop_name}
                         record={cycle}
@@ -151,13 +173,18 @@ export function PersonDetailScreen() {
                           />
                         }
                       />
-                      <p className="text-xs text-deep/60">
+                      <p className="type-note tabular" style={{ color: 'var(--ink-3)' }}>
                         {t('person.window')}: {formatPlainDate(cycle.harvest_start)} –{' '}
                         {formatPlainDate(cycle.harvest_end)}
                       </p>
 
                       {cycle.harvests.map((h) => (
-                        <div key={h.id} data-testid={`harvest-${h.id}`} className="ml-3 border-l border-deep/10 pl-3">
+                        <div
+                          key={h.id}
+                          data-testid={`harvest-${h.id}`}
+                          className="ml-1 pl-3.5"
+                          style={{ borderLeft: `3px solid ${railColour(h.verification)}` }}
+                        >
                           <Row
                             title={`${t(`person.${h.kind}`)} ${formatKg(h.quantity_kg)}${
                               h.is_current ? '' : ` (${t('person.superseded')})`
@@ -198,6 +225,12 @@ function Badge({ record }: { record: Provenance }) {
   )
 }
 
+/**
+ * The mark leads, the name follows, the verify control sits at the end of the
+ * row. Six levels of nesting mean this row is read dozens of times down one
+ * screen, so provenance collapses to the compact variant here — the mark plus
+ * one line of words — and the full lozenge is kept for the person at the top.
+ */
 function Row({
   title,
   record,
@@ -208,9 +241,18 @@ function Row({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-medium">{title}</span>
-      <Badge record={record} />
+    <div className="flex flex-wrap items-center gap-3">
+      <VerificationMark verification={record.verification} size={18} />
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <b style={{ fontSize: 16, fontWeight: 600 }}>{title}</b>
+        <ProvenanceBadge
+          compact
+          source={record.source}
+          verification={record.verification}
+          confidence={record.confidence}
+          capturedAt={record.captured_at}
+        />
+      </span>
       {action}
     </div>
   )
@@ -218,17 +260,28 @@ function Row({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-deep/60">{title}</h2>
-      <div className="space-y-3">{children}</div>
+    <section className="flex flex-col gap-2.5">
+      <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+        {title}
+      </h2>
+      <div className="flex flex-col gap-3">{children}</div>
     </section>
   )
 }
 
 function Card({ children, testId }: { children: React.ReactNode; testId: string }) {
   return (
-    <div data-testid={testId} className="space-y-2 rounded border border-deep/10 bg-white/60 p-3">
+    <div
+      data-testid={testId}
+      className="flex flex-col gap-3 p-4"
+      style={{
+        border: '1px solid var(--rule)',
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--paper)',
+      }}
+    >
       {children}
     </div>
   )
 }
+

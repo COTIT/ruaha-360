@@ -1,17 +1,32 @@
 import { Link } from '@tanstack/react-router'
+import { UserPlus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { Loading } from '@/components/controls'
+import { VerificationMark } from '@/components/marks'
 import { useOfficerHome } from '@/features/officer/useOfficerHome'
 
 type LinkTo = Parameters<typeof Link>[0]['to']
 
 function Figure({ label, value }: { label: string; value: number }) {
   return (
-    <div className="space-y-0.5">
-      <p className="text-xs text-deep/60">{label}</p>
-      <p className="tabular text-lg font-semibold text-deep">{value}</p>
+    <div
+      className="flex min-w-0 flex-col gap-0.5 px-3 py-2.5"
+      style={{
+        flex: '1 1 0',
+        border: '1px solid var(--rule)',
+        borderRadius: 'var(--radius-control)',
+        background: 'var(--sand-2)',
+      }}
+    >
+      <p className="type-note" style={{ color: 'var(--ink-2)' }}>
+        {label}
+      </p>
+      <p className="tabular" style={{ fontSize: 22, fontWeight: 600 }}>
+        {value}
+      </p>
     </div>
   )
 }
@@ -32,9 +47,7 @@ export function OfficerHomeScreen() {
 
   if (isLoading) {
     return (
-      <p data-testid="officer-home-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="officer-home-loading" />
     )
   }
 
@@ -56,14 +69,24 @@ export function OfficerHomeScreen() {
   const outstanding = villages.reduce((sum, v) => sum + v.unverified, 0)
 
   return (
-    <section data-testid="officer-home" className="space-y-5">
-      <header className="space-y-3">
-        <h1 className="text-lg font-semibold">{t('officerHome.title')}</h1>
+    <section data-testid="officer-home" className="flex flex-col gap-4">
+      <header className="flex flex-col gap-2.5">
+        <h1 className="type-screen-title">{t('officerHome.title')}</h1>
+        {/* The officer's one recurring task, as a target rather than a link. */}
         <Link
           to={'/officer/register' as LinkTo}
           data-testid="officer-home-register"
-          className="inline-block rounded bg-primary px-4 py-2 text-sm font-medium text-white"
+          className="flex w-full items-center justify-center gap-2.5 font-semibold"
+          style={{
+            minHeight: 52,
+            borderRadius: 'var(--radius-control)',
+            background: 'var(--primary)',
+            color: '#fff',
+            fontSize: 17,
+            textWrap: 'balance',
+          }}
         >
+          <UserPlus aria-hidden size={19} strokeWidth={2.25} style={{ flex: 'none' }} />
           {t('officerHome.register')}
         </Link>
       </header>
@@ -73,41 +96,65 @@ export function OfficerHomeScreen() {
           statistic. */}
       <div
         data-testid="officer-unverified"
-        className="rounded border border-deep/10 bg-white/70 p-4 text-sm"
+        className="flex flex-col gap-2.5 p-4"
+        style={{
+          border: '1px solid var(--rule)',
+          borderLeft: '4px solid var(--primary)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--paper)',
+        }}
       >
         {outstanding === 0 ? (
-          <p>{t('officerHome.nothingOutstanding')}</p>
+          <p style={{ fontSize: 15 }}>{t('officerHome.nothingOutstanding')}</p>
         ) : (
-          <p>
-            {t('officerHome.outstanding', { count: outstanding })}{' '}
+          <>
+            <p className="inline-flex items-center gap-2.5" style={{ fontSize: 15, fontWeight: 500 }}>
+              <VerificationMark verification="unverified" size={18} />
+              {t('officerHome.outstanding', { count: outstanding })}
+            </p>
             <Link
               to={'/officer/verify' as LinkTo}
               data-testid="officer-unverified-link"
-              className="font-medium text-primary underline underline-offset-4"
+              className="flex w-full items-center justify-center font-semibold"
+              style={{
+                minHeight: 48,
+                border: '1.5px solid var(--primary)',
+                borderRadius: 'var(--radius-control)',
+                background: 'var(--primary-tint)',
+                color: 'var(--primary-ink)',
+                fontSize: 15,
+              }}
             >
               {t('officerHome.openVerifyQueue')}
             </Link>
-          </p>
+          </>
         )}
       </div>
 
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-deep/70">{t('officerHome.villages')}</h2>
-        <ul className="space-y-3">
+      <div className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('officerHome.villages')}
+        </h2>
+        <ul className="flex flex-col gap-2.5">
           {villages.map((v) => (
             <li
               key={v.villageId}
               data-testid="officer-village"
-              className="rounded border border-deep/10 bg-white/70 p-4"
+              className="flex flex-col gap-3 p-4"
+              style={{
+                border: '1px solid var(--rule)',
+                borderRadius: 'var(--radius-card)',
+                background: 'var(--paper)',
+              }}
             >
-              <p className="font-medium text-deep">{v.villageName}</p>
-              <div className="mt-3 grid grid-cols-3 gap-3">
+              <p style={{ fontSize: 17, fontWeight: 600 }}>{v.villageName}</p>
+              <div className="flex gap-2.5">
                 <Figure label={t('officerHome.people')} value={v.persons} />
                 <Figure label={t('officerHome.farms')} value={v.farms} />
                 <Figure label={t('officerHome.requests')} value={v.requests} />
               </div>
               {v.unverified > 0 && (
-                <p className="mt-3 text-xs text-deep/60">
+                <p className="type-note" style={{ color: 'var(--ink-3)' }}>
                   {t('officerHome.villageOutstanding', { count: v.unverified })}
                 </p>
               )}

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { ProvenanceBadge } from '@/components/ProvenanceBadge'
+import { railColour } from '@/components/controlStyles'
+import { Loading } from '@/components/controls'
 import { useCycleDetail, useFarmDetail } from '@/features/officer/useOfficerRecords'
 import { formatArea, formatKg, formatPlainDate } from '@/lib/format'
 
@@ -20,9 +22,21 @@ const cycleRoute = getRouteApi('/_officer/officer/cycles/$cycleId')
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="space-y-0.5">
-      <p className="text-xs text-deep/60">{label}</p>
-      <p className="text-sm text-deep">{value}</p>
+    <div
+      className="flex min-w-0 flex-col gap-0.5 px-3.5 py-2.5"
+      style={{
+        flex: '1 1 160px',
+        border: '1px solid var(--rule)',
+        borderRadius: 'var(--radius-control)',
+        background: 'var(--sand-2)',
+      }}
+    >
+      <p className="type-note" style={{ color: 'var(--ink-2)' }}>
+        {label}
+      </p>
+      <p className="tabular" style={{ fontSize: 15, fontWeight: 500 }}>
+        {value}
+      </p>
     </div>
   )
 }
@@ -36,9 +50,7 @@ export function OfficerFarmScreen() {
 
   if (query.isLoading) {
     return (
-      <p data-testid="farm-detail-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="farm-detail-loading" />
     )
   }
 
@@ -50,9 +62,9 @@ export function OfficerFarmScreen() {
   }
 
   return (
-    <section data-testid="farm-detail" className="space-y-5">
-      <header className="space-y-2">
-        <h1 className="text-lg font-semibold">{farm.label}</h1>
+    <section data-testid="farm-detail" className="flex max-w-2xl flex-col gap-4">
+      <header className="flex flex-wrap items-center gap-2.5">
+        <h1 className="type-screen-title">{farm.label}</h1>
         <ProvenanceBadge
           source={farm.source}
           verification={farm.verification}
@@ -61,7 +73,7 @@ export function OfficerFarmScreen() {
         />
       </header>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-wrap gap-2.5">
         <Detail
           label={t('farmDetail.gps')}
           value={
@@ -73,32 +85,39 @@ export function OfficerFarmScreen() {
         <Detail label={t('farmDetail.plotCount')} value={farm.plots.length} />
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-deep/70">{t('farmDetail.plots')}</h2>
+      <div className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('farmDetail.plots')}
+        </h2>
         {farm.plots.length === 0 ? (
           <EmptyState title={t('farmDetail.noPlotsTitle')} detail={t('farmDetail.noPlotsDetail')} />
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2.5">
             {farm.plots.map((plot) => (
               <li
                 key={plot.id}
                 data-testid="farm-plot"
-                className="rounded border border-deep/10 bg-white/70 p-3"
+                className="flex flex-col gap-2 p-4"
+                style={{
+                  border: '1px solid var(--rule)',
+                  borderLeft: `3px solid ${railColour(plot.verification)}`,
+                  borderRadius: 'var(--radius-card)',
+                  background: 'var(--paper)',
+                }}
               >
-                <p className="text-sm font-medium text-deep">
-                  {plot.label}
-                  <span className="tabular ml-2 font-normal text-deep/70">
+                <p className="flex flex-wrap items-baseline gap-2.5">
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>{plot.label}</span>
+                  <span className="tabular" style={{ fontSize: 14, color: 'var(--ink-2)' }}>
                     {formatArea(plot.area_ha, 'hectare')}
                   </span>
                 </p>
-                <div className="mt-1">
-                  <ProvenanceBadge
-                    source={plot.source}
-                    verification={plot.verification}
-                    confidence={plot.confidence ?? undefined}
-                    capturedAt={plot.captured_at}
-                  />
-                </div>
+                <ProvenanceBadge
+                  compact
+                  source={plot.source}
+                  verification={plot.verification}
+                  confidence={plot.confidence ?? undefined}
+                  capturedAt={plot.captured_at}
+                />
               </li>
             ))}
           </ul>
@@ -117,9 +136,7 @@ export function OfficerCycleScreen() {
 
   if (query.isLoading) {
     return (
-      <p data-testid="cycle-detail-loading" className="text-sm text-deep/60">
-        {t('common.loading')}
-      </p>
+      <Loading testId="cycle-detail-loading" />
     )
   }
 
@@ -142,10 +159,12 @@ export function OfficerCycleScreen() {
 
   return (
     <section data-testid="cycle-detail" className="space-y-5">
-      <header className="space-y-2">
-        <h1 className="text-lg font-semibold">
+      <header className="flex flex-wrap items-center gap-2.5">
+        <h1 className="type-screen-title">
           {cycle.crop_name}
-          {cycle.plot_label && <span className="font-normal text-deep/60"> · {cycle.plot_label}</span>}
+          {cycle.plot_label && (
+            <span style={{ fontWeight: 400, color: 'var(--ink-2)' }}> · {cycle.plot_label}</span>
+          )}
         </h1>
         <ProvenanceBadge
           source={cycle.source}
@@ -155,7 +174,7 @@ export function OfficerCycleScreen() {
         />
       </header>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-wrap gap-2.5">
         <Detail label={t('cycleDetail.measure')} value={measure} />
         <Detail label={t('cycleDetail.status')} value={t(`cycleStatus.${cycle.status}`)} />
         <Detail
@@ -166,11 +185,15 @@ export function OfficerCycleScreen() {
         <Detail label={t('cycleDetail.season')} value={cycle.season_label ?? '—'} />
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-deep/70">{t('cycleDetail.harvests')}</h2>
+      <div className="flex flex-col gap-2.5">
+        <h2 className="type-section" style={{ color: 'var(--ink-3)' }}>
+          {t('cycleDetail.harvests')}
+        </h2>
         {/* A harvest figure is a series, not a value: superseded rows stay
             visible and labelled so a revised estimate has an audit trail. */}
-        <p className="text-xs text-deep/60">{t('cycleDetail.seriesNote')}</p>
+        <p className="type-note" style={{ color: 'var(--ink-3)', textWrap: 'pretty' }}>
+          {t('cycleDetail.seriesNote')}
+        </p>
 
         {cycle.harvests.length === 0 ? (
           <EmptyState
@@ -178,33 +201,62 @@ export function OfficerCycleScreen() {
             detail={t('cycleDetail.noHarvestsDetail')}
           />
         ) : (
-          <ul className="space-y-2">
+          <ul className="flex flex-col gap-2.5">
             {cycle.harvests.map((h) => (
               <li
                 key={h.id}
                 data-testid="cycle-harvest"
                 data-current={h.is_current}
-                className={`rounded border p-3 ${
-                  h.is_current ? 'border-deep/10 bg-white/70' : 'border-deep/10 bg-deep/5'
-                }`}
+                className="flex flex-col gap-2 p-4"
+                style={{
+                  /*
+                    The current figure is outlined in blue; a superseded one is
+                    hatched and struck through. The 3,200 kg the Tower excludes
+                    stays visible and is obviously not counted.
+                  */
+                  border: h.is_current
+                    ? '1.5px solid var(--primary)'
+                    : '1px solid var(--rule-2)',
+                  borderRadius: 'var(--radius-card)',
+                  background: h.is_current ? 'var(--paper)' : 'var(--hatch), var(--sand-2)',
+                }}
               >
-                <p className="text-sm text-deep">
-                  <span className="mr-2 rounded bg-deep/10 px-1.5 py-0.5 text-xs">
+                <p className="flex flex-wrap items-baseline gap-2.5">
+                  <span
+                    className="type-note px-2 py-0.5"
+                    style={{
+                      border: '1px solid var(--rule-2)',
+                      borderRadius: 'var(--radius-pill)',
+                      background: 'var(--paper)',
+                      color: 'var(--ink-2)',
+                    }}
+                  >
                     {t(`harvestKind.${h.kind}`)}
                   </span>
-                  <span className="tabular font-medium">{formatKg(h.quantity_kg)}</span>
+                  <span
+                    className="tabular font-semibold"
+                    style={{
+                      fontSize: 17,
+                      ...(h.is_current
+                        ? {}
+                        : { textDecoration: 'line-through', color: 'var(--ink-2)' }),
+                    }}
+                  >
+                    {formatKg(h.quantity_kg)}
+                  </span>
                   {!h.is_current && (
-                    <span className="ml-2 text-xs text-deep/60">({t('cycleDetail.superseded')})</span>
+                    <span className="type-note" style={{ color: 'var(--ink-3)' }}>
+                      {t('cycleDetail.superseded')}
+                    </span>
                   )}
                 </p>
-                <div className="mt-1">
-                  <ProvenanceBadge
-                    source={h.source}
-                    verification={h.verification}
-                    confidence={h.confidence ?? undefined}
-                    capturedAt={h.captured_at}
-                  />
-                </div>
+                <ProvenanceBadge
+                  compact
+                  source={h.source}
+                  verification={h.verification}
+                  confidence={h.confidence ?? undefined}
+                  capturedAt={h.captured_at}
+                />
               </li>
             ))}
           </ul>
