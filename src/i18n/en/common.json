@@ -699,5 +699,56 @@
     "openOpportunities": "See opportunities",
     "noFarmTitle": "No farm recorded yet",
     "noFarmDetail": "Your field officer has not registered your farm yet. Ask them to add it."
+  },
+  "tour": {
+    "start": "Take the tour",
+    "restart": "Take the tour again",
+    "next": "Next",
+    "back": "Back",
+    "close": "Done",
+    "skip": "Skip the tour",
+    "progress": "Step {{step}} of {{total}}",
+    "farmer": {
+      "welcomeTitle": "Welcome to Ruaha 360",
+      "welcomeBody": "This is your own record. Everything here was written by a field officer who visited your farm, and every figure shows where it came from. Six short stops.",
+      "summaryTitle": "What is on file for you",
+      "summaryBody": "Your farm, your plots and what you expect to harvest. If something here is wrong, tell your field officer — they are the one who can correct it.",
+      "recordsTitle": "Your farm, in detail",
+      "recordsBody": "Each record carries a badge saying who recorded it and whether an officer has verified it. Unverified does not mean wrong; it means nobody has checked it yet.",
+      "equipmentTitle": "Equipment you can ask for",
+      "equipmentBody": "Browse what is available and what it would cost to run. Every price here is indicative — it is a guide, not a quotation, and nothing is ordered from this screen.",
+      "requestsTitle": "What you have asked for",
+      "requestsBody": "Every request you send appears here with its current status, so you can see whether it is waiting, under review, approved or turned down — and why.",
+      "opportunitiesTitle": "Opportunities near you",
+      "opportunitiesBody": "An opportunity is a buyer looking for a crop, matched to what your village expects to harvest. It is not a sale, a delivery or a payment — nothing is owed either way."
+    },
+    "officer": {
+      "welcomeTitle": "Welcome to Ruaha 360",
+      "welcomeBody": "This is the field officer's surface. You register farmers, then verify what you recorded. Six short stops, and you can take this tour again at any time.",
+      "outstandingTitle": "What still needs verifying",
+      "outstandingBody": "Everything you record starts unverified. This counts what is waiting for you. Verify only what you have seen yourself — it cannot be undone.",
+      "registerTitle": "One page, one submit",
+      "registerBody": "Six groups — person, household, farm, plot, crop cycle, expected harvest — created together in a single step. These chips show which groups you have filled in.",
+      "oneSubmitTitle": "Registering creates all six records",
+      "oneSubmitBody": "Press this once. If the signal drops the form stays saved on this phone, and pressing it again after a failure replays the same registration rather than creating a second farmer.",
+      "peopleTitle": "Everyone you have registered",
+      "peopleBody": "Search by name or phone, or filter by whether records are verified. Opening a person shows every record attached to them and who recorded each one.",
+      "verifyTitle": "The verify queue",
+      "verifyBody": "Everything awaiting verification, in one list. Verifying says you have seen the record yourself. There is no way to un-verify, so leave anything you are unsure of."
+    },
+    "ops": {
+      "welcomeTitle": "Welcome to Ruaha 360",
+      "welcomeBody": "This is the programme surface: requests, buyer demand and the Control Tower. Six short stops, and the tour is always available from the header.",
+      "queueTitle": "What is waiting for you",
+      "queueBody": "Each tile counts one queue and opens it. They are counts of work, not performance figures.",
+      "requestsTitle": "The request pipeline",
+      "requestsBody": "Every equipment request, filterable by status and village. Opening one shows the farmer's own words, the energy estimate and the decision controls.",
+      "demandTitle": "Buyer demand",
+      "demandBody": "What buyers are asking for, and how much of it a village could cover. Prices are indicative throughout. Creating an opportunity records a match — it is not a sale.",
+      "towerTitle": "The Control Tower",
+      "towerBody": "Production, energy, market and data quality for one village. Every figure is read from the database and drills down to the record it came from.",
+      "towerVillageTitle": "Pick a village first",
+      "towerVillageBody": "The Tower is always about one village. Capacity here is planned and always shown with its basis — never measured — and prospective and approved demand are separate figures that are never added together."
+    }
   }
 }

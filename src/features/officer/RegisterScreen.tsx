@@ -383,7 +383,7 @@ export function RegisterScreen() {
         submits. The marks are the same shapes verification uses, so the
         vocabulary is learned once.
       */}
-      <ul className="flex flex-wrap gap-2">
+      <ul data-testid="register-progress" className="flex flex-wrap gap-2">
         {REGISTER_GROUPS.map((group) => (
           <li key={group}>
             <span

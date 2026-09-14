@@ -126,6 +126,13 @@
   --rule: rgba(12, 31, 91, 0.12); /* every hairline divider */
   --rule-2: rgba(12, 31, 91, 0.22); /* chip, control and card edges */
 
+  /* ── the scrim ───────────────────────────────────────── */
+  /* The only thing in this design that dims the page: the guided tour's
+     overlay, which has to leave the spotlit element legible while making
+     everything else clearly not the subject. Brand navy rather than black,
+     so the dimmed page still reads as this product. */
+  --scrim: rgba(12, 31, 91, 0.55);
+
   /* ── the provisional mark ────────────────────────────── */
   /* Hatching means estimated / planned / superseded / not-yet-covered,
      everywhere in the system. `.hatch` lays it over whatever ground the

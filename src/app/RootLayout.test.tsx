@@ -148,3 +148,29 @@ describe('the tab bar never covers the last control', () => {
     expect(screen.queryByTestId('nav-tabs')).not.toBeInTheDocument()
   })
 })
+
+/**
+ * The tour crosses screens, so the way back to it lives in the header beside
+ * the language switch rather than on any one of them.
+ */
+describe('the header offers the tour', () => {
+  test('on a surface that has one', () => {
+    useSession.mockReturnValue({
+      data: { appUser: { id: 'u-1', display_name: 'Asha' }, memberships: [m('ops')] },
+    })
+    pathname.mockReturnValue('/ops/tower')
+    renderLayout()
+
+    expect(screen.getByRole('banner')).toContainElement(screen.getByTestId('tour-restart'))
+  })
+
+  // Signed out, or on a path that belongs to no surface: there is no role to
+  // give a tour of.
+  test('and not before anyone has signed in', () => {
+    useSession.mockReturnValue({ data: undefined, isLoading: true })
+    pathname.mockReturnValue('/login')
+    renderLayout()
+
+    expect(screen.queryByTestId('tour-restart')).not.toBeInTheDocument()
+  })
+})

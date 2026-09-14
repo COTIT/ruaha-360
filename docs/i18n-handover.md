@@ -1,6 +1,6 @@
 # Swahili handover — Ruaha 360
 
-Generated 2026-09-13 from `src/i18n/en/common.json`. Do not edit by hand;
+Generated 2026-09-14 from `src/i18n/en/common.json`. Do not edit by hand;
 regenerate with `pnpm i18n:handover`.
 
 ## What this is
@@ -18,12 +18,12 @@ English is visibly untranslated and a wrong Swahili string is not.
 ## Priority
 
 - **Required** — the farmer and officer surfaces, and the chrome both of
-  them render. 341 strings. CLAUDE.md specifies these ship
+  them render. 384 strings. CLAUDE.md specifies these ship
   complete Swahili.
 - **Optional** — Ops and Tower. 260 strings. These may ship
   English for the demo.
 
-601 strings in total, of which 2 already have Swahili.
+644 strings in total, of which 2 already have Swahili.
 
 ## How to read the table
 
@@ -365,6 +365,49 @@ English is visibly untranslated and a wrong Swahili string is not.
 | `source.transaction_derived` | From a transaction |  | Provenance wording: where a record came from, and who verified it. |
 | `table.emptyDetail` | No records match. |  |  |
 | `table.emptyTitle` | Nothing to show |  |  |
+| `tour.back` | Back |  |  |
+| `tour.close` | Done |  |  |
+| `tour.farmer.equipmentBody` | Browse what is available and what it would cost to run. Every price here is indicative — it is a guide, not a quotation, and nothing is ordered from this screen. |  |  |
+| `tour.farmer.equipmentTitle` | Equipment you can ask for |  |  |
+| `tour.farmer.opportunitiesBody` | An opportunity is a buyer looking for a crop, matched to what your village expects to harvest. It is not a sale, a delivery or a payment — nothing is owed either way. |  |  |
+| `tour.farmer.opportunitiesTitle` | Opportunities near you |  |  |
+| `tour.farmer.recordsBody` | Each record carries a badge saying who recorded it and whether an officer has verified it. Unverified does not mean wrong; it means nobody has checked it yet. |  |  |
+| `tour.farmer.recordsTitle` | Your farm, in detail |  |  |
+| `tour.farmer.requestsBody` | Every request you send appears here with its current status, so you can see whether it is waiting, under review, approved or turned down — and why. |  |  |
+| `tour.farmer.requestsTitle` | What you have asked for |  |  |
+| `tour.farmer.summaryBody` | Your farm, your plots and what you expect to harvest. If something here is wrong, tell your field officer — they are the one who can correct it. |  |  |
+| `tour.farmer.summaryTitle` | What is on file for you |  |  |
+| `tour.farmer.welcomeBody` | This is your own record. Everything here was written by a field officer who visited your farm, and every figure shows where it came from. Six short stops. |  |  |
+| `tour.farmer.welcomeTitle` | Welcome to Ruaha 360 |  |  |
+| `tour.next` | Next |  |  |
+| `tour.officer.oneSubmitBody` | Press this once. If the signal drops the form stays saved on this phone, and pressing it again after a failure replays the same registration rather than creating a second farmer. |  |  |
+| `tour.officer.oneSubmitTitle` | Registering creates all six records |  |  |
+| `tour.officer.outstandingBody` | Everything you record starts unverified. This counts what is waiting for you. Verify only what you have seen yourself — it cannot be undone. |  |  |
+| `tour.officer.outstandingTitle` | What still needs verifying |  |  |
+| `tour.officer.peopleBody` | Search by name or phone, or filter by whether records are verified. Opening a person shows every record attached to them and who recorded each one. |  |  |
+| `tour.officer.peopleTitle` | Everyone you have registered |  |  |
+| `tour.officer.registerBody` | Six groups — person, household, farm, plot, crop cycle, expected harvest — created together in a single step. These chips show which groups you have filled in. |  |  |
+| `tour.officer.registerTitle` | One page, one submit |  |  |
+| `tour.officer.verifyBody` | Everything awaiting verification, in one list. Verifying says you have seen the record yourself. There is no way to un-verify, so leave anything you are unsure of. |  |  |
+| `tour.officer.verifyTitle` | The verify queue |  |  |
+| `tour.officer.welcomeBody` | This is the field officer's surface. You register farmers, then verify what you recorded. Six short stops, and you can take this tour again at any time. |  |  |
+| `tour.officer.welcomeTitle` | Welcome to Ruaha 360 |  |  |
+| `tour.ops.demandBody` | What buyers are asking for, and how much of it a village could cover. Prices are indicative throughout. Creating an opportunity records a match — it is not a sale. |  |  |
+| `tour.ops.demandTitle` | Buyer demand |  |  |
+| `tour.ops.queueBody` | Each tile counts one queue and opens it. They are counts of work, not performance figures. |  |  |
+| `tour.ops.queueTitle` | What is waiting for you |  |  |
+| `tour.ops.requestsBody` | Every equipment request, filterable by status and village. Opening one shows the farmer's own words, the energy estimate and the decision controls. |  |  |
+| `tour.ops.requestsTitle` | The request pipeline |  |  |
+| `tour.ops.towerBody` | Production, energy, market and data quality for one village. Every figure is read from the database and drills down to the record it came from. |  |  |
+| `tour.ops.towerTitle` | The Control Tower |  |  |
+| `tour.ops.towerVillageBody` | The Tower is always about one village. Capacity here is planned and always shown with its basis — never measured — and prospective and approved demand are separate figures that are never added together. |  |  |
+| `tour.ops.towerVillageTitle` | Pick a village first |  |  |
+| `tour.ops.welcomeBody` | This is the programme surface: requests, buyer demand and the Control Tower. Six short stops, and the tour is always available from the header. |  |  |
+| `tour.ops.welcomeTitle` | Welcome to Ruaha 360 |  |  |
+| `tour.progress` | Step {{step}} of {{total}} |  | Keep {{step}} {{total}} |
+| `tour.restart` | Take the tour again |  |  |
+| `tour.skip` | Skip the tour |  |  |
+| `tour.start` | Take the tour |  |  |
 | `verification.disputed` | Disputed |  | Provenance wording: where a record came from, and who verified it. |
 | `verification.pending` | Pending |  | Provenance wording: where a record came from, and who verified it. |
 | `verification.unverified` | Unverified |  | Provenance wording: where a record came from, and who verified it. |

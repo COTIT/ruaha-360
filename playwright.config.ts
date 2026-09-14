@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
+import { TOURS_ALREADY_SEEN } from './e2e/tours-already-seen'
+
 // The browser suite, run against the demo Supabase project and its seed.
 // `journey.spec.ts` is CLAUDE.md's acceptance journey end to end; every other
 // spec covers one screen and its state cycle.
@@ -28,7 +30,14 @@ export default defineConfig({
   // if a run crashes mid-test.
   globalSetup: './e2e/global-setup.ts',
   globalTeardown: './e2e/global-teardown.ts',
-  use: { baseURL: 'http://localhost:5173', trace: 'on-first-retry' },
+  use: {
+    baseURL: 'http://localhost:5173',
+    trace: 'on-first-retry',
+    // A fresh context is a first visit, and a first visit opens the guided
+    // tour over the whole screen. Every spec but `tour.spec.ts` starts with
+    // the tours already taken.
+    storageState: TOURS_ALREADY_SEEN,
+  },
   webServer: {
     command: 'pnpm dev',
     url: 'http://localhost:5173',
