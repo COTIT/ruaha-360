@@ -8,7 +8,7 @@ import { TourContext } from '@/app/tour/tourContext'
 import { TourTooltip } from '@/app/tour/TourTooltip'
 import { TOURS } from '@/app/tour/tourSteps'
 import { hasSeenTour, markTourSeen } from '@/app/tour/tourState'
-import { useStepTarget } from '@/app/tour/useStepTarget'
+import { useTourStall } from '@/app/tour/useTourStall'
 
 /**
  * The guided tour, one per surface.
@@ -54,18 +54,28 @@ export function TourProvider({
    * effect that sets state on mount is a cascading render for something the
    * props already know.
    */
-  const [held, setHeld] = useState<{ running: boolean; index: number } | null>(null)
+  const [held, setHeld] = useState<{ who: string; running: boolean; index: number } | null>(null)
+
+  /**
+   * Whose tour this is. A held decision belongs to one person on one surface
+   * and must not outlive either.
+   *
+   * Without this the state is sticky in a way that only shows up on a second
+   * tour: finishing the ops tour leaves `running: false` behind, and signing in
+   * as a farmer — or an officer opening the ops surface they also hold — then
+   * gets no tour at all, silently, for the rest of the session.
+   */
+  const who = `${surface ?? ''}:${userId ?? ''}`
+  const mine = held?.who === who ? held : null
   const firstVisit = available && Boolean(surface) && !hasSeenTour(surface!, userId)
 
-  const active = held ? held.running : firstVisit
-  const stepIndex = held ? held.index : 0
-
-  const selector = (index: number) => `[data-testid="${tour[index].testId}"]`
+  const active = mine ? mine.running : firstVisit
+  const stepIndex = mine?.index ?? 0
 
   const stop = useCallback(() => {
-    setHeld({ running: false, index: 0 })
+    setHeld({ who, running: false, index: 0 })
     if (surface) markTourSeen(surface, userId)
-  }, [surface, userId])
+  }, [who, surface, userId])
 
   /**
    * Running means: the tour is active, we are standing on the screen this stop
@@ -94,21 +104,17 @@ export function TourProvider({
   }, [stepIndex])
 
   /**
-   * How long a stop is allowed to not exist.
+   * The backstop: a tour that is running but drawing nothing is over.
    *
-   * Joyride's own `TARGET_NOT_FOUND` cannot answer this: it fires the instant
-   * a lifecycle changes with the target absent, which every screen change
-   * produces, so it says "not yet" rather than "not coming". The deadline is
-   * therefore ours, and reaching it ends the tour — `stop()` unmounts the
-   * library, its portal and its overlay together.
-   *
-   * Armed whenever the tour is active, deliberately — NOT only once the route
-   * matches. A navigation that does not happen is the one case where the route
-   * never matches, and gating on it meant the watchdog was disarmed in exactly
-   * the situation it exists for: the library waiting forever for an element on
-   * a screen the router never reached.
+   * Deliberately not "is this stop's element there". That question was asked
+   * first and missed the failure that reached users — on a production build
+   * the library began scrolling to stop four, never reported finishing, and
+   * never drew, with the stop's own element present the whole time. Watching
+   * what the user can see catches every way it can stall, including the ones
+   * not yet met, and `stop()` unmounts the library with its portal and its
+   * overlay together.
    */
-  useStepTarget(active ? selector(stepIndex) : null, stop)
+  useTourStall(active, stop)
 
   /**
    * The route follows the stop, declaratively.
@@ -136,19 +142,19 @@ export function TourProvider({
         stop()
         return
       }
-      setHeld({ running: true, index })
+      setHeld({ who, running: true, index })
     },
-    [tour, stop],
+    [tour, who, stop],
   )
 
   const start = useCallback(() => {
     if (!available) return
     // The effect above takes it to the first stop's screen.
-    setHeld({ running: true, index: 0 })
-  }, [available])
+    setHeld({ who, running: true, index: 0 })
+  }, [available, who])
 
   const onEvent = useCallback(
-    ({ action, status, type }: EventData) => {
+    ({ action, index, status, type }: EventData) => {
       if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
         stop()
         return
@@ -167,6 +173,23 @@ export function TourProvider({
        * says so if it never arrives. One source for that decision, and it is
        * ours.
        */
+
+      /**
+       * The library announces the stop it is about to show, and that is the
+       * one place the two counters can be reconciled.
+       *
+       * Joyride steps itself when the primary button is clicked, independently
+       * of the `stepIndex` it was given. If the two ever disagree — and on a
+       * production build, clicking through quickly, they did — it waits for an
+       * element belonging to ITS stop while everything here still describes
+       * ours: the overlay stays up, no bubble is drawn, and the watchdog is
+       * watching the wrong element, so nothing recovers. Following the number
+       * it announces makes that divergence self-healing rather than terminal.
+       */
+      if (type === EVENTS.STEP_BEFORE && typeof index === 'number' && index !== at.current) {
+        goTo(index)
+        return
+      }
 
       if (type === EVENTS.STEP_AFTER) {
         // One step from where WE are, not from where the library says it is.
@@ -231,6 +254,13 @@ export function TourProvider({
             // Clear of the fixed header, so a spotlit element is never half
             // behind it after the scroll.
             scrollOffset: 96,
+            // The library does not scroll. It waits for its own scroll to
+            // report finished before it draws, and on a production build that
+            // report did not always arrive: the tour sat behind its overlay
+            // with no bubble, permanently. Nothing here needs scrolling to a
+            // stop badly enough to risk that — and an animated scroll is
+            // against this design anyway.
+            skipScroll: true,
             // A tour that crosses screens asks for a stop whose element the
             // router has not mounted yet. Waiting for it is the whole reason
             // this can navigate and advance in one move; without it the stop

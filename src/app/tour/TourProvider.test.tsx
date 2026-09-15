@@ -18,10 +18,18 @@ vi.mock('react-joyride', () => ({
   // passes against a component the app cannot import.
   Joyride: (props: Record<string, unknown>) => {
     joyride = props
-    return <div data-testid="joyride" />
+    // The real one renders our tooltip, and the tour watches for that bubble
+    // to decide whether it is drawing anything at all.
+    return (
+      <div data-testid="joyride">{props.run ? <div data-testid="tour-tooltip" /> : null}</div>
+    )
   },
   ACTIONS: { NEXT: 'next', PREV: 'prev' },
-  EVENTS: { STEP_AFTER: 'step:after', TARGET_NOT_FOUND: 'error:target_not_found' },
+  EVENTS: {
+    STEP_BEFORE: 'step:before',
+    STEP_AFTER: 'step:after',
+    TARGET_NOT_FOUND: 'error:target_not_found',
+  },
   STATUS: { FINISHED: 'finished', SKIPPED: 'skipped' },
 }))
 
@@ -375,5 +383,100 @@ describe('crossing to another screen', () => {
     emit({ action: 'prev', type: 'step:after' })
 
     expect(navigate).toHaveBeenLastCalledWith({ to: '/officer' })
+  })
+})
+
+/**
+ * The library steps itself when its primary button is clicked, independently of
+ * the `stepIndex` it was handed. When the two disagree it waits for an element
+ * belonging to ITS stop while everything here still describes ours — overlay
+ * up, no bubble, and the watchdog armed on the wrong element, so nothing
+ * recovers. Seen on the production build, clicking through quickly: our state
+ * said stop 2 and its said stop 3.
+ */
+describe('when the library steps itself', () => {
+  beforeEach(() => localStorage.clear())
+
+  test('the announced stop is followed rather than argued with', async () => {
+    renderTour()
+    await settle()
+    expect(joyride.stepIndex).toBe(0)
+
+    emit({ action: 'next', index: 3, type: 'step:before' })
+    await settle()
+
+    expect(joyride.stepIndex).toBe(3)
+    expect(mounted()).toBe(true)
+  })
+
+  test('and an announcement it already agrees with changes nothing', async () => {
+    renderTour()
+    await settle()
+
+    emit({ action: 'update', index: 0, type: 'step:before' })
+    await settle()
+
+    expect(joyride.stepIndex).toBe(0)
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  // Past the end is still the end, whoever announced it.
+  test('an announced stop past the last one ends the tour', async () => {
+    renderTour()
+    await settle()
+
+    emit({ action: 'next', index: TOURS.officer.length, type: 'step:before' })
+    await settle()
+
+    expect(mounted()).toBe(false)
+    expect(hasSeenTour('officer', OFFICER)).toBe(true)
+  })
+})
+
+/**
+ * A finished tour belongs to the person who finished it.
+ *
+ * The state that says "this tour is over" used to outlive both the user and the
+ * surface, so the SECOND tour of a session never opened: finish the ops tour,
+ * sign in as a farmer, and there was silently no tour at all — the same for an
+ * officer who also holds ops and moves between the two.
+ */
+describe('a second tour in the same session', () => {
+  beforeEach(() => localStorage.clear())
+
+  test('opens for the next person to sign in', async () => {
+    const view = renderTour()
+    await settle()
+    emit({ status: 'skipped', action: 'skip', index: 0, type: 'tour:status' })
+    await settle()
+    expect(mounted()).toBe(false)
+
+    view.rerender(
+      <TourProvider surface="officer" userId="80000000-0000-4000-8000-000000000004">
+        <Harness />
+      </TourProvider>,
+    )
+    await settle()
+
+    expect(mounted()).toBe(true)
+    expect(joyride.stepIndex).toBe(0)
+  })
+
+  test('and for the next surface the same person opens', async () => {
+    const view = renderTour()
+    await settle()
+    emit({ status: 'skipped', action: 'skip', index: 0, type: 'tour:status' })
+    await settle()
+
+    pathname = '/ops'
+    view.rerender(
+      <TourProvider surface="ops" userId={OFFICER}>
+        <Harness surface="ops" />
+      </TourProvider>,
+    )
+    await settle()
+
+    expect(mounted()).toBe(true)
+    expect((joyride.steps as unknown[]).length).toBe(TOURS.ops.length)
   })
 })
